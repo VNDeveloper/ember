@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { STORAGE_KEY, loadData, saveData } from './persist'
+import { STORAGE_KEY, loadData, readData, saveData } from './persist'
 import { dataFixture, taskFixture } from './test-fixtures'
 
 describe('persistence', () => {
@@ -39,5 +39,18 @@ describe('persistence', () => {
   it('keeps running when storage refuses to save', () => {
     const full = { setItem: vi.fn(() => { throw new Error('QuotaExceededError') }) } as unknown as Storage
     expect(() => saveData(dataFixture(), full)).not.toThrow()
+  })
+  it('reports when unreadable data could not be backed up', () => {
+    const raw = '{not json'
+    const store = { getItem: () => raw, setItem: () => { throw new Error('QuotaExceededError') } } as unknown as Storage
+    expect(readData(store)).toEqual({ status: 'unreadable', backedUp: false })
+    localStorage.setItem(STORAGE_KEY, raw)
+    expect(readData()).toEqual({ status: 'unreadable', backedUp: true })
+  })
+
+  it('distinguishes empty from loaded', () => {
+    expect(readData()).toEqual({ status: 'empty' })
+    saveData(dataFixture())
+    expect(readData()).toEqual({ status: 'ok', data: dataFixture() })
   })
 })

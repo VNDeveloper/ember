@@ -7,7 +7,7 @@ import type {
   EmberData, FocusLog, Goal, Milestone, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
-import { loadData, saveData } from '../core/persist'
+import { readData, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
 import { tallyLogs } from '../core/tally'
 import { DEMO_SPEED, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
@@ -19,8 +19,10 @@ const demoInUrl = (): boolean =>
   typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === '1'
 
 export const useEmberStore = defineStore('ember', () => {
-  const loaded = loadData()
-  const initial = loaded ?? buildSeed(Date.now())
+  const read = readData()
+  const initial = read.status === 'ok' ? read.data : buildSeed(Date.now())
+  /** False when saved data couldn't be read or backed up: run in memory rather than destroy it. */
+  const storageWritable = ref(!(read.status === 'unreadable' && !read.backedUp))
 
   const goals = ref<Goal[]>(initial.goals)
   const tasks = ref<Task[]>(initial.tasks)
@@ -62,8 +64,9 @@ export const useEmberStore = defineStore('ember', () => {
     settings.value = d.settings
   }
 
-  if (!loaded) saveData(snapshot())
-  watch([goals, tasks, logs, selection, timer, settings], () => saveData(snapshot()), { deep: true })
+  const persist = () => { if (storageWritable.value) saveData(snapshot()) }
+  if (read.status !== 'ok') persist()
+  watch([goals, tasks, logs, selection, timer, settings], persist, { deep: true })
 
   // — lookups —
   const taskById = (id: string): Task | null => tasks.value.find((t) => t.id === id) ?? null
@@ -202,7 +205,7 @@ export const useEmberStore = defineStore('ember', () => {
   }
 
   return {
-    goals, tasks, logs, selection, timer, settings, now, completions,
+    goals, tasks, logs, selection, timer, settings, now, completions, storageWritable,
     today, demo, speed, tally, remaining, lastLog,
     snapshot, replaceData, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,

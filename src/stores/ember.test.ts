@@ -326,6 +326,23 @@ describe('goals', () => {
   })
 })
 
+describe('unreadable saved data', () => {
+  it('never overwrites data it could not back up', async () => {
+    localStorage.setItem(STORAGE_KEY, '{not json')
+    const real = Storage.prototype.setItem
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key.includes(':corrupt:')) throw new Error('QuotaExceededError')
+      return real.call(this, key, value)
+    })
+    const store = freshStore()
+    expect(store.storageWritable).toBe(false)
+    store.addTask({ title: 'New', when: 'today', deadline: false, goalId: null })
+    await nextTick()
+    spy.mockRestore()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{not json')
+  })
+})
+
 describe('storage key', () => {
   it('uses ember:v1', () => {
     freshStore()
