@@ -10,7 +10,7 @@ import { sameTarget } from '../core/model'
 import { loadData, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
 import { tallyLogs } from '../core/tally'
-import { DEMO_SPEED, LENGTHS, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
+import { DEMO_SPEED, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
 
 export type When = 'today' | 'tomorrow' | 'date' | 'someday'
 export interface NewTask { title: string; when: When; date?: ISODate; deadline: boolean; goalId: string | null }
@@ -170,7 +170,7 @@ export const useEmberStore = defineStore('ember', () => {
     }
     const sel = selection.value
     logs.value.push({
-      id: uid(), at, date: todayISO(at), min: LENGTHS[session].focus / 60,
+      id: uid(), at, date: todayISO(at), min: timer.value.lengthSec / 60,
       target: sel && targetExists(sel) ? sel : null,
     })
     timer.value = idleTimer(session, 'break')

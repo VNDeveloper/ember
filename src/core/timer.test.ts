@@ -9,7 +9,7 @@ const MIN = 60_000
 describe('timer engine', () => {
   it('starts idle in a full focus phase', () => {
     const t = idleTimer('25/5')
-    expect(t).toEqual({ phase: 'focus', running: false, endsAt: null, leftSec: 1500, speed: 1 })
+    expect(t).toEqual({ phase: 'focus', running: false, endsAt: null, leftSec: 1500, speed: 1, lengthSec: 1500 })
     expect(idleTimer('50/10').leftSec).toBe(3000)
     expect(idleTimer('25/5', 'break').leftSec).toBe(300)
     expect(idleTimer('50/10', 'break').leftSec).toBe(600)
@@ -49,8 +49,8 @@ describe('timer engine', () => {
 
   it('reports progress through the phase', () => {
     const t = startTimer(idleTimer('25/5'), T0, 1)
-    expect(progress(idleTimer('25/5'), T0, '25/5')).toBe(0)
-    expect(progress(t, T0 + 5 * MIN, '25/5')).toBeCloseTo(0.2)
+    expect(progress(idleTimer('25/5'), T0)).toBe(0)
+    expect(progress(t, T0 + 5 * MIN)).toBeCloseTo(0.2)
   })
 
   it('labels the phase and the start button like the prototype', () => {

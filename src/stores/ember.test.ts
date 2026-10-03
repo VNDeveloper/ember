@@ -129,10 +129,10 @@ describe('timer', () => {
   })
 
   it('returns to a paused full focus session when a break ends', () => {
-    const store = storeWith({ timer: { phase: 'break', running: false, endsAt: null, leftSec: 300, speed: 1 } })
+    const store = storeWith({ timer: { phase: 'break', running: false, endsAt: null, leftSec: 300, speed: 1, lengthSec: 300 } })
     store.startPause()
     store.tick(NOW + 5 * MIN)
-    expect(store.timer).toEqual({ phase: 'focus', running: false, endsAt: null, leftSec: 1500, speed: 1 })
+    expect(store.timer).toEqual({ phase: 'focus', running: false, endsAt: null, leftSec: 1500, speed: 1, lengthSec: 1500 })
     expect(store.logs).toHaveLength(0)
   })
 
@@ -141,7 +141,7 @@ describe('timer', () => {
     store.startPause()
     store.resetTimer()
     expect(store.timer).toMatchObject({ phase: 'focus', running: false, leftSec: 1500 })
-    store.replaceData({ ...fixture(), timer: { phase: 'break', running: true, endsAt: NOW + MIN, leftSec: 300, speed: 1 } })
+    store.replaceData({ ...fixture(), timer: { phase: 'break', running: true, endsAt: NOW + MIN, leftSec: 300, speed: 1, lengthSec: 300 } })
     store.skipBreak()
     expect(store.timer).toMatchObject({ phase: 'focus', running: false, leftSec: 1500 })
   })
@@ -192,6 +192,16 @@ describe('timer', () => {
     store.setSession('25/5')
     expect(store.timer.running).toBe(true)
     expect(store.remaining).toBe(3000)
+  })
+
+  it('logs the length a run actually ran when the session changes mid-run', () => {
+    const store = storeWith()
+    store.setSession('50/10')
+    store.startPause()
+    store.setSession('25/5')
+    store.tick(NOW + 50 * MIN)
+    expect(store.logs).toHaveLength(1)
+    expect(store.logs[0].min).toBe(50)
   })
 
   it('rolls today over at midnight', () => {

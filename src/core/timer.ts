@@ -13,7 +13,7 @@ export const phaseLength = (phase: Phase, session: SessionLength): number =>
   phase === 'focus' ? LENGTHS[session].focus : LENGTHS[session].brk
 
 export const idleTimer = (session: SessionLength, phase: Phase = 'focus'): Timer => ({
-  phase, running: false, endsAt: null, leftSec: phaseLength(phase, session), speed: 1,
+  phase, running: false, endsAt: null, leftSec: phaseLength(phase, session), speed: 1, lengthSec: phaseLength(phase, session),
 })
 
 /** Timer-seconds left, derived from the wall clock while running. */
@@ -34,8 +34,7 @@ export function pauseTimer(t: Timer, now: number): Timer {
 
 export const isDue = (t: Timer, now: number): boolean => t.running && t.endsAt != null && now >= t.endsAt
 
-export const progress = (t: Timer, now: number, session: SessionLength): number =>
-  1 - remainingSec(t, now) / phaseLength(t.phase, session)
+export const progress = (t: Timer, now: number): number => 1 - remainingSec(t, now) / t.lengthSec
 
 export function phaseLabel(t: Timer, session: SessionLength): string {
   if (t.phase === 'break') return t.running ? 'Break' : `Session done — take ${LENGTHS[session].brk / 60}`

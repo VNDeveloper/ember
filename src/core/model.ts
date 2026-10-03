@@ -36,6 +36,8 @@ export interface Timer {
   leftSec: number
   /** Timer-seconds per real second, captured when a run starts (1, or 60 in demo). */
   speed: number
+  /** Full length of this phase in timer-seconds, fixed when the phase begins (what a finished focus logs). */
+  lengthSec: number
 }
 
 export type SessionLength = '25/5' | '50/10'
