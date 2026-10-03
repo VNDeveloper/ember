@@ -343,6 +343,27 @@ describe('unreadable saved data', () => {
   })
 })
 
+describe('other tabs', () => {
+  it('adopts data another tab saved instead of overwriting it later', async () => {
+    const store = storeWith()
+    await nextTick()
+    const other = { ...fixture(), tasks: [...fixture().tasks, taskFixture('Added in tab B')] }
+    saveData(other)
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: localStorage.getItem(STORAGE_KEY) }))
+    expect(store.tasks.map((t) => t.title)).toContain('Added in tab B')
+    store.toggleTask('Review PR')
+    await nextTick()
+    expect(loadData()?.tasks.map((t) => t.title)).toContain('Added in tab B')
+  })
+
+  it('ignores unreadable or unrelated storage events', () => {
+    const store = storeWith()
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: '{bad' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: 'other', newValue: '{}' }))
+    expect(store.tasks).toHaveLength(3)
+  })
+})
+
 describe('storage key', () => {
   it('uses ember:v1', () => {
     freshStore()

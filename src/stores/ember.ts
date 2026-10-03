@@ -7,7 +7,7 @@ import type {
   EmberData, FocusLog, Goal, Milestone, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
-import { readData, saveData } from '../core/persist'
+import { STORAGE_KEY, parseStored, readData, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
 import { tallyLogs } from '../core/tally'
 import { DEMO_SPEED, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
@@ -67,6 +67,15 @@ export const useEmberStore = defineStore('ember', () => {
   const persist = () => { if (storageWritable.value) saveData(snapshot()) }
   if (read.status !== 'ok') persist()
   watch([goals, tasks, logs, selection, timer, settings], persist, { deep: true })
+
+  // Another tab saved: adopt its data so our next save doesn't overwrite it.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (e.key !== STORAGE_KEY || !e.newValue) return
+      const d = parseStored(e.newValue)
+      if (d) replaceData(d)
+    })
+  }
 
   // — lookups —
   const taskById = (id: string): Task | null => tasks.value.find((t) => t.id === id) ?? null
