@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-dca67e65-d2be-4a57-b54e-3e1af256b93f/styles.css">
+<script src="_ds/modernist-dca67e65-d2be-4a57-b54e-3e1af256b93f/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg)}
+a{color:var(--color-accent)}a:hover{color:var(--color-accent-600)}
+@keyframes pop0{0%{transform:scale(.3)}60%{transform:scale(1.45)}100%{transform:scale(1)}}
+@keyframes pop1{0%{transform:scale(.3)}60%{transform:scale(1.45)}100%{transform:scale(1)}}
+@keyframes drop0{0%{transform:translateY(-220px);opacity:0}70%{transform:translateY(3px);opacity:1}100%{transform:translateY(0)}}
+@keyframes drop1{0%{transform:translateY(-220px);opacity:0}70%{transform:translateY(3px);opacity:1}100%{transform:translateY(0)}}
+@keyframes float0{0%{transform:translateY(8px);opacity:0}15%{opacity:1}100%{transform:translateY(-40px);opacity:0}}
+@keyframes float1{0%{transform:translateY(8px);opacity:0}15%{opacity:1}100%{transform:translateY(-40px);opacity:0}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+
+<nav class="nav" style="padding:var(--space-3) var(--space-6);gap:var(--space-6)">
+<span class="nav-brand" style="margin-right:var(--space-2)">Ember</span>
+<div style="display:flex;gap:var(--space-6);margin-right:auto">
+<button onClick="{{ tabToday.go }}" aria-current="{{ tabToday.cur }}" style="padding:4px 0;border:0;border-bottom:2px solid {{ tabToday.line }};background:none;font:inherit;font-size:14px;font-weight:700;color:{{ tabToday.color }};cursor:pointer;border-radius:0" style-hover="color:var(--color-accent)">Today</button>
+<button onClick="{{ tabGoals.go }}" aria-current="{{ tabGoals.cur }}" style="padding:4px 0;border:0;border-bottom:2px solid {{ tabGoals.line }};background:none;font:inherit;font-size:14px;font-weight:700;color:{{ tabGoals.color }};cursor:pointer;border-radius:0" style-hover="color:var(--color-accent)">Goals</button>
+<button onClick="{{ tabAct.go }}" aria-current="{{ tabAct.cur }}" style="padding:4px 0;border:0;border-bottom:2px solid {{ tabAct.line }};background:none;font:inherit;font-size:14px;font-weight:700;color:{{ tabAct.color }};cursor:pointer;border-radius:0" style-hover="color:var(--color-accent)">Activity</button>
+</div>
+<span style="font-size:13px">Wed 23 Sep 2026</span>
+</nav>
+
+<div style="position:relative;display:flex;flex-direction:column;background:{{ F.bg }};color:{{ F.color }};transition:background .3s">
+<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:var(--space-6);align-items:center;padding:var(--space-3) var(--space-6)">
+<span style="font:800 40px/1 var(--font-heading);font-variant-numeric:tabular-nums;letter-spacing:-.02em">{{ F.time }}</span>
+<div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:{{ F.subColor }}">{{ F.phaseLabel }}</span>
+<button onClick="{{ PK.open }}" title="Change what you're focusing on" style="display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;align-self:flex-start;padding:0;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-weight:700;font-size:16px;color:inherit;cursor:pointer;text-align:left;border-radius:0" style-hover="border-bottom-color:var(--color-accent)"><span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ F.selTitle }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex:none"><path d="m6 9 6 6 6-6"></path></svg></button>
+<span style="font-size:12px;color:{{ F.subColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ F.selSub }}</span>
+</div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><sc-if value="{{ F.demo }}"><span class="tag tag-accent" title="25 minutes run in about 25 seconds. Turn off in Tweaks.">Demo speed</span></sc-if><span style="font-size:13px;color:{{ F.subColor }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ F.todayText }}</span></div>
+<div style="display:flex;gap:var(--space-2)">
+<button class="btn btn-primary" onClick="{{ F.onStart }}"><sc-if value="{{ F.running }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="14" y="4" width="4" height="16"></rect><rect x="6" y="4" width="4" height="16"></rect></svg></sc-if><sc-if value="{{ F.notRunning }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg></sc-if>{{ F.startLabel }}</button>
+<button class="btn btn-secondary btn-icon" style="color:inherit;border-color:currentColor;background:transparent" onClick="{{ FM.enter }}" aria-label="Focus mode" title="Focus mode — full screen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>
+<sc-if value="{{ F.showReset }}"><button class="btn btn-ghost" style="color:inherit" onClick="{{ F.onReset }}">Reset</button></sc-if>
+<sc-if value="{{ F.showSkip }}"><button class="btn btn-ghost" style="color:inherit" onClick="{{ F.onSkip }}">Skip break</button></sc-if>
+</div>
+</div>
+<div style="height:4px;background:var(--color-neutral-300)"><div style="height:100%;width:{{ F.phasePct }};background:var(--color-accent);transition:width .25s linear"></div></div>
+<sc-if value="{{ F.toastOn }}"><div style="position:absolute;left:var(--space-6);bottom:-30px;z-index:2;font:800 16px/1 var(--font-heading);color:var(--color-accent-700);animation:{{ F.toastAnim }};pointer-events:none;white-space:nowrap">{{ F.toastText }}</div></sc-if>
+</div>
+
+<sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+<main style="flex:1;padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-8);border-top:2px solid var(--color-divider);min-width:0">
+<div style="display:flex;flex-direction:column;gap:var(--space-3)">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-4)"><span class="card-kicker">Working on</span><button class="btn btn-ghost" onClick="{{ T.openGoals }}" style="padding:2px 4px;font-size:13px">All goals<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div>
+<div style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);border-top:2px solid var(--color-text);border-bottom:2px solid var(--color-divider)">
+<sc-for list="{{ W.items }}" as="w" hint-placeholder-count="3">
+<div style="padding:var(--space-3) var(--space-4) var(--space-4);border-left:{{ w.edge }};display:flex;flex-direction:column;gap:var(--space-2);background:{{ w.bg }};transition:background .2s;min-width:0">
+<button onClick="{{ w.open }}" title="Open goal" style="display:flex;align-items:flex-start;gap:8px;padding:0;border:0;background:none;font:inherit;font-size:14px;font-weight:700;line-height:1.3;color:var(--color-text);cursor:pointer;text-align:left;border-radius:0" style-hover="color:var(--color-accent)"><span style="flex:none;width:10px;height:10px;margin-top:4px;background:{{ w.swatch }}"></span><span style="flex:1;min-width:0">{{ w.goal }}</span><span style="font-size:13px;color:var(--color-text)">{{ w.pct }}</span></button>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ w.msNum }}</span><span style="font:800 18px/1.2 var(--font-heading)">{{ w.ms }}</span></div>
+<div style="display:flex;gap:3px"><sc-for list="{{ w.segs }}" as="sg" hint-placeholder-count="3"><div style="flex:1;height:6px;background:{{ sg.bg }}"></div></sc-for></div>
+<div style="display:flex;align-items:center;gap:var(--space-2);margin-top:auto"><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:11px;color:var(--color-neutral-700)">Next step</span><span style="font-size:14px">{{ w.next }}</span></div><button onClick="{{ w.select }}" aria-label="Focus on this step" title="Focus on this step" style="flex:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:{{ w.focusColor }};cursor:pointer;border-radius:0" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></button></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:var(--space-8);align-items:start">
+<section style="display:flex;flex-direction:column;gap:var(--space-3);min-width:0">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap">
+<h4 style="margin:0">Today</h4>
+<div style="display:flex;align-items:center;gap:var(--space-3);font-size:13px;color:var(--color-neutral-700)">
+<div style="display:flex;gap:3px" title="Last 7 days"><sc-for list="{{ T.week }}" as="d" hint-placeholder-count="7"><span title="{{ d.tip }}" style="width:10px;height:10px;background:{{ d.bg }};box-shadow:{{ d.ring }};animation:{{ d.anim }}"></span></sc-for></div>
+<span>{{ T.streakText }}</span><span style="color:var(--color-text);font-weight:700">{{ T.summary }}</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2);margin-bottom:var(--space-1)">
+<div style="display:flex;gap:var(--space-2)"><input class="input" placeholder="Add a task…" value="{{ T.draft }}" onChange="{{ T.onDraft }}" onKeyDown="{{ T.onKey }}"><button class="btn btn-primary" onClick="{{ T.add }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center">
+<div class="seg">
+<label class="seg-opt"><input type="radio" name="tally-when" checked="{{ T.wToday }}" onChange="{{ T.setToday }}">Today</label>
+<label class="seg-opt"><input type="radio" name="tally-when" checked="{{ T.wTmrw }}" onChange="{{ T.setTmrw }}">Tomorrow</label>
+<label class="seg-opt"><input type="radio" name="tally-when" checked="{{ T.wDate }}" onChange="{{ T.setDate }}">Pick date</label>
+<label class="seg-opt"><input type="radio" name="tally-when" checked="{{ T.wSome }}" onChange="{{ T.setSome }}">Someday</label>
+</div>
+<sc-if value="{{ T.wDate }}"><input type="date" class="input" style="width:auto;min-height:33px;padding:4px 8px;font-size:13px" min="{{ T.minDate }}" value="{{ T.dateVal }}" onChange="{{ T.onDate }}"></sc-if>
+<sc-if value="{{ T.canHard }}" hint-placeholder-val="{{ true }}"><button onClick="{{ T.toggleHard }}" aria-pressed="{{ T.hard }}" title="Mark as a hard deadline" style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;border:1px solid {{ T.hardBorder }};background:{{ T.hardBg }};color:{{ T.hardColor }};border-radius:0" style-hover="border-color:var(--color-accent)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg>Deadline</button></sc-if>
+<select class="input" aria-label="Link to a goal" style="width:auto;min-height:33px;padding:4px 8px;font-size:13px" value="{{ T.goalVal }}" onChange="{{ T.onGoal }}">{{ T.goalOptions }}</select>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+<sc-for list="{{ T.tasks }}" as="t" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:22px minmax(0,1fr) auto 28px 28px;gap:var(--space-2) var(--space-3);align-items:center;padding:var(--space-2);border-bottom:1px solid var(--color-divider);background:{{ t.rowBg }}">
+<button onClick="{{ t.toggle }}" aria-label="Toggle task" style="width:22px;height:22px;padding:0;display:grid;place-items:center;cursor:pointer;border:2px solid {{ t.boxBorder }};background:{{ t.boxBg }};color:var(--color-bg);border-radius:0;animation:{{ t.anim }}" style-hover="border-color:var(--color-accent)"><sc-if value="{{ t.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></button>
+<div style="min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;text-decoration:{{ t.deco }};color:{{ t.color }}">{{ t.title }}</span><span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:11px;color:var(--color-neutral-700)"><span style="display:flex;align-items:center;gap:5px"><sc-if value="{{ t.hasGoal }}"><span style="flex:none;width:8px;height:8px;background:{{ t.swatch }}"></span></sc-if>{{ t.label }}</span><sc-if value="{{ t.hasNote }}"><span style="display:flex;align-items:center;gap:4px;font-weight:700;color:{{ t.noteColor }}"><sc-if value="{{ t.hard }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg></sc-if>{{ t.note }}</span></sc-if></span></div>
+<span style="font-size:12px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ t.spent }}</span>
+<button onClick="{{ t.defer }}" aria-label="Move to tomorrow" title="Move to tomorrow" style="flex:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;border-radius:0;visibility:{{ t.deferVis }}" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3"></path><path d="m11 18 6-6-6-6"></path><path d="M21 5v14"></path></svg></button>
+<button onClick="{{ t.select }}" aria-label="Focus on this task" title="Focus on this task" style="flex:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:{{ t.focusColor }};cursor:pointer;border-radius:0;visibility:{{ t.vis }}" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></button>
+</div>
+</sc-for>
+<sc-if value="{{ T.hasDone }}"><button onClick="{{ T.toggleDone }}" aria-expanded="{{ T.showDone }}" style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);border:0;border-bottom:1px solid var(--color-divider);background:transparent;font:inherit;font-size:13px;color:var(--color-neutral-700);cursor:pointer;text-align:left;border-radius:0" style-hover="background:var(--color-accent-100)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex:none;transform:{{ T.doneChev }};transition:transform .15s"><path d="m9 18 6-6-6-6"></path></svg>{{ T.doneLabel }}</button></sc-if>
+</div>
+</section>
+<section style="display:flex;flex-direction:column;gap:var(--space-3);min-width:0">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap"><h4 style="margin:0">Upcoming</h4><span style="font-size:13px;color:var(--color-neutral-700)">{{ U.summary }}</span></div>
+<div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider);max-height:min(640px,72vh);overflow-y:auto">
+<sc-for list="{{ U.groups }}" as="gr" hint-placeholder-count="5">
+<sc-if value="{{ gr.fixed }}" hint-placeholder-val="{{ true }}"><div style="position:sticky;top:0;z-index:1;background:var(--color-bg);display:flex;justify-content:space-between;gap:var(--space-2);padding:var(--space-3) var(--space-2) var(--space-1);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--color-divider)"><span>{{ gr.label }}</span><span style="font-weight:400;color:var(--color-neutral-700)">{{ gr.date }}</span></div></sc-if>
+<sc-if value="{{ gr.collapsible }}"><button onClick="{{ gr.toggle }}" aria-expanded="{{ gr.open }}" style="position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:var(--space-2);width:100%;padding:var(--space-3) var(--space-2) var(--space-1);border:0;border-bottom:1px solid var(--color-divider);background:var(--color-bg);font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--color-text);cursor:pointer;text-align:left;border-radius:0" style-hover="background:var(--color-accent-100)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex:none;transform:{{ gr.chev }};transition:transform .15s"><path d="m9 18 6-6-6-6"></path></svg><span>{{ gr.label }}</span><span style="margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--color-neutral-700)">{{ gr.date }}</span></button></sc-if>
+<sc-if value="{{ gr.open }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ gr.items }}" as="t" hint-placeholder-count="1">
+<div style="display:grid;grid-template-columns:18px minmax(0,1fr) 28px;gap:var(--space-3);align-items:center;padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">
+<button onClick="{{ t.toggle }}" aria-label="Toggle task" style="width:18px;height:18px;padding:0;display:grid;place-items:center;cursor:pointer;border:2px solid {{ t.boxBorder }};background:{{ t.boxBg }};color:var(--color-bg);border-radius:0;animation:{{ t.anim }}" style-hover="border-color:var(--color-accent)"><sc-if value="{{ t.done }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></button>
+<div style="min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;text-decoration:{{ t.deco }};color:{{ t.color }}">{{ t.title }}</span><span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:11px;color:var(--color-neutral-700)"><span style="display:flex;align-items:center;gap:5px"><sc-if value="{{ t.hasGoal }}"><span style="flex:none;width:8px;height:8px;background:{{ t.swatch }}"></span></sc-if>{{ t.label }}</span><sc-if value="{{ t.hasNote }}"><span style="display:flex;align-items:center;gap:4px;font-weight:700;color:{{ t.noteColor }}"><sc-if value="{{ t.hard }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg></sc-if>{{ t.note }}</span></sc-if></span></div>
+<button onClick="{{ t.pull }}" aria-label="Move to today" title="Move to today" style="flex:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;border-radius:0;visibility:{{ t.pullVis }}" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19V5"></path><path d="m13 6-6 6 6 6"></path><path d="M7 12h14"></path></svg></button>
+</div>
+</sc-for></sc-if>
+</sc-for>
+<sc-if value="{{ U.empty }}"><p style="margin:0;padding:var(--space-3) 0;font-size:13px;color:var(--color-neutral-700)">Nothing planned. Pick a date or Someday when you add a task.</p></sc-if>
+</div>
+</section>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{ isGoals }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:280px minmax(0,1fr);border-top:2px solid var(--color-divider)">
+<aside style="border-right:2px solid var(--color-divider);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-4)">
+<span class="card-kicker">Goals</span>
+<div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+<sc-for list="{{ GV.goals }}" as="g" hint-placeholder-count="3">
+<button onClick="{{ g.select }}" style="display:flex;flex-direction:column;gap:8px;align-items:stretch;text-align:left;padding:var(--space-3);border:0;border-bottom:1px solid var(--color-divider);background:{{ g.bg }};cursor:pointer;font:inherit;color:var(--color-text);border-radius:0" style-hover="background:var(--color-accent-100)">
+<span style="display:flex;justify-content:space-between;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px"><span style="flex:none;width:10px;height:10px;background:{{ g.swatch }}"></span>{{ g.title }}</span><span style="font-size:13px;font-weight:700">{{ g.pct }}</span></span>
+<span style="display:block;height:4px;background:var(--color-neutral-300)"><span style="display:block;height:100%;width:{{ g.pct }};background:{{ g.barColor }}"></span></span>
+<span style="font-size:12px;color:var(--color-neutral-700)">{{ g.meta }}</span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:auto">
+<span style="font-size:12px;font-weight:700">New goal</span>
+<div style="display:flex;gap:var(--space-2)"><input class="input" placeholder="e.g. Learn Three.js" value="{{ GV.goalDraft }}" onChange="{{ GV.onGoalDraft }}" onKeyDown="{{ GV.onGoalKey }}"><button class="btn btn-primary btn-icon" onClick="{{ GV.addGoal }}" aria-label="Add goal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button></div>
+</div>
+</aside>
+<main style="padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6);min-width:0">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-6);align-items:end">
+<div><span class="card-kicker">{{ GV.kicker }}</span><h2 style="margin:4px 0 0">{{ GV.title }}</h2></div>
+<div style="font:800 64px/.9 var(--font-heading);letter-spacing:-.03em">{{ GV.pct }}</div>
+</div>
+<div style="border:2px solid var(--color-divider)">
+<div style="display:flex;justify-content:space-between;padding:var(--space-2) var(--space-3);border-bottom:2px solid var(--color-divider);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700"><span>Readme · what done looks like</span><span style="font-weight:400;color:var(--color-neutral-700)">Click to edit</span></div>
+<textarea rows="2" value="{{ GV.outcome }}" onChange="{{ GV.onOutcome }}" placeholder="Describe the finish line — what will you be able to do?" style="display:block;width:100%;box-sizing:border-box;resize:none;border:0;padding:var(--space-3);background:transparent;font:inherit;font-size:15px;line-height:1.45;color:var(--color-text)" style-focus="outline:2px solid var(--color-accent);outline-offset:-2px"></textarea>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
+<div style="padding:var(--space-3) var(--space-3) var(--space-3) 0"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Focused</div><div style="font:800 28px/1.1 var(--font-heading);color:var(--color-accent-700)">{{ GV.spentFmt }}</div></div>
+<div style="padding:var(--space-3);border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Estimated</div><div style="font:800 28px/1.1 var(--font-heading)">{{ GV.estFmt }}</div></div>
+<div style="padding:var(--space-3);border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Left to go</div><div style="font:800 28px/1.1 var(--font-heading)">{{ GV.leftFmt }}</div></div>
+<div style="padding:var(--space-3);border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Accuracy</div><div style="font:800 28px/1.1 var(--font-heading)">{{ GV.accuracy }}</div></div>
+</div>
+<sc-if value="{{ GV.hasTasks }}"><div style="display:flex;flex-direction:column;gap:var(--space-2)"><span class="card-kicker">Tasks for this goal</span><div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+<sc-for list="{{ GV.tasks }}" as="t" hint-placeholder-count="1">
+<div style="display:grid;grid-template-columns:22px minmax(0,1fr) auto 28px;gap:var(--space-3);align-items:center;padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);background:{{ t.rowBg }}">
+<button onClick="{{ t.toggle }}" aria-label="Toggle task" style="width:22px;height:22px;padding:0;display:grid;place-items:center;cursor:pointer;border:2px solid {{ t.boxBorder }};background:{{ t.boxBg }};color:var(--color-bg);border-radius:0;animation:{{ t.anim }}" style-hover="border-color:var(--color-accent)"><sc-if value="{{ t.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></button>
+<div style="min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;text-decoration:{{ t.deco }};color:{{ t.color }}">{{ t.title }}</span><span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:11px;color:var(--color-neutral-700)"><span style="display:flex;align-items:center;gap:5px"><sc-if value="{{ t.hasGoal }}"><span style="flex:none;width:8px;height:8px;background:{{ t.swatch }}"></span></sc-if>{{ t.label }}</span><sc-if value="{{ t.hasNote }}"><span style="display:flex;align-items:center;gap:4px;font-weight:700;color:{{ t.noteColor }}"><sc-if value="{{ t.hard }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg></sc-if>{{ t.note }}</span></sc-if></span></div>
+<span style="font-size:12px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ t.spent }}</span>
+<button onClick="{{ t.select }}" aria-label="Focus on this task" title="Focus on this task" style="flex:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:{{ t.focusColor }};cursor:pointer;border-radius:0;visibility:{{ t.vis }}" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></button>
+</div>
+</sc-for>
+</div><sc-if value="{{ GV.moreTasks }}"><button class="btn btn-ghost" onClick="{{ GV.toggleTasks }}" style="align-self:flex-start;padding-left:0">{{ GV.moreLabel }}</button></sc-if></div></sc-if>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-4);font-size:12px;color:var(--color-neutral-700)">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-text)"></span>Earlier sessions</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--color-accent)"></span>Today</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;box-shadow:inset 0 0 0 2px var(--color-neutral-400)"></span>Estimate remaining</span>
+<span>1 block = 25 min</span>
+</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ GV.rows }}" as="m" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:32px minmax(0,1fr);gap:var(--space-4)">
+<div style="position:relative">
+<div style="position:absolute;top:0;bottom:0;left:15px;width:2px;background:{{ m.line }}"></div>
+<div style="position:relative;width:32px;height:32px;display:grid;place-items:center;background:{{ m.mBg }};color:{{ m.mColor }};box-shadow:inset 0 0 0 2px {{ m.mBorder }};font:800 13px/1 var(--font-heading)">
+<sc-if value="{{ m.complete }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+<sc-if value="{{ m.showNum }}"><span>{{ m.num }}</span></sc-if>
+</div>
+</div>
+<div style="padding:4px 0 var(--space-6);display:flex;flex-direction:column;gap:var(--space-3);min-width:0">
+<button onClick="{{ m.toggleExpand }}" style="display:flex;align-items:center;gap:var(--space-3);padding:0;border:0;background:none;font:inherit;color:var(--color-text);cursor:pointer;text-align:left">
+<span style="font:800 20px/1.2 var(--font-heading)">{{ m.title }}</span>
+<sc-if value="{{ m.current }}"><span class="tag tag-accent">You are here</span></sc-if>
+<span style="margin-left:auto;font-size:12px;color:var(--color-neutral-700);white-space:nowrap">{{ m.ledger }}</span>
+<span style="font-size:13px;font-weight:700;white-space:nowrap">{{ m.count }}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex:none;transform:{{ m.chev }};transition:transform .2s"><path d="m6 9 6 6 6-6"></path></svg>
+</button>
+<div style="display:flex;gap:3px"><sc-for list="{{ m.segs }}" as="s" hint-placeholder-count="3"><div style="flex:1;height:8px;background:{{ s.bg }}"></div></sc-for></div>
+<sc-if value="{{ m.expanded }}">
+<div style="display:flex;flex-direction:column;border-top:1px solid var(--color-divider)">
+<sc-for list="{{ m.steps }}" as="s" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:22px minmax(0,1fr) minmax(0,auto) 104px 28px;gap:var(--space-3);align-items:center;padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);background:{{ s.rowBg }}">
+<button onClick="{{ s.toggle }}" aria-label="Toggle step" style="width:22px;height:22px;padding:0;display:grid;place-items:center;cursor:pointer;border:2px solid {{ s.boxBorder }};background:{{ s.boxBg }};color:var(--color-bg);border-radius:0;animation:{{ s.anim }}" style-hover="border-color:var(--color-accent)"><sc-if value="{{ s.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></button>
+<span style="font-size:14px;text-decoration:{{ s.deco }};color:{{ s.color }}">{{ s.t }}</span>
+<div style="display:flex;flex-wrap:wrap;gap:3px;max-width:220px"><sc-for list="{{ s.blocks }}" as="b" hint-placeholder-count="3"><div style="width:14px;height:14px;background:{{ b.bg }};box-shadow:inset 0 0 0 2px {{ b.border }};animation:{{ b.anim }}"></div></sc-for></div>
+<div style="display:flex;flex-direction:column;font-size:12px;font-variant-numeric:tabular-nums"><span>{{ s.ledger }}</span><span style="color:{{ s.noteColor }};font-weight:{{ s.noteWeight }}">{{ s.note }}</span></div>
+<button onClick="{{ s.select }}" aria-label="Focus on this step" title="Focus on this step" style="width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:{{ s.focusColor }};cursor:pointer;border-radius:0;visibility:{{ s.vis }}" style-hover="background:var(--color-accent-200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></button>
+</div>
+</sc-for>
+<sc-if value="{{ m.adding }}"><div style="padding-top:var(--space-2)"><input class="input" autoFocus="{{ true }}" placeholder="New step (estimated 2 sessions), Enter to add" value="{{ GV.draft }}" onChange="{{ GV.onDraft }}" onKeyDown="{{ GV.onKey }}" onBlur="{{ GV.cancel }}"></div></sc-if>
+<sc-if value="{{ m.showAdd }}"><button class="btn btn-ghost" onClick="{{ m.startAdd }}" style="align-self:flex-start;padding-left:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add step</button></sc-if>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-for>
+<div style="display:grid;grid-template-columns:32px minmax(0,1fr);gap:var(--space-4)">
+<div style="position:relative"><div style="position:absolute;top:0;height:16px;left:15px;width:2px;background:var(--color-neutral-300)"></div></div>
+<div style="padding-bottom:var(--space-6)">
+<sc-if value="{{ GV.addingMs }}"><input class="input" style="max-width:320px" autoFocus="{{ true }}" placeholder="Milestone name, Enter to add" value="{{ GV.draft }}" onChange="{{ GV.onDraft }}" onKeyDown="{{ GV.onKey }}" onBlur="{{ GV.cancel }}"></sc-if>
+<sc-if value="{{ GV.showAddMs }}"><button class="btn btn-secondary" onClick="{{ GV.startMs }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add milestone</button></sc-if>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:32px minmax(0,1fr);gap:var(--space-4);align-items:start">
+<div style="width:32px;height:32px;display:grid;place-items:center;background:{{ GV.fBg }};color:{{ GV.fColor }};box-shadow:inset 0 0 0 2px {{ GV.fBorder }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:2px"><span style="font:800 20px/1.2 var(--font-heading)">{{ GV.fTitle }}</span><span style="font-size:14px;color:var(--color-neutral-800);text-wrap:pretty">{{ GV.fText }}</span></div>
+</div>
+</div>
+</main>
+</div>
+</sc-if>
+
+<sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+<main style="flex:1;padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-8);border-top:2px solid var(--color-divider);min-width:0">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:var(--space-4);flex-wrap:wrap">
+<div><span class="card-kicker">{{ AC.kicker }}</span><h2 style="margin:4px 0 0">{{ AC.heatTitle }}</h2></div>
+<div class="seg">
+<label class="seg-opt"><input type="radio" name="tally-heat" checked="{{ AC.focusMode }}" onChange="{{ AC.setFocus }}">Focus time</label>
+<label class="seg-opt"><input type="radio" name="tally-heat" checked="{{ AC.doneMode }}" onChange="{{ AC.setDone }}">Things done</label>
+</div>
+</div>
+<div style="max-width:1100px;display:flex;flex-direction:column;gap:6px">
+<div style="display:grid;grid-template-columns:28px repeat(53,minmax(0,1fr));gap:3px;height:12px"><sc-for list="{{ AC.heatMonths }}" as="l" hint-placeholder-count="12"><span style="grid-column:{{ l.col }};grid-row:1;font-size:10px;line-height:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-neutral-700)">{{ l.m }}</span></sc-for></div>
+<div style="display:grid;grid-template-columns:28px repeat(53,minmax(0,1fr));grid-template-rows:repeat(7,auto);grid-auto-flow:column;gap:3px">
+<span></span><span style="align-self:center;font-size:9px;line-height:1;color:var(--color-neutral-700)">Mon</span><span></span><span style="align-self:center;font-size:9px;line-height:1;color:var(--color-neutral-700)">Wed</span><span></span><span style="align-self:center;font-size:9px;line-height:1;color:var(--color-neutral-700)">Fri</span><span></span>
+<sc-for list="{{ AC.heat }}" as="c" hint-placeholder-count="369"><div title="{{ c.tip }}" style="aspect-ratio:1;background:{{ c.bg }};box-shadow:{{ c.ring }};animation:{{ c.anim }}"></div></sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:4px;margin-left:31px;font-size:11px;color:var(--color-neutral-700)">Less<span style="width:12px;height:12px;background:var(--color-neutral-300);margin-left:4px"></span><span style="width:12px;height:12px;background:var(--color-accent-200)"></span><span style="width:12px;height:12px;background:var(--color-accent-400)"></span><span style="width:12px;height:12px;background:var(--color-accent)"></span><span style="width:12px;height:12px;background:var(--color-accent-800);margin-right:4px"></span>{{ AC.legendMore }}</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:2px solid var(--color-divider)">
+<sc-for list="{{ AC.stats }}" as="s" hint-placeholder-count="4"><div style="padding:var(--space-3) var(--space-3) 0 {{ s.padL }};border-left:{{ s.edge }}"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ s.l }}</div><div style="font:800 32px/1.1 var(--font-heading)">{{ s.v }}</div></div></sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:var(--space-8);align-items:start;border-top:2px solid var(--color-divider);padding-top:var(--space-6)">
+<div style="display:flex;flex-direction:column;gap:var(--space-2);min-width:0">
+<div><span class="card-kicker">Done wall · last {{ AC.weeks }} weeks</span><h3 style="margin:4px 0 0">{{ AC.headline }}</h3></div>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);font-size:12px;color:var(--color-neutral-700);margin-top:var(--space-2)">
+<sc-for list="{{ AC.legend }}" as="l" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:{{ l.bg }}"></span>{{ l.name }}</span></sc-for>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;box-shadow:inset 0 0 0 2px var(--color-text)"></span>Tasks</span>
+</div>
+<div style="display:flex;gap:6px;align-items:flex-end;height:{{ AC.chartH }};border-bottom:2px solid var(--color-text);margin-top:var(--space-3)">
+<sc-for list="{{ AC.cols }}" as="c" hint-placeholder-count="12"><div style="flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column-reverse;gap:3px;background:{{ c.colBg }}"><sc-for list="{{ c.bricks }}" as="b" hint-placeholder-count="0"><div title="{{ b.tip }}" style="flex:none;height:18px;background:{{ b.bg }};box-shadow:{{ b.ring }};animation:{{ b.anim }}"></div></sc-for></div></sc-for>
+</div>
+<div style="display:flex;gap:6px"><sc-for list="{{ AC.cols }}" as="c" hint-placeholder-count="12"><span style="flex:1 1 0;min-width:0;font-size:11px;white-space:nowrap;overflow:hidden;color:{{ c.labelColor }}">{{ c.label }}</span></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:2px solid var(--color-divider);margin-top:var(--space-3)">
+<div style="padding:var(--space-3) var(--space-3) 0 0"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">This week</div><div style="font:800 32px/1.1 var(--font-heading);color:var(--color-accent-700)">{{ AC.thisWeek }}</div></div>
+<div style="padding:var(--space-3) var(--space-3) 0;border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Best week</div><div style="font:800 32px/1.1 var(--font-heading)">{{ AC.best }}</div></div>
+<div style="padding:var(--space-3) var(--space-3) 0;border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Weeks in a row</div><div style="font:800 32px/1.1 var(--font-heading)">{{ AC.streak }}</div></div>
+<div style="padding:var(--space-3) var(--space-3) 0;border-left:2px solid var(--color-divider)"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Milestones done</div><div style="font:800 32px/1.1 var(--font-heading)">{{ AC.msDone }}</div></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;min-width:0">
+<span class="card-kicker" style="margin-bottom:var(--space-2)">Activity log</span>
+<div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+<sc-for list="{{ AC.feed }}" as="e" hint-placeholder-count="9">
+<div style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:var(--space-2);padding:var(--space-2) 0;border-bottom:1px solid var(--color-divider)">
+<sc-if value="{{ e.isDone }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="3" stroke-linecap="square" style="margin-top:2px"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+<sc-if value="{{ e.isFocus }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" style="margin-top:2px"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></sc-if>
+<div style="min-width:0"><div style="font-size:13px;line-height:1.35">{{ e.text }}</div><div style="display:flex;flex-wrap:wrap;gap:0 8px;font-size:11px;color:var(--color-neutral-700);margin-top:2px"><span style="font-variant-numeric:tabular-nums;font-weight:700">{{ e.hash }}</span><span>{{ e.src }}</span><span>{{ e.when }}</span></div></div>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ AC.moreFeed }}"><button class="btn btn-ghost" onClick="{{ AC.showEarlier }}" style="align-self:flex-start;padding-left:0">Show earlier</button></sc-if>
+</div>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{ PK.isOpen }}" hint-placeholder-val="{{ false }}">
+<div class="dialog-backdrop" onClick="{{ PK.close }}" style="z-index:200;place-items:start center;padding-top:12vh">
+<div class="dialog" role="dialog" aria-label="Pick what to focus on" onClick="{{ PK.stop }}" style="width:min(560px,100%);max-height:72vh;padding:0;gap:0;color:var(--color-text);border:2px solid var(--color-text)">
+<div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:2px solid var(--color-divider)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input autoFocus="{{ true }}" placeholder="{{ PK.ph }}" value="{{ PK.q }}" onChange="{{ PK.onQ }}" onKeyDown="{{ PK.onKey }}" aria-label="Search" style="flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--color-text);outline:none">
+<div class="seg" style="flex:none">
+<label class="seg-opt"><input type="radio" name="ember-pick" checked="{{ PK.tTasks }}" onChange="{{ PK.setTasks }}">Tasks</label>
+<label class="seg-opt"><input type="radio" name="ember-pick" checked="{{ PK.tGoals }}" onChange="{{ PK.setGoals }}">Goals</label>
+</div>
+</div>
+<div style="overflow-y:auto;display:flex;flex-direction:column;padding-bottom:var(--space-2)">
+<sc-for list="{{ PK.sections }}" as="sec" hint-placeholder-count="3">
+<div style="position:sticky;top:0;z-index:1;background:var(--color-surface);display:flex;justify-content:space-between;padding:var(--space-3) var(--space-4) var(--space-1);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--color-divider)"><span>{{ sec.label }}</span><span style="font-weight:400;color:var(--color-neutral-700)">{{ sec.count }}</span></div>
+<sc-for list="{{ sec.items }}" as="it" hint-placeholder-count="3">
+<button onClick="{{ it.pick }}" style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:var(--space-3);align-items:center;padding:var(--space-2) var(--space-4);border:0;border-bottom:1px solid var(--color-divider);background:{{ it.bg }};font:inherit;color:var(--color-text);cursor:pointer;text-align:left;border-radius:0" style-hover="background:var(--color-accent-100)">
+<span style="width:10px;height:10px;background:{{ it.swatch }};box-shadow:{{ it.ring }}"></span>
+<span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:{{ it.weight }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.title }}</span><span style="font-size:12px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.meta }}</span></span>
+<sc-if value="{{ it.cur }}"><span class="tag tag-accent">Current</span></sc-if>
+</button>
+</sc-for>
+</sc-for>
+<sc-if value="{{ PK.empty }}"><p style="margin:0;padding:var(--space-4);font-size:14px;color:var(--color-neutral-700)">Nothing matches “{{ PK.q }}”.</p></sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ FM.open }}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-label="Focus mode" style="position:fixed;inset:0;z-index:100;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;background:var(--color-text);color:var(--color-bg);overflow:hidden">
+<sc-if value="{{ FM.showVideo }}"><div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;filter:grayscale(1)"><iframe src="{{ FM.src }}" title="Background video" allow="autoplay; encrypted-media" tabIndex="-1" style="position:absolute;top:50%;left:50%;width:max(100vw,177.78vh);height:max(100vh,56.25vw);transform:translate(-50%,-50%);border:0"></iframe></div></sc-if>
+<div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:color-mix(in oklch,var(--color-text) 62%,transparent)"></div>
+<div style="position:relative;display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);border-bottom:2px solid color-mix(in oklch,var(--color-bg) 35%,transparent)">
+<span style="font:800 18px/1 var(--font-heading)">Ember</span><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">Focus mode</span>
+<button class="btn btn-ghost" onClick="{{ FM.exit }}" style="margin-left:auto;color:inherit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>Exit · Esc</button>
+</div>
+<div style="position:relative;display:flex;flex-direction:column;justify-content:center;gap:var(--space-4);padding:var(--space-8);min-width:0">
+<span style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700">{{ F.phaseLabel }}</span>
+<span style="font:800 clamp(96px,18vw,220px)/.85 var(--font-heading);letter-spacing:-.04em;font-variant-numeric:tabular-nums">{{ F.time }}</span>
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+<button onClick="{{ PK.open }}" title="Change what you're focusing on" style="display:flex;align-items:center;gap:var(--space-3);align-self:flex-start;max-width:100%;padding:0;border:0;border-bottom:2px solid transparent;background:none;font:800 clamp(24px,3vw,40px)/1.1 var(--font-heading);color:inherit;cursor:pointer;text-align:left;border-radius:0" style-hover="border-bottom-color:var(--color-accent)"><span style="text-wrap:pretty">{{ F.selTitle }}</span><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex:none"><path d="m6 9 6 6 6-6"></path></svg></button>
+<span style="font-size:15px">{{ F.selSub }}</span>
+<sc-if value="{{ FM.hasThen }}"><span style="font-size:15px;opacity:.85">{{ FM.thenText }}</span></sc-if>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-4)">
+<button class="btn btn-primary" onClick="{{ F.onStart }}" style="min-width:160px;justify-content:flex-start">{{ F.startLabel }}</button>
+<sc-if value="{{ FM.canDone }}"><button class="btn btn-secondary" onClick="{{ FM.markDone }}" style="color:inherit;border-color:currentColor;background:transparent"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M20 6 9 17l-5-5"></path></svg>Mark done</button></sc-if>
+<sc-if value="{{ F.showSkip }}"><button class="btn btn-ghost" style="color:inherit" onClick="{{ F.onSkip }}">Skip break</button></sc-if>
+</div>
+</div>
+<div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-4);padding:var(--space-4) var(--space-8);border-top:2px solid color-mix(in oklch,var(--color-bg) 35%,transparent);background:color-mix(in oklch,var(--color-text) 70%,transparent)">
+<span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700">Background</span>
+<div class="seg">
+<label class="seg-opt"><input type="radio" name="ember-bg" checked="{{ FM.bgVideo }}" onChange="{{ FM.setVideo }}">Video</label>
+<label class="seg-opt"><input type="radio" name="ember-bg" checked="{{ FM.bgOff }}" onChange="{{ FM.setOff }}">Off</label>
+</div>
+<button class="btn btn-ghost" onClick="{{ FM.toggleSound }}" aria-pressed="{{ FM.muted }}" style="color:inherit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"></path><sc-if value="{{ FM.muted }}"><path d="m22 9-6 6"></path><path d="m16 9 6 6"></path></sc-if></svg>{{ FM.soundLabel }}</button>
+<div style="display:flex;gap:var(--space-2);flex:1 1 320px;max-width:520px;margin-left:auto">
+<input class="input" placeholder="Paste a YouTube link" value="{{ FM.draft }}" onChange="{{ FM.onDraft }}" onKeyDown="{{ FM.onKey }}" aria-label="YouTube link" style="background:var(--color-bg);color:var(--color-text)">
+<button class="btn btn-primary" onClick="{{ FM.apply }}">Play</button>
+</div>
+<span style="flex-basis:100%;font-size:12px">Now: {{ FM.current }}<sc-if value="{{ FM.err }}"><span style="font-weight:700"> · That doesn't look like a YouTube link</span></sc-if></span>
+</div>
+<div style="position:relative;height:6px;background:color-mix(in oklch,var(--color-bg) 25%,transparent)"><div style="height:100%;width:{{ F.phasePct }};background:var(--color-accent);transition:width .25s linear"></div></div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;fastTimer&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Timer&quot;},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;25 / 5&quot;,&quot;50 / 10&quot;],&quot;default&quot;:&quot;25 / 5&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Timer&quot;},&quot;showFuture&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Charts&quot;},&quot;wallWeeks&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:4,&quot;max&quot;:26,&quot;step&quot;:1,&quot;default&quot;:12,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Charts&quot;}}">
+const TODAY = 265, DAYS = 365;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MLEN = [31,28,31,30,31,30,31,31,30,31,30,31];
+const MSTART = [0,31,59,90,120,151,181,212,243,273,304,334];
+const rng = seed => { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
+const HIST = (() => { const r = rng(11); return Array.from({ length: DAYS }, (_, i) => {
+  if (i >= TODAY) return 0; const we = [0, 6].includes((4 + i) % 7);
+  if (i < TODAY - 18 && r() < (we ? 0.35 : 0.1)) return 0;
+  return Math.max(1, Math.round((we ? 2 : 4.5) * (0.55 + (i / DAYS) * 0.7) * (0.5 + r()))); }); })();
+const HSUM = HIST.reduce((a, b) => a + b, 0);
+const FOCUS = (() => { const r = rng(7); return Array.from({ length: DAYS }, (_, i) => {
+  if (i >= TODAY) return 0; const we = [0, 6].includes((4 + i) % 7);
+  if (i < TODAY - 12 && r() < (we ? 0.55 : 0.18)) return 0;
+  return 25 * Math.max(1, Math.round((we ? 1.5 : 3) * (0.6 + i / DAYS * 0.8) * (0.4 + r()))); }); })();
+const FSUM = FOCUS.reduce((a, b) => a + b, 0);
+const SEED = [
+  ['Send Q3 invoice to Halden & Co.', 'Work', true, 0, true, null],
+  ['Water the plants', 'Home', true, 0, false, null],
+  ['Book dentist appointment', 'Health', false, -2, false, null],
+  ['Renew car insurance', 'Personal', false, 0, true, null],
+  ['Book Spanish tutor for October', '', false, 0, false, 1],
+  ['Review pull request #482', 'Work', false, 0, false, null],
+  ['30-minute run', 'Health', false, 0, false, null],
+  ['Call the landlord about the boiler', 'Home', false, 1, false, null],
+  ['Submit September expenses', 'Work', false, 2, true, null],
+  ['Order cold-press paper', '', false, 3, false, 2],
+  ['Plan Q4 roadmap review', 'Work', false, 5, false, null],
+  ['Pay council tax', 'Personal', false, 6, true, null],
+  ['Buy Mum’s birthday present', 'Personal', false, 9, true, null],
+  ['Car service', 'Home', false, 16, false, null],
+  ['Try a sourdough starter', 'Home', false, null, false, null],
+  ['Read “Visual Display of Quantitative Information”', '', false, null, false, 0],
+  ['Sort out old phone photos', 'Personal', false, null, false, null],
+];
+const L_W = w => TODAY - w * 7 - (w === 0 ? 1 : 0);
+const L_SEED = [
+  ['Learn D3.js', 'Build and publish an interactive, animated chart of a real dataset — starting from a blank file, no tutorial open.', [
+    ['Foundations', [['SVG shapes & paths', 11], ['Selections & data joins', 10], ['Scales & axes', 9]]],
+    ['First charts', [['Bar chart from a CSV', 7], ['Line chart with tooltips', 5], ['Scatter plot with zoom', 2], ['Reusable chart function']]],
+    ['Motion & interaction', [['Transitions & easing'], ['Keyed enter / update / exit'], ['Brushing & linked views']]],
+    ['Capstone', [['Choose a dataset'], ['Sketch the chart on paper'], ['Build it'], ['Publish & write it up']]],
+  ]],
+  ['Speak Spanish at B1', 'Hold a 20-minute conversation with a native speaker on everyday topics without switching to English.', [
+    ['Basics', [['Present tense', 11], ['500 core words', 10], ['Pronunciation drills', 8]]],
+    ['Past tenses', [['Preterite', 6], ['Imperfect', 4], ['Preterite vs imperfect', 3]]],
+    ['Conversation', [['8 tutor sessions', 1], ['A series with Spanish subtitles', 0], ['30-day journal']]],
+    ['Exam', [['Mock DELE B1 paper'], ['Book the exam']]],
+  ]],
+  ['Learn watercolour', 'Paint a finished landscape from one of my own photos — good enough to frame.', [
+    ['Control', [['Flat & graded washes', 9], ['Wet-on-wet', 6], ['Colour mixing chart', 2]]],
+    ['Studies', [['Ten skies'], ['Trees & foliage'], ['Water reflections']]],
+    ['Final piece', [['Pick the photo'], ['Value sketch'], ['Paint it']]],
+  ]],
+];
+const fmt = n => n.toLocaleString('en-US');
+const pad2 = n => String(n).padStart(2, '0');
+const fmtM = m => m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}`;
+const dayLabel = d => new Date(2026, 0, 1 + d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const isoOf = d => { const x = new Date(2026, 0, 1 + d); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; };
+const dayOf = s => { const [y, m, dd] = s.split('-').map(Number); return Math.round((new Date(y, m - 1, dd) - new Date(2026, 0, 1)) / 864e5); };
+const wdLong = d => new Date(2026, 0, 1 + d).toLocaleDateString('en-US', { weekday: 'long' });
+const hsh = s => { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+const msDone = m => m.steps.length > 0 && m.steps.every(s => s.d != null);
+const gStats = g => { const all = g.ms.flatMap(m => m.steps), done = all.filter(s => s.d != null).length;
+  return { done, total: all.length, pct: all.length ? Math.round(done / all.length * 100) : 0, msDone: g.ms.filter(msDone).length, cur: g.ms.findIndex(m => !msDone(m)) }; };
+const GC = ['var(--color-accent)', 'var(--color-text)', 'var(--color-accent-300)', 'var(--color-neutral-500)'];
+const mapStep = (goals, p, fn) => goals.map((g, i) => i !== p.gi ? g : { ...g, ms: g.ms.map((m, j) => j !== p.mi ? m : { ...m, steps: m.steps.map((s, l) => l !== p.si ? s : fn(s)) }) });
+const nextOpen = (goals, gi) => { const g = goals[gi]; if (!g) return null;
+  for (let mi = 0; mi < g.ms.length; mi++) for (let si = 0; si < g.ms[mi].steps.length; si++) if (g.ms[mi].steps[si].d == null) return { k: 's', gi, mi, si };
+  return null; };
+const mkState = () => {
+  const goals = L_SEED.map(([title, outcome, ms]) => ({ title, outcome, ms: ms.map(([mt, steps]) => ({ title: mt, steps: steps.map(([t, w]) => {
+    const h = hsh(t), est = 25 * (2 + h % 4), d = w == null ? null : L_W(w);
+    return { t, d, est, min: d == null ? 0 : Math.max(25, est + 25 * ((h >> 3) % 3 - 1)), today: 0 }; }) })) }));
+  goals.forEach((g, gi) => { const p = nextOpen(goals, gi); if (p) g.ms[p.mi].steps[p.si].min = 50; });
+  const sel = nextOpen(goals, 0), st = goals[0].ms[sel.mi].steps[sel.si]; st.today = 50;
+  return { view: 'today', goals, tasks: SEED.map((t, i) => ({ id: i, title: t[0], tag: t[1], done: t[2], min: 0, due: t[3] == null ? null : TODAY + t[3], hard: t[4], gi: t[5], doneDay: t[2] ? TODAY : null })), nextId: SEED.length,
+    sel, running: false, phase: 'focus', left: 1500, today: 50, sessions: 2, pulse: 0,
+    log: [{ d: TODAY, t: st.t, src: goals[0].title, min: 25 }, { d: TODAY, t: st.t, src: goals[0].title, min: 25 }],
+    active: 0, expanded: {}, adding: null, draft: '', goalDraft: '', taskDraft: '', taskWhen: 'today', taskDate: isoOf(TODAY + 2), taskHard: false, taskGoal: '', heatMode: 'focus', tp: 0, dp: 0, lastKey: '', lastOn: false, doneOpen: false, openGroups: {}, gTasksAll: {}, feedN: 10,
+    focusMode: false, ytUrl: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', ytDraft: '', ytErr: false, ytMuted: true, bgMode: 'video', pickOpen: false, pickQ: '' };
+};
+
+const ytId = s => { s = (s || '').trim(); if (/^[\w-]{11}$/.test(s)) return s; const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/); return m ? m[1] : null; };
+class Component extends DCLogic {
+  state = mkState();
+  componentDidMount() { this._tk = setInterval(() => this.tick(), 250);
+    this._kd = e => { if (e.key !== 'Escape') return; if (this.state.pickOpen) this.setState({ pickOpen: false }); else if (this.state.focusMode) this.setState({ focusMode: false }); }; window.addEventListener('keydown', this._kd); }
+  componentWillUnmount() { clearInterval(this._tk); window.removeEventListener('keydown', this._kd); }
+  componentDidUpdate(prev) {
+    if (prev.session !== this.props.session && !this.state.running) { const L = this.lens(); this.setState(o => ({ left: o.phase === 'focus' ? L.focus : L.brk })); }
+  }
+  lens() { return String(this.props.session ?? '25 / 5').startsWith('50') ? { focus: 3000, brk: 600 } : { focus: 1500, brk: 300 }; }
+  tick() {
+    const o = this.state; if (!o.running) return;
+    const left = o.left - ((this.props.fastTimer ?? true) ? 15 : 0.25);
+    if (left <= 0) this.complete(); else this.setState({ left });
+  }
+  complete() {
+    const o = this.state, L = this.lens();
+    if (o.phase === 'break') return this.setState({ phase: 'focus', left: L.focus, running: false });
+    const S = o.sel, add = L.focus / 60;
+    let goals = o.goals, tasks = o.tasks, t = 'Unassigned', src = 'No step picked';
+    if (S && S.k === 's' && goals[S.gi]?.ms[S.mi]?.steps[S.si]) {
+      goals = mapStep(goals, S, s => ({ ...s, min: s.min + add, today: s.today + add })); t = goals[S.gi].ms[S.mi].steps[S.si].t; src = goals[S.gi].title;
+    } else if (S && S.k === 't') {
+      const tk = tasks.find(x => x.id === S.id); if (tk) { tasks = tasks.map(x => x.id === S.id ? { ...x, min: x.min + add } : x); t = tk.title; src = tk.gi != null ? goals[tk.gi].title : `Task · ${tk.tag}`; }
+    }
+    this.setState(s => ({ goals, tasks, today: s.today + add, sessions: s.sessions + 1, pulse: s.pulse + 1, phase: 'break', left: L.brk, running: false,
+      log: [{ d: TODAY, t, src, min: add }, ...s.log] }));
+  }
+  toggleStep(gi, mi, si) {
+    this.setState(o => { const on = o.goals[gi].ms[mi].steps[si].d == null;
+      const goals = mapStep(o.goals, { gi, mi, si }, s => ({ ...s, d: on ? TODAY : null }));
+      let sel = o.sel; if (on && sel && sel.k === 's' && sel.gi === gi && sel.mi === mi && sel.si === si) sel = nextOpen(goals, gi);
+      return { goals, sel, tp: o.tp + 1, dp: on ? o.dp + 1 : o.dp, lastKey: `s${gi}-${mi}-${si}`, lastOn: on }; });
+  }
+  toggleTask(id) {
+    this.setState(o => { const on = !o.tasks.find(x => x.id === id).done;
+      return { tasks: o.tasks.map(x => x.id === id ? { ...x, done: on, doneDay: on ? TODAY : null } : x), sel: on && o.sel && o.sel.k === 't' && o.sel.id === id ? null : o.sel,
+        tp: o.tp + 1, dp: on ? o.dp + 1 : o.dp, lastKey: `t${id}`, lastOn: on }; });
+  }
+  addTask() { const o = this.state, v = o.taskDraft.trim(); if (!v) return;
+    const due = o.taskWhen === 'someday' ? null : o.taskWhen === 'tomorrow' ? TODAY + 1 : o.taskWhen === 'date' ? Math.max(TODAY, dayOf(o.taskDate)) : TODAY;
+    this.setState(s => ({ tasks: [...s.tasks, { id: s.nextId, title: v, tag: 'Inbox', done: false, min: 0, due, hard: due != null && s.taskHard, gi: s.taskGoal === '' ? null : +s.taskGoal, doneDay: null }], nextId: s.nextId + 1, taskDraft: '', taskHard: false })); }
+  moveTask(id, due) { this.setState(o => ({ tasks: o.tasks.map(x => x.id === id ? { ...x, due } : x) })); }
+  addGoal() { const v = this.state.goalDraft.trim(); if (!v) return;
+    this.setState(o => ({ goals: [...o.goals, { title: v, outcome: '', ms: [{ title: 'Getting started', steps: [] }] }], active: o.goals.length, goalDraft: '', adding: 0, draft: '' })); }
+  commit() {
+    const o = this.state, v = o.draft.trim(); if (!v || o.adding === null) return;
+    const upd = fn => o.goals.map((g, i) => i === o.active ? fn(g) : g);
+    if (o.adding === 'ms') this.setState({ goals: upd(g => ({ ...g, ms: [...g.ms, { title: v, steps: [] }] })), draft: '' });
+    else { const mi = o.adding; this.setState({ goals: upd(g => ({ ...g, ms: g.ms.map((m, i) => i === mi ? { ...m, steps: [...m.steps, { t: v, d: null, est: 50, min: 0, today: 0 }] } : m) })), draft: '' }); }
+  }
+
+  renderVals() {
+    const o = this.state, A = 'var(--color-accent)', INK = 'var(--color-text)', N3 = 'var(--color-neutral-300)', BG = 'var(--color-bg)', A1 = 'var(--color-accent-100)';
+    const sf = this.props.showFuture ?? true, L = this.lens(), S = o.sel;
+    const pop = n => `pop${n % 2} .45s cubic-bezier(.3,1.6,.5,1)`;
+    const hit = k => o.tp > 0 && o.lastOn && o.lastKey === k;
+    const dpOn = o.dp > 0 && o.lastOn;
+    const isSelS = (gi, mi, si) => !!S && S.k === 's' && S.gi === gi && S.mi === mi && S.si === si;
+    const isSelT = id => !!S && S.k === 't' && S.id === id;
+    const box = done => ({ done, boxBg: done ? A : 'transparent', boxBorder: done ? A : INK, deco: done ? 'line-through' : 'none', color: done ? 'var(--color-neutral-700)' : INK, vis: done ? 'hidden' : 'visible' });
+    const sumG = (g, f) => g.ms.reduce((a, m) => a + m.steps.reduce((b, s) => b + (f(s) || 0), 0), 0);
+    const tab = v => ({ color: o.view === v ? A : INK, line: o.view === v ? A : 'transparent', cur: o.view === v ? 'page' : undefined, go: () => this.setState({ view: v }) });
+
+    // focus bar
+    const dur = o.phase === 'focus' ? L.focus : L.brk, sec = Math.max(0, Math.ceil(o.left)), focusing = o.running && o.phase === 'focus', pz = o.pulse > 0 && o.phase === 'break';
+    let selTitle = 'Pick a task or step to focus on', selSub = 'Press the timer icon on any row';
+    if (S && S.k === 's') { const g = o.goals[S.gi], m = g?.ms[S.mi], s = m?.steps[S.si];
+      if (s) { selTitle = s.t; selSub = `${g.title} · ${pad2(S.mi + 1)} ${m.title} · ${fmtM(s.min)} of est. ${fmtM(s.est)}`; } }
+    else if (S && S.k === 't') { const t = o.tasks.find(x => x.id === S.id);
+      if (t) { selTitle = t.title; selSub = `${t.gi != null ? `${o.goals[t.gi].title} · task` : `Task · ${t.tag}`}${t.min ? ` · ${fmtM(t.min)} focused` : ''}`; } }
+    const F = {
+      time: `${pad2(Math.floor(sec / 60))}:${pad2(sec % 60)}`, running: o.running, notRunning: !o.running,
+      phaseLabel: o.phase === 'break' ? (o.running ? 'Break' : `Session done — take ${L.brk / 60}`) : (o.running ? 'Focusing on' : 'Next focus session'),
+      selTitle, selSub, todayText: `${o.sessions} session${o.sessions === 1 ? '' : 's'} · ${fmtM(o.today)} today`,
+      startLabel: o.running ? 'Pause' : o.phase === 'break' ? 'Start break' : (o.left < dur ? 'Resume' : 'Start focus'),
+      onStart: () => this.setState(s => ({ running: !s.running })),
+      onReset: () => this.setState({ running: false, left: L.focus }), showReset: o.phase === 'focus' && (o.running || o.left < L.focus), demo: this.props.fastTimer ?? true,
+      showSkip: o.phase === 'break', onSkip: () => this.setState({ phase: 'focus', left: L.focus, running: false }),
+      phasePct: `${(1 - o.left / dur) * 100}%`,
+      bg: focusing ? INK : o.phase === 'break' ? A1 : 'var(--color-neutral-200)', color: focusing ? BG : INK,
+      subColor: focusing ? 'var(--color-neutral-400)' : 'var(--color-neutral-700)',
+      toastOn: pz, toastAnim: pz ? `float${o.pulse % 2} 1.6s ease-out forwards` : 'none', toastText: `+${fmtM(o.log[0]?.min ?? 25)} · ${o.log[0]?.t ?? ''}`,
+    };
+
+    // focus mode
+    let thenText = '';
+    if (S && S.k === 's') { const g = o.goals[S.gi]; let past = false;
+      outer: for (let mi = 0; mi < (g?.ms.length || 0); mi++) for (let si = 0; si < g.ms[mi].steps.length; si++) {
+        if (mi === S.mi && si === S.si) { past = true; continue; }
+        if (past && g.ms[mi].steps[si].d == null) { thenText = `Then: ${g.ms[mi].steps[si].t}`; break outer; } } }
+    const vid = ytId(o.ytUrl), applyYt = () => { const v = o.ytDraft.trim(); if (!v) return; const id = ytId(v); this.setState(id ? { ytUrl: v, ytDraft: '', ytErr: false, bgMode: 'video' } : { ytErr: true }); };
+    const FM = {
+      open: o.focusMode, enter: () => this.setState({ focusMode: true }), exit: () => this.setState({ focusMode: false }),
+      showVideo: o.bgMode === 'video' && !!vid, bgVideo: o.bgMode === 'video', bgOff: o.bgMode === 'off',
+      setVideo: () => this.setState({ bgMode: 'video' }), setOff: () => this.setState({ bgMode: 'off' }),
+      src: vid ? `https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&mute=${o.ytMuted ? 1 : 0}&loop=1&playlist=${vid}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1` : '',
+      muted: o.ytMuted, soundLabel: o.ytMuted ? 'Sound off' : 'Sound on', toggleSound: () => this.setState(s => ({ ytMuted: !s.ytMuted })),
+      draft: o.ytDraft, onDraft: e => { const v = e.target.value; this.setState({ ytDraft: v, ytErr: false }); }, onKey: e => { if (e.key === 'Enter') applyYt(); }, apply: applyYt,
+      err: o.ytErr, current: vid ? `youtu.be/${vid}` : 'No video',
+      thenText, hasThen: !!thenText, canDone: !!S && o.phase === 'focus',
+      markDone: () => { if (!S) return; if (S.k === 's') this.toggleStep(S.gi, S.mi, S.si); else this.toggleTask(S.id); },
+    };
+
+    // today
+    const tasksDone = o.tasks.filter(t => t.doneDay === TODAY).length;
+    let stepsToday = 0; o.goals.forEach(g => g.ms.forEach(m => m.steps.forEach(s => { if (s.d === TODAY) stepsToday++; })));
+    const rel = d => d === TODAY ? 'Today' : d === TODAY + 1 ? 'Tomorrow' : dayLabel(d);
+    const note = (t, showDate) => {
+      if (t.due == null) return showDate ? { note: 'Someday', noteColor: 'var(--color-neutral-700)' } : { note: '', noteColor: 'inherit' };
+      if (!t.done && t.due < TODAY) return t.hard ? { note: `Deadline passed · ${dayLabel(t.due)}`, noteColor: 'var(--color-accent-700)' } : { note: `From ${dayLabel(t.due)}`, noteColor: 'var(--color-neutral-700)' };
+      if (t.hard) return { note: t.due === TODAY ? 'Due today' : `Due ${rel(t.due)}`, noteColor: 'var(--color-accent-700)' };
+      if (showDate) return { note: rel(t.due), noteColor: 'var(--color-neutral-700)' };
+      return { note: '', noteColor: 'inherit' };
+    };
+    const row = (t, showDate) => { const n = note(t, showDate), gl = t.gi != null ? o.goals[t.gi] : null;
+      return { title: t.title, hard: t.hard, ...box(t.done), ...n, hasNote: !!n.note, spent: t.min ? fmtM(t.min) : '',
+        label: gl ? gl.title : t.tag, hasGoal: !!gl, swatch: gl ? GC[t.gi % GC.length] : 'transparent',
+        rowBg: isSelT(t.id) ? A1 : 'transparent', focusColor: isSelT(t.id) ? A : INK, anim: hit(`t${t.id}`) ? pop(o.tp) : 'none',
+        toggle: () => this.toggleTask(t.id), select: () => this.setState({ sel: { k: 't', id: t.id } }),
+        deferVis: !t.done && t.due != null && t.due <= TODAY ? 'visible' : 'hidden', defer: () => this.moveTask(t.id, TODAY + 1),
+        pullVis: !t.done && (t.due == null || t.due > TODAY) ? 'visible' : 'hidden', pull: () => this.moveTask(t.id, TODAY) }; };
+    const late = t => t.hard && t.due < TODAY && !t.done;
+    const todayList = o.tasks.filter(t => t.due != null && t.due <= TODAY && (!t.done || t.doneDay === TODAY)).sort((a, b) => (late(a) ? 0 : 1) - (late(b) ? 0 : 1));
+    const T = {
+      tasks: [...todayList.filter(t => !t.done), ...(o.doneOpen ? todayList.filter(t => t.done) : [])].map(t => row(t, false)), hasDone: todayList.some(t => t.done), showDone: o.doneOpen,
+      toggleDone: () => this.setState(s => ({ doneOpen: !s.doneOpen })), doneChev: o.doneOpen ? 'rotate(90deg)' : 'none', doneLabel: o.doneOpen ? 'Hide done' : `${todayList.filter(t => t.done).length} done`, summary: `${todayList.filter(t => t.done).length} of ${todayList.length} done`, draft: o.taskDraft,
+      onDraft: e => { const v = e.target.value; this.setState({ taskDraft: v }); }, onKey: e => { if (e.key === 'Enter') this.addTask(); }, add: () => this.addTask(),
+      wToday: o.taskWhen === 'today', wTmrw: o.taskWhen === 'tomorrow', wDate: o.taskWhen === 'date', wSome: o.taskWhen === 'someday', canHard: o.taskWhen !== 'someday',
+      setToday: () => this.setState({ taskWhen: 'today' }), setTmrw: () => this.setState({ taskWhen: 'tomorrow' }), setDate: () => this.setState({ taskWhen: 'date' }), setSome: () => this.setState({ taskWhen: 'someday', taskHard: false }),
+      minDate: isoOf(TODAY), dateVal: o.taskDate, onDate: e => { const v = e.target.value; if (v) this.setState({ taskDate: v }); },
+      hard: o.taskHard, toggleHard: () => this.setState(s => ({ taskHard: !s.taskHard })),
+      hardBg: o.taskHard ? A1 : 'transparent', hardBorder: o.taskHard ? A : 'var(--color-divider)', hardColor: o.taskHard ? 'var(--color-accent-800)' : INK,
+      openGoals: () => this.setState({ view: 'goals' }),
+      goalVal: o.taskGoal, onGoal: e => { const v = e.target.value; this.setState({ taskGoal: v }); },
+      goalOptions: [React.createElement('option', { key: 'n', value: '' }, 'No goal'), ...o.goals.map((x, i) => React.createElement('option', { key: i, value: String(i) }, x.title))],
+    };
+    const fut = o.tasks.filter(t => t.due != null && t.due > TODAY).sort((a, b) => a.due - b.due), groups = [];
+    const some = o.tasks.filter(t => t.due == null && (!t.done || t.doneDay === TODAY));
+    fut.forEach(t => { const later = t.due > TODAY + 6, key = later ? 'later' : t.due;
+      let gr = groups.find(x => x.key === key);
+      if (!gr) { gr = { key, label: later ? 'Later' : t.due === TODAY + 1 ? 'Tomorrow' : wdLong(t.due), date: later ? '' : dayLabel(t.due), items: [], fixed: !later, collapsible: later }; groups.push(gr); }
+      gr.items.push(row(t, later)); });
+    if (some.length) groups.push({ key: 'someday', label: 'Someday', items: some.map(t => row(t, false)), fixed: false, collapsible: true });
+    groups.forEach(g => { if (!g.collapsible) { g.open = true; return; } const n = g.items.length; g.open = !!o.openGroups[g.key]; g.date = `${n} task${n === 1 ? '' : 's'}`;
+      g.chev = g.open ? 'rotate(90deg)' : 'none'; g.toggle = () => this.setState(s => ({ openGroups: { ...s.openGroups, [g.key]: !s.openGroups[g.key] } })); });
+    const nOpen = fut.filter(t => !t.done).length, nHard = fut.filter(t => t.hard && !t.done).length, nSome = some.filter(t => !t.done).length;
+    const U = { groups, empty: !fut.length && !some.length, summary: `${nOpen} planned · ${nHard} deadline${nHard === 1 ? '' : 's'}${nSome ? ` · ${nSome} someday` : ''}` };
+    const q = (o.pickQ || '').trim().toLowerCase(), pickFirst = [];
+    const tItem = (t, meta) => { const gl = t.gi != null ? o.goals[t.gi] : null, cur = isSelT(t.id);
+      return { title: t.title, meta: meta ?? (gl ? gl.title : t.tag || 'Task'), swatch: gl ? GC[t.gi % GC.length] : 'transparent', ring: gl ? 'none' : `inset 0 0 0 2px ${INK}`,
+        cur, bg: cur ? A1 : 'transparent', weight: cur ? 700 : 400, sel: { k: 't', id: t.id } }; };
+    const openT = o.tasks.filter(t => !t.done);
+    const pTab = o.pickTab || 'tasks';
+    const secs = (pTab === 'goals'
+      ? o.goals.map((g, gi) => { const p = nextOpen(o.goals, gi); if (!p) return [g.title, []]; const m = g.ms[p.mi];
+          return [g.title, m.steps.map((s, si) => ({ s, si })).filter(x => x.s.d == null).map(({ s, si }) => { const cur = isSelS(gi, p.mi, si);
+            return { title: s.t, meta: `${pad2(p.mi + 1)} ${m.title}${si === p.si ? ' · next step' : ''}`, swatch: GC[gi % GC.length], ring: 'none', cur, bg: cur ? A1 : 'transparent', weight: cur ? 700 : 400, sel: { k: 's', gi, mi: p.mi, si } }; })]; })
+      : [
+      ['Today', openT.filter(t => t.due != null && t.due <= TODAY).map(t => tItem(t))],
+      ['Upcoming', openT.filter(t => t.due != null && t.due > TODAY).sort((a, b) => a.due - b.due).map(t => { const gl = t.gi != null ? o.goals[t.gi] : null; return tItem(t, `${rel(t.due)} · ${gl ? gl.title : t.tag || 'Task'}`); })],
+      ['Someday', openT.filter(t => t.due == null).map(t => tItem(t))],
+    ]).map(([label, items]) => { const f = q ? items.filter(it => `${it.title} ${it.meta}`.toLowerCase().includes(q)) : items; pickFirst.push(...f);
+      return { label, count: f.length, items: f.map(it => ({ ...it, pick: () => this.setState({ sel: it.sel, pickOpen: false, pickQ: '' }) })) }; }).filter(s => s.items.length);
+    const PK = { isOpen: o.pickOpen, open: () => this.setState(s => ({ pickOpen: true, pickQ: '', pickTab: s.sel && s.sel.k === 's' ? 'goals' : 'tasks' })),
+      tTasks: pTab === 'tasks', tGoals: pTab === 'goals', setTasks: () => this.setState({ pickTab: 'tasks' }), setGoals: () => this.setState({ pickTab: 'goals' }),
+      ph: pTab === 'goals' ? 'Search goal steps' : 'Search tasks', close: () => this.setState({ pickOpen: false }), stop: e => e.stopPropagation(),
+      q: o.pickQ, onQ: e => { const v = e.target.value; this.setState({ pickQ: v }); },
+      onKey: e => { if (e.key === 'Enter' && pickFirst[0]) this.setState({ sel: pickFirst[0].sel, pickOpen: false, pickQ: '' }); },
+      sections: secs, empty: !secs.length };
+    const W = { items: o.goals.map((g, gi) => { const p = nextOpen(o.goals, gi); if (!p) return null; const m = g.ms[p.mi], s = m.steps[p.si], sel = isSelS(gi, p.mi, p.si);
+        return { goal: g.title, swatch: GC[gi % GC.length], pct: `${gStats(g).pct}%`, msNum: `Milestone ${pad2(p.mi + 1)} of ${pad2(g.ms.length)}`, ms: m.title, next: s.t,
+          segs: m.steps.map(x => ({ bg: x.d != null ? A : N3 })), bg: sel ? A1 : 'transparent', focusColor: sel ? A : INK,
+          select: () => this.setState({ sel: { k: 's', gi, mi: p.mi, si: p.si } }), open: () => this.setState({ view: 'goals', active: gi }) }; })
+      .filter(Boolean).map((w, i) => ({ ...w, edge: i ? '2px solid var(--color-divider)' : '0' })) };
+
+    // year grid
+    const counts = HIST.slice(); counts[TODAY] = tasksDone + stepsToday;
+    let streak = 0; for (let i = counts[TODAY] > 0 ? TODAY : TODAY - 1; i >= 0 && counts[i] > 0; i--) streak++;
+    const lv = c => c === 0 ? N3 : c <= 2 ? 'var(--color-accent-200)' : c <= 4 ? 'var(--color-accent-400)' : c <= 6 ? A : 'var(--color-accent-800)';
+    const G = {
+      totalFmt: fmt(HSUM + counts[TODAY]), todayText: `${counts[TODAY]} done today`, best: Math.max(...counts), streak: `${streak}d`, active: counts.filter(c => c > 0).length,
+      month: counts.slice(MSTART[8], MSTART[8] + MLEN[8]).reduce((a, b) => a + b, 0),
+      heads: Array.from({ length: 31 }, (_, d) => (d === 0 || (d + 1) % 5 === 0) ? d + 1 : ''),
+      months: MONTHS.map((label, mi) => ({ label, cells: Array.from({ length: 31 }, (_, d) => {
+        if (d >= MLEN[mi]) return { bg: 'transparent', ring: 'none', anim: 'none', tip: '' };
+        const i = MSTART[mi] + d, c = counts[i];
+        if (i > TODAY) return { bg: 'transparent', ring: sf ? `inset 0 0 0 1px ${N3}` : 'none', anim: 'none', tip: '' };
+        return { bg: lv(c), ring: i === TODAY ? `0 0 0 2px ${INK}` : 'none', anim: i === TODAY && dpOn ? pop(o.dp) : 'none', tip: `${label} ${d + 1}: ${c} done` };
+      }) })),
+    };
+
+    T.week = Array.from({ length: 7 }, (_, j) => { const i = TODAY - 6 + j; return { bg: lv(counts[i]), ring: i === TODAY ? `inset 0 0 0 2px ${INK}` : 'none', anim: i === TODAY && dpOn ? pop(o.dp) : 'none', tip: `${dayLabel(i)}: ${counts[i]} done` }; });
+    T.streakText = `${streak}-day streak`;
+    // goals
+    const gi = o.active, g = o.goals[gi], st = gStats(g), rb = g.ms.length > 0 && g.ms.every(msDone);
+    const all = g.ms.flatMap(m => m.steps), dn = all.filter(s => s.d != null);
+    const dEst = dn.reduce((a, s) => a + s.est, 0), dMin = dn.reduce((a, s) => a + s.min, 0), gSpent = sumG(g, s => s.min);
+    const GV = {
+      goals: o.goals.map((x, i) => { const s = gStats(x); return { title: x.title, pct: `${s.pct}%`, meta: `${fmtM(sumG(x, y => y.min))} focused · ${s.done}/${s.total} steps`,
+        bg: i === gi ? A1 : 'transparent', barColor: s.pct === 100 ? A : INK, swatch: GC[i % GC.length], select: () => this.setState({ active: i, adding: null, draft: '' }) }; }),
+      goalDraft: o.goalDraft, onGoalDraft: e => { const v = e.target.value; this.setState({ goalDraft: v }); },
+      onGoalKey: e => { if (e.key === 'Enter') this.addGoal(); }, addGoal: () => this.addGoal(),
+      title: g.title, kicker: `Goal · ${fmtM(gSpent)} focused · ${st.msDone} of ${g.ms.length} milestones`, pct: `${st.pct}%`, outcome: g.outcome,
+      onOutcome: e => { const v = e.target.value; this.setState(s => ({ goals: s.goals.map((x, i) => i === s.active ? { ...x, outcome: v } : x) })); },
+      spentFmt: fmtM(gSpent), estFmt: fmtM(sumG(g, s => s.est)), leftFmt: fmtM(all.filter(s => s.d == null).reduce((a, s) => a + Math.max(0, s.est - s.min), 0)),
+      accuracy: dn.length ? `${Math.round(Math.min(dEst, dMin) / Math.max(dEst, dMin) * 100)}%` : '—',
+      draft: o.draft, onDraft: e => { const v = e.target.value; this.setState({ draft: v }); },
+      onKey: e => { if (e.key === 'Enter') this.commit(); if (e.key === 'Escape') this.setState({ adding: null }); },
+      cancel: () => this.setState({ adding: null }), addingMs: o.adding === 'ms', showAddMs: o.adding !== 'ms', startMs: () => this.setState({ adding: 'ms', draft: '' }),
+      ...(() => { const all = o.tasks.filter(t => t.gi === gi && (!t.done || t.doneDay === TODAY)).sort((a, b) => (a.due ?? 1e9) - (b.due ?? 1e9)), ex = !!o.gTasksAll[gi];
+        return { tasks: (ex ? all : all.slice(0, 5)).map(t => row(t, true)), moreTasks: all.length > 5, moreLabel: ex ? 'Show fewer' : `Show all ${all.length}`,
+          toggleTasks: () => this.setState(s => ({ gTasksAll: { ...s.gTasksAll, [gi]: !ex } })) }; })(),
+      hasTasks: o.tasks.some(t => t.gi === gi && (!t.done || t.doneDay === TODAY)),
+      fBg: rb ? A : BG, fColor: rb ? BG : INK, fBorder: rb ? A : INK, fTitle: rb ? 'Finish line — reached' : 'Finish line', fText: g.outcome || 'Describe what done looks like above.',
+      rows: g.ms.map((m, mi) => {
+        const complete = msDone(m), cur = mi === st.cur, key = `${gi}-${mi}`, ex = o.expanded[key] ?? cur;
+        const spent = m.steps.reduce((a, s) => a + s.min, 0), est = m.steps.reduce((a, s) => a + s.est, 0), nd = m.steps.filter(s => s.d != null).length;
+        return { num: pad2(mi + 1), title: m.title, complete, showNum: !complete, current: cur, count: `${nd} / ${m.steps.length}`, ledger: `${fmtM(spent)} of est. ${fmtM(est)}`,
+          expanded: ex, chev: ex ? 'rotate(180deg)' : 'none', toggleExpand: () => this.setState(s => ({ expanded: { ...s.expanded, [key]: !ex } })),
+          line: complete ? A : N3, mBg: complete ? A : cur ? INK : BG, mColor: complete || cur ? BG : 'var(--color-neutral-700)', mBorder: complete ? A : cur ? INK : 'var(--color-neutral-400)',
+          segs: m.steps.map(s => ({ bg: s.d != null ? A : N3 })),
+          adding: o.adding === mi, showAdd: o.adding !== mi, startAdd: () => this.setState({ adding: mi, draft: '' }),
+          steps: m.steps.map((s, si) => {
+            const done = s.d != null, sel = isSelS(gi, mi, si), nb = Math.round(s.min / 25), ne = Math.round(s.est / 25), nt = Math.round(s.today / 25), over = nb > ne;
+            return { t: s.t, ...box(done), rowBg: sel ? A1 : 'transparent', focusColor: sel ? A : INK, anim: hit(`s${gi}-${mi}-${si}`) ? pop(o.tp) : 'none',
+              toggle: () => this.toggleStep(gi, mi, si), select: () => this.setState({ sel: { k: 's', gi, mi, si } }),
+              ledger: `${fmtM(s.min)} / ${fmtM(s.est)}`, note: over ? `+${fmtM(s.min - s.est)} over` : done ? `Done ${dayLabel(s.d)}` : '',
+              noteColor: over ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', noteWeight: over ? 700 : 400,
+              blocks: Array.from({ length: Math.max(nb, ne) }, (_, b) => b < nb
+                ? { bg: b >= nb - nt ? A : INK, border: b >= nb - nt ? A : INK, anim: pz && sel && b === nb - 1 ? pop(o.pulse) : 'none' }
+                : { bg: 'transparent', border: 'var(--color-neutral-400)', anim: 'none' }) };
+          }) };
+      }),
+    };
+
+    // activity
+    const fa = i => i === TODAY ? o.today : FOCUS[i];
+    const lvf = v => v === 0 ? N3 : v <= 50 ? 'var(--color-accent-200)' : v <= 100 ? 'var(--color-accent-400)' : v <= 150 ? A : 'var(--color-accent-800)';
+    let fs = 0; for (let i = o.today > 0 ? TODAY : TODAY - 1; i >= 0 && fa(i) > 0; i--) fs++;
+    const weeks = Math.max(4, Math.min(26, this.props.wallWeeks ?? 12)), mon0 = TODAY - 2, buckets = Array.from({ length: weeks }, () => []);
+    const dne = [];
+    o.goals.forEach((gg, gj) => gg.ms.forEach(m => m.steps.forEach(s => { if (s.d == null) return;
+      dne.push({ d: s.d, text: `Completed “${s.t}”`, src: gg.title, isDone: true });
+      const w = s.d >= mon0 ? 0 : Math.ceil((mon0 - s.d) / 7);
+      if (w < weeks) buckets[w].push({ bg: GC[gj % GC.length], ring: 'none', tip: `${gg.title}: ${s.t}`, d: s.d }); })));
+    o.tasks.filter(t => t.doneDay === TODAY).forEach(t => { const gl = t.gi != null ? o.goals[t.gi] : null; buckets[0].push({ bg: 'transparent', ring: `inset 0 0 0 2px ${gl ? GC[t.gi % GC.length] : INK}`, tip: `Task: ${t.title}`, d: TODAY });
+      dne.push({ d: TODAY, text: `Completed task “${t.title}”`, src: gl ? gl.title : `Task · ${t.tag}`, isDone: true }); });
+    buckets.forEach(b => b.sort((x, y) => x.d - y.d)); dne.sort((a, b) => b.d - a.d);
+    const maxB = Math.max(6, ...buckets.map(b => b.length)) + 1;
+    let ws = 0; while (ws < weeks && buckets[ws].length) ws++;
+    const AC = {
+      ...(() => { const fm = o.heatMode !== 'done', val = i => fm ? fa(i) : counts[i], lvl = fm ? lvf : lv;
+        const sepF = Array.from({ length: MLEN[8] }, (_, d) => fa(MSTART[8] + d)).reduce((a, b) => a + b, 0);
+        const st = fm ? [['September', fmtM(sepF)], ['Best day', fmtM(Math.max(o.today, ...FOCUS))], ['Focus streak', `${fs}d`], ['Daily average', fmtM(Math.round((FSUM + o.today) / (TODAY + 1) / 5) * 5)]]
+          : [['September', G.month], ['Best day', G.best], ['Streak', G.streak], ['Active days', G.active]];
+        return {
+          focusMode: fm, doneMode: !fm, setFocus: () => this.setState({ heatMode: 'focus' }), setDone: () => this.setState({ heatMode: 'done' }),
+          kicker: fm ? 'Focus time · all goals and tasks' : 'Things done · tasks and goal steps',
+          heatTitle: fm ? `${fmt(Math.round((FSUM + o.today) / 60))} hours focused in 2026` : `${fmt(HSUM + counts[TODAY])} things done in 2026`,
+          legendMore: fm ? 'More focus time' : 'More done',
+          stats: st.map(([l, v], i) => ({ l, v, edge: i ? '2px solid var(--color-divider)' : '0', padL: i ? 'var(--space-3)' : '0' })),
+          heat: [...Array.from({ length: 4 }, () => ({ bg: 'transparent', ring: 'none', anim: 'none', tip: '' })), ...Array.from({ length: DAYS }, (_, i) => i > TODAY
+            ? { bg: 'transparent', ring: sf ? `inset 0 0 0 1px ${N3}` : 'none', anim: 'none', tip: '' }
+            : { bg: lvl(val(i)), ring: i === TODAY ? `0 0 0 2px ${INK}` : 'none', anim: i === TODAY && (fm ? pz : dpOn) ? pop(fm ? o.pulse : o.dp) : 'none',
+                tip: fm ? `${dayLabel(i)}: ${fmtM(fa(i))}` : `${dayLabel(i)}: ${counts[i]} done` })],
+        }; })(),
+      heatMonths: MONTHS.map((m, mi) => ({ m, col: `${2 + Math.floor((MSTART[mi] + 4) / 7)} / span 4` })),
+      weeks, headline: `${dne.length} things finished`, chartH: `${maxB * 21}px`,
+      legend: o.goals.map((x, i) => ({ name: x.title, bg: GC[i % GC.length] })),
+      cols: buckets.map((_, i) => { const w = weeks - 1 - i, list = buckets[w];
+        return { label: weeks <= 14 || w % 2 === 0 ? dayLabel(mon0 - 7 * w) : '', labelColor: w === 0 ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', colBg: w === 0 ? A1 : 'transparent',
+          bricks: list.map((b, j) => ({ bg: b.bg, ring: b.ring, tip: b.tip, anim: w === 0 && dpOn && j === list.length - 1 ? `drop${o.dp % 2} .55s cubic-bezier(.2,.9,.3,1.15)` : 'none' })) }; }),
+      thisWeek: buckets[0].length, best: Math.max(...buckets.map(b => b.length)), streak: ws, msDone: o.goals.reduce((a, x) => a + gStats(x).msDone, 0),
+      moreFeed: dne.length + o.log.length > o.feedN, showEarlier: () => this.setState(s => ({ feedN: s.feedN + 10 })),
+      feed: [...dne.filter(e => e.d === TODAY), ...o.log.map(e => ({ d: e.d, text: `Focused ${fmtM(e.min)} on “${e.t}”`, src: e.src, isDone: false })), ...dne.filter(e => e.d < TODAY)].slice(0, o.feedN).map((e, i) => ({ ...e, isFocus: !e.isDone, hash: hsh(e.text + e.d + i).toString(16).padStart(8, '0').slice(0, 7), when: e.d === TODAY ? 'Today' : e.d === TODAY - 1 ? 'Yesterday' : dayLabel(e.d) })),
+    };
+
+    return { tabToday: tab('today'), tabGoals: tab('goals'), tabAct: tab('activity'), isToday: o.view === 'today', isGoals: o.view === 'goals', isActivity: o.view === 'activity', F, FM, PK, T, U, W, G, GV, AC };
+  }
+}
+</script>
+</body>
+</html>
