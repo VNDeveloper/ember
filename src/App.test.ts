@@ -47,4 +47,30 @@ describe('App shell', () => {
     expect(w.find('.picker-backdrop').exists()).toBe(false)
     w.unmount()
   })
+
+  it('returns focus to the focus-bar title when the picker closes', async () => {
+    const w = mountApp()
+    const title = w.find('.fb-title')
+    ;(title.element as HTMLElement).focus()
+    await title.trigger('click')
+    expect(document.activeElement?.classList.contains('picker-input')).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(document.activeElement).toBe(title.element)
+    w.unmount()
+  })
+
+  it('keeps Tab inside the picker', async () => {
+    const w = mountApp()
+    await w.find('.fb-title').trigger('click')
+    const input = w.find('.picker-input').element as HTMLElement
+    const rows = w.findAll('.picker-row')
+    const last = rows[rows.length - 1].element as HTMLElement
+    last.focus()
+    await w.find('.picker').trigger('keydown', { key: 'Tab' })
+    expect(document.activeElement).toBe(input)
+    await w.find('.picker').trigger('keydown', { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+    w.unmount()
+  })
 })
