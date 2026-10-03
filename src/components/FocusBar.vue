@@ -99,8 +99,9 @@ const toastText = computed(() => {
 
 .fb-toast {
   position: absolute; left: var(--space-6); bottom: -30px; z-index: 2;
+  max-width: calc(100% - 2 * var(--space-6));
   font: 800 16px/1 var(--font-heading); color: var(--color-accent-700);
-  white-space: nowrap; pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
   animation: float0 1.6s ease-out forwards;
 }
 
@@ -109,6 +110,6 @@ const toastText = computed(() => {
   .fb-time { font-size: 32px; }
   .fb-meta { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: var(--space-2); }
   .fb-actions { grid-column: 1 / -1; flex-wrap: wrap; }
-  .fb-toast { left: var(--space-4); }
+  .fb-toast { left: var(--space-4); max-width: calc(100% - 2 * var(--space-4)); }
 }
 </style>
