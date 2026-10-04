@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Search } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useDialogFocus } from '../composables/useDialogFocus'
 import { pickerSections, type PickerItem } from '../core/picker'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
@@ -9,36 +10,11 @@ const ember = useEmberStore()
 const ui = useUiStore()
 const input = ref<HTMLInputElement | null>(null)
 const dialog = ref<HTMLElement | null>(null)
-/** Whatever had focus before the picker opened gets it back on close. */
-let returnTo: HTMLElement | null = null
+const { onKeydown } = useDialogFocus(dialog, input)
 
 const sections = computed(() =>
   pickerSections(ember.goals, ember.tasks, ember.selection, ui.pickerTab, ui.pickerQuery, ember.today),
 )
-
-onMounted(() => {
-  returnTo = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
-  input.value?.focus()
-})
-onBeforeUnmount(() => {
-  if (returnTo?.isConnected) returnTo.focus()
-})
-
-/** aria-modal: keep Tab cycling inside the dialog. */
-function trapTab(e: KeyboardEvent) {
-  if (e.key !== 'Tab' || !dialog.value) return
-  const nodes = [...dialog.value.querySelectorAll<HTMLElement>('input:not([type=radio]), input[type=radio]:checked, button')]
-  const first = nodes[0]
-  const last = nodes[nodes.length - 1]
-  if (!first || !last) return
-  if (e.shiftKey && document.activeElement === first) {
-    e.preventDefault()
-    last.focus()
-  } else if (!e.shiftKey && document.activeElement === last) {
-    e.preventDefault()
-    first.focus()
-  }
-}
 
 function pick(item: PickerItem) {
   ember.select(item.target)
@@ -54,7 +30,7 @@ function pickFirst() {
 <template>
   <Teleport to="body">
     <div class="dialog-backdrop picker-backdrop" @click.self="ui.closePicker()">
-      <div ref="dialog" class="dialog picker" role="dialog" aria-modal="true" aria-label="Pick what to focus on" @keydown="trapTab">
+      <div ref="dialog" class="dialog picker" role="dialog" aria-modal="true" aria-label="Pick what to focus on" @keydown="onKeydown">
         <div class="picker-head">
           <Search :size="18" :stroke-width="2.25" />
           <input
