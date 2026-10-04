@@ -1,3 +1,5 @@
+import { useUiStore } from '../../stores/ui'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -74,5 +76,17 @@ describe('AddTask', () => {
     const { w, ember } = setup()
     await w.find('.at-add').trigger('click')
     expect(ember.tasks).toHaveLength(0)
+  })
+
+  it('keeps the last valid date when the field is cleared, and moves a stale date forward', async () => {
+    const { w, ember } = setup()
+    await when(w, 2)
+    const date = w.find('.at-date')
+    ;(date.element as HTMLInputElement).value = ''
+    await date.trigger('change')
+    expect(useUiStore().taskDraft.date).toBe('2026-09-25')
+    ember.tick(new Date(2026, 8, 26, 9, 0).getTime())
+    await nextTick()
+    expect(useUiStore().taskDraft.date).toBe('2026-09-28')
   })
 })

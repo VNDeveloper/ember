@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Flag, Plus } from 'lucide-vue-next'
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { addDays } from '../../core/dates'
 import { useEmberStore, type When } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
@@ -12,6 +12,17 @@ const WHEN: [When, string][] = [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['
 onMounted(() => {
   if (!draft.date) draft.date = addDays(ember.today, 2)
 })
+
+/** A picked date that has slipped into the past moves forward again. */
+watch(() => ember.today, (t) => {
+  if (draft.date && draft.date < t) draft.date = addDays(t, 2)
+})
+
+/** Clearing the field keeps the last valid date instead of silently filing the task under today. */
+function onDate(e: Event) {
+  const v = (e.target as HTMLInputElement).value
+  if (v) draft.date = v
+}
 
 function setWhen(w: When) {
   draft.when = w
@@ -44,7 +55,7 @@ function onEnter(e: KeyboardEvent) {
           <input type="radio" name="ember-when" :value="value" :checked="draft.when === value" @change="setWhen(value)" />{{ label }}
         </label>
       </div>
-      <input v-if="draft.when === 'date'" v-model="draft.date" type="date" class="input input-sm at-date" aria-label="Date" :min="ember.today" />
+      <input v-if="draft.when === 'date'" :value="draft.date" type="date" @change="onDate" class="input input-sm at-date" aria-label="Date" :min="ember.today" />
       <button
         v-if="draft.when !== 'someday'"
         class="at-deadline"

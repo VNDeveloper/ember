@@ -21,6 +21,10 @@ function pick(item: PickerItem) {
   ui.closePicker()
 }
 
+function onEnter(e: KeyboardEvent) {
+  if (!e.isComposing) pickFirst()
+}
+
 function pickFirst() {
   const first = sections.value[0]?.items[0]
   if (first) pick(first)
@@ -39,7 +43,7 @@ function pickFirst() {
             class="picker-input"
             :placeholder="ui.pickerTab === 'goals' ? 'Search goal steps' : 'Search tasks'"
             aria-label="Search"
-            @keydown.enter.prevent="pickFirst"
+            @keydown.enter.prevent="onEnter"
           />
           <div class="seg">
             <label class="seg-opt"><input v-model="ui.pickerTab" type="radio" name="ember-pick" value="tasks" />Tasks</label>

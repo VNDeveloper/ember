@@ -100,4 +100,15 @@ describe('FocusBar', () => {
     const { w } = setup()
     expect(w.find('.fb-demo').text()).toBe('Demo speed')
   })
+
+  it('announces a finished session to screen readers and marks the title as opening a dialog', async () => {
+    const { w, ember } = setup()
+    expect(w.find('.fb-title').attributes('aria-haspopup')).toBe('dialog')
+    expect(w.find('.fb-live').attributes('aria-live')).toBe('polite')
+    expect(w.find('.fb-live').text()).toBe('')
+    await w.find('.fb-start').trigger('click')
+    ember.tick(NOW + 25 * 60_000)
+    await nextTick()
+    expect(w.find('.fb-live').text()).toBe('Session done: +25m · Line')
+  })
 })

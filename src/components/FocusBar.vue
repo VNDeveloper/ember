@@ -31,7 +31,7 @@ const toastText = computed(() => {
       <span class="fb-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fb-stack">
         <span class="fb-phase">{{ phaseLabel(ember.timer, session) }}</span>
-        <button class="fb-title" title="Change what you're focusing on" @click="ui.openPicker(ember.selection)">
+        <button class="fb-title" title="Change what you're focusing on" aria-haspopup="dialog" @click="ui.openPicker(ember.selection)">
           <span>{{ info.title }}</span>
           <ChevronDown :size="16" :stroke-width="2.5" />
         </button>
@@ -61,6 +61,7 @@ const toastText = computed(() => {
     </div>
     <div class="fb-progress"><div class="fb-progress-fill" :style="{ width: pct }"></div></div>
     <div v-if="showToast" :key="ember.completions" class="fb-toast">{{ toastText }}</div>
+    <span class="sr-only fb-live" role="status" aria-live="polite">{{ showToast ? `Session done: ${toastText}` : '' }}</span>
   </div>
 </template>
 

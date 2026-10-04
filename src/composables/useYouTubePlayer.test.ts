@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref, type Ref } from 'vue'
 import { useYouTubePlayer } from './useYouTubePlayer'
 
-interface FakePlayer { mute: ReturnType<typeof vi.fn>; unMute: ReturnType<typeof vi.fn>; playVideo: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }
+interface FakePlayer { mute: ReturnType<typeof vi.fn>; unMute: ReturnType<typeof vi.fn>; playVideo: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn>; getIframe: () => HTMLIFrameElement }
 let players: FakePlayer[]
 let Player: ReturnType<typeof vi.fn>
 
@@ -20,7 +20,8 @@ function host(videoId: Ref<string | null>, muted: Ref<boolean>) {
 beforeEach(() => {
   players = []
   Player = vi.fn(function () {
-    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn() }
+    const frame = document.createElement('iframe')
+    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => frame) }
     players.push(p)
     return p
   })
@@ -56,17 +57,28 @@ describe('useYouTubePlayer', () => {
     expect(target.playVideo).toHaveBeenCalled()
   })
 
-  it('mutes and unmutes without recreating the player', async () => {
+  it('ignores sound changes until the player is ready, then mutes and unmutes without recreating it', async () => {
     const muted = ref(true)
     mount(host(ref('jfKfPfyJRdk'), muted))
     await flushPromises()
     muted.value = false
     await flushPromises()
+    expect(players[0].unMute).not.toHaveBeenCalled()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
     expect(players[0].unMute).toHaveBeenCalledTimes(1)
     muted.value = true
     await flushPromises()
     expect(players[0].mute).toHaveBeenCalledTimes(1)
     expect(Player).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the iframe out of the tab order once ready', async () => {
+    mount(host(ref('jfKfPfyJRdk'), ref(true)))
+    await flushPromises()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    const frame = players[0].getIframe()
+    expect(frame.getAttribute('tabindex')).toBe('-1')
+    expect(frame.getAttribute('title')).toBe('Background video')
   })
 
   it('recreates the player when the video changes and removes it when there is none', async () => {
@@ -117,5 +129,20 @@ describe('loadYouTubeApi', () => {
     await expect(a).resolves.toBe(YT)
     await expect(b).resolves.toBe(YT)
     scripts[0].remove()
+  })
+
+  it('gives up after 15 seconds so a later call can retry', async () => {
+    vi.useFakeTimers()
+    delete (window as unknown as { YT?: unknown }).YT
+    vi.resetModules()
+    const { loadYouTubeApi } = await import('./useYouTubePlayer')
+    const first = loadYouTubeApi()
+    vi.advanceTimersByTime(15_000)
+    await expect(first).rejects.toThrow('timed out')
+    loadYouTubeApi().catch(() => {})
+    const scripts = [...document.querySelectorAll('script')].filter((s) => s.src === 'https://www.youtube.com/iframe_api')
+    expect(scripts).toHaveLength(1)
+    scripts.forEach((s) => s.remove())
+    vi.useRealTimers()
   })
 })

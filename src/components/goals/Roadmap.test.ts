@@ -184,4 +184,15 @@ describe('Roadmap', () => {
     expect(lineBlocks[1].classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
     w.unmount()
   })
+
+  it('returns focus to the Add step button on Esc, and labels checkboxes with their milestone', async () => {
+    const { w } = setup()
+    const add = w.find('.rm-add-step')
+    await add.trigger('click')
+    await w.find('.rm-step-input').trigger('keydown', { key: 'Escape' })
+    await nextTick()
+    expect(document.activeElement).toBe(w.find('.rm-add-step').element)
+    expect(w.findAll('.step-row')[1].find('.check').attributes('aria-label')).toBe('Line, First charts')
+    w.unmount()
+  })
 })

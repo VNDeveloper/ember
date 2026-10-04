@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, ChevronDown, Flag, Plus, Timer } from 'lucide-vue-next'
-import { computed, type Directive } from 'vue'
+import { computed, nextTick, ref, type Directive } from 'vue'
 import { finishLine, roadmap, type MilestoneRow } from '../../core/goalView'
 import type { Goal } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
@@ -32,6 +32,18 @@ function startMilestone() {
   ui.adding = { kind: 'milestone' }
   ui.draft = ''
 }
+const root = ref<HTMLElement | null>(null)
+
+/** Esc closes the input and puts focus back on the button that opened it. */
+function onEsc() {
+  const was = ui.adding
+  cancel()
+  void nextTick(() => {
+    const selector = was?.kind === 'step' ? `[data-add-step="${was.msId}"]` : '.rm-add-ms'
+    root.value?.querySelector<HTMLElement>(selector)?.focus()
+  })
+}
+
 function cancel() {
   ui.adding = null
 }
@@ -51,7 +63,7 @@ function commit(e: KeyboardEvent) {
 </script>
 
 <template>
-  <section class="roadmap">
+  <section ref="root" class="roadmap">
     <div class="rm-legend">
       <span><i class="blk is-earlier"></i>Earlier sessions</span>
       <span><i class="blk is-today"></i>Today</span>
@@ -84,7 +96,7 @@ function commit(e: KeyboardEvent) {
                 :class="[{ 'is-done': s.done }, s.done && justDone(s.id) ? popClass(ember.lastDone!.n) : '']"
                 role="checkbox"
                 :aria-checked="s.done"
-                :aria-label="s.title"
+                :aria-label="`${s.title}, ${r.title}`"
                 @click="ember.toggleStep(s.target)"
               >
                 <Check v-if="s.done" :size="14" :stroke-width="3.5" />
@@ -115,11 +127,11 @@ function commit(e: KeyboardEvent) {
                 placeholder="New step (estimated 2 sessions), Enter to add"
                 aria-label="New step"
                 @keydown.enter="commit"
-                @keydown.esc="cancel"
+                @keydown.esc="onEsc"
                 @blur="onBlur"
               />
             </div>
-            <button v-else class="btn btn-ghost rm-add-step" @click="startStep(r.id)">
+            <button v-else class="btn btn-ghost rm-add-step" :data-add-step="r.id" @click="startStep(r.id)">
               <Plus :size="14" :stroke-width="2.5" />Add step
             </button>
           </div>
@@ -137,7 +149,7 @@ function commit(e: KeyboardEvent) {
             placeholder="Milestone name, Enter to add"
             aria-label="New milestone"
             @keydown.enter="commit"
-            @keydown.esc="cancel"
+            @keydown.esc="onEsc"
             @blur="onBlur"
           />
           <button v-else class="btn btn-secondary rm-add-ms" @click="startMilestone">
@@ -223,10 +235,13 @@ function commit(e: KeyboardEvent) {
 .rm-finish-title { font: 800 20px/1.2 var(--font-heading); }
 .rm-finish-outcome { font-size: 14px; color: var(--color-neutral-800); text-wrap: pretty; }
 
-@media (max-width: 560px) {
+@media (max-width: 720px) {
   .step-row { grid-template-columns: 22px minmax(0, 1fr) 28px; row-gap: var(--space-2); }
   .sr-blocks { grid-column: 2; grid-row: 2; }
   .sr-ledger { grid-column: 2; grid-row: 3; }
   .sr-focus { grid-column: 3; grid-row: 1; }
+}
+@media (max-width: 560px) {
+  .rm-title { flex-basis: 100%; }
 }
 </style>

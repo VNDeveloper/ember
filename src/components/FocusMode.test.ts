@@ -32,7 +32,7 @@ beforeEach(() => {
   localStorage.clear()
   players = []
   Player = vi.fn(function () {
-    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn() }
+    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => document.createElement('iframe')) }
     players.push(p)
     return p
   })
@@ -112,6 +112,7 @@ describe('FocusMode', () => {
 
   it('toggles sound without reloading the video', async () => {
     const { w, ember } = await setup()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
     expect(w.find('.fm-sound').text()).toBe('Sound off')
     await w.find('.fm-sound').trigger('click')
     await flushPromises()
@@ -119,6 +120,7 @@ describe('FocusMode', () => {
     expect(w.find('.fm-sound').text()).toBe('Sound on')
     expect(players[0].unMute).toHaveBeenCalledTimes(1)
     expect(Player).toHaveBeenCalledTimes(1)
+    expect(w.find('.fm-sound').attributes('aria-pressed')).toBe('true')
     w.unmount()
   })
 

@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
           <input type="radio" name="ember-bg" value="off" :checked="ember.settings.focusBg === 'off'" @change="ember.updateSettings({ focusBg: 'off' })" />Off
         </label>
       </div>
-      <button class="btn btn-ghost fm-ghost fm-sound" @click="ember.updateSettings({ muted: !muted })">
+      <button class="btn btn-ghost fm-ghost fm-sound" :aria-pressed="!muted" @click="ember.updateSettings({ muted: !muted })">
         <VolumeX v-if="muted" :size="16" :stroke-width="2.25" /><Volume2 v-else :size="16" :stroke-width="2.25" />{{ muted ? 'Sound off' : 'Sound on' }}
       </button>
       <div class="fm-link">

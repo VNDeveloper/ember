@@ -78,4 +78,12 @@ describe('FocusPicker', () => {
     await w.find('.picker-backdrop').trigger('click')
     expect(ui.pickerOpen).toBe(false)
   })
+
+  it('ignores Enter while an input method is composing', async () => {
+    const { w, ember, ui } = setup()
+    await w.find('.picker-input').setValue('land')
+    await w.find('.picker-input').trigger('keydown', { key: 'Enter', isComposing: true })
+    expect(ember.selection).toEqual({ kind: 'task', taskId: 'Review PR' })
+    expect(ui.pickerOpen).toBe(true)
+  })
 })
