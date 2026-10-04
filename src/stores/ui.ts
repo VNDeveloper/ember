@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
+import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
 import type { PickerTab } from '../core/picker'
+import type { When } from './ember'
 
 export type View = 'today' | 'goals' | 'activity'
 
@@ -13,6 +15,14 @@ export const useUiStore = defineStore('ui', () => {
   const pickerTab = ref<PickerTab>('tasks')
   const pickerQuery = ref('')
   const focusModeOpen = ref(false)
+  /** Add-task row draft; survives tab switches, not reloads. */
+  const taskDraft = reactive<{ title: string; when: When; date: ISODate | ''; deadline: boolean; goalId: string }>({
+    title: '', when: 'today', date: '', deadline: false, goalId: '',
+  })
+  /** Today list: finished rows expanded. */
+  const doneOpen = ref(false)
+  /** Upcoming: which collapsible groups (later, someday) are open. */
+  const openGroups = reactive<Record<string, boolean>>({})
 
   function openPicker(selection: Selection) {
     pickerTab.value = selection?.kind === 'step' ? 'goals' : 'tasks'
@@ -47,7 +57,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, pickerOpen, pickerTab, pickerQuery, focusModeOpen,
+    view, activeGoalId, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }
 })

@@ -43,4 +43,13 @@ describe('ui store', () => {
     expect(ui.view).toBe('goals')
     expect(ui.activeGoalId).toBe('D3')
   })
+
+  it('holds the add-task draft and Today collapse state', () => {
+    const ui = useUiStore()
+    expect(ui.taskDraft).toEqual({ title: '', when: 'today', date: '', deadline: false, goalId: '' })
+    expect(ui.doneOpen).toBe(false)
+    expect(ui.openGroups).toEqual({})
+    ui.openGroups.later = true
+    expect(ui.openGroups.later).toBe(true)
+  })
 })
