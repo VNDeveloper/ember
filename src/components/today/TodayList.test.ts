@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dataFixture, taskFixture } from '../../core/test-fixtures'
@@ -17,7 +17,7 @@ function setup() {
       taskFixture('D', { date: '2026-09-25' }),
     ],
   }))
-  return mount(TodayList)
+  return mount(TodayList, { attachTo: document.body })
 }
 const rowTitles = (w: ReturnType<typeof mount>) => w.findAll('.tr-title').map((t) => t.text())
 
@@ -52,5 +52,25 @@ describe('TodayList', () => {
     expect(days[6].classes()).toContain('is-today')
     expect(days[6].attributes('title')).toBe('Sep 23: 1 done')
     expect(w.find('.tl-streak').text()).toBe('1-day streak')
+  })
+
+  it('keeps keyboard focus in the list when a row is completed or moved away', async () => {
+    const w = setup()
+    const rowCheck = (title: string) => w.findAll('.task-row').find((r) => r.find('.tr-title').text() === title)!.find('.check')
+
+    const c = rowCheck('C')
+    ;(c.element as HTMLElement).focus()
+    await c.trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(rowCheck('A').element)
+
+    const a = rowCheck('A')
+    ;(a.element as HTMLElement).focus()
+    const defer = w.findAll('.task-row')[0].find('.tr-defer')
+    ;(defer.element as HTMLElement).focus()
+    await defer.trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.find('.tl-done-toggle').element)
+    w.unmount()
   })
 })

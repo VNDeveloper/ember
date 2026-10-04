@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ArrowLeftToLine, ArrowRightToLine, Check, Flag, Timer } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { fmtM } from '../core/format'
 import { goalColor } from '../core/goals'
 import type { Task } from '../core/model'
 import { sameTarget } from '../core/model'
 import { taskNote } from '../core/today'
 import { useEmberStore } from '../stores/ember'
+import { withFocusRescue } from './focusRescue'
 
 const props = withDefaults(defineProps<{ task: Task; variant: 'today' | 'upcoming'; showDate?: boolean }>(), { showDate: false })
 const ember = useEmberStore()
+const root = ref<HTMLElement | null>(null)
+const act = (e: Event, action: () => void) => withFocusRescue(root.value, e, action)
 
 const done = computed(() => props.task.doneOn != null)
 const goalIndex = computed(() => (props.task.goalId ? ember.goals.findIndex((g) => g.id === props.task.goalId) : -1))
@@ -26,14 +29,14 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
 </script>
 
 <template>
-  <div class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant === 'today' }]">
+  <div ref="root" class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant === 'today' }]">
     <button
       class="check"
       :class="{ 'check-sm': variant === 'upcoming', 'is-done': done }"
       role="checkbox"
       :aria-checked="done"
       :aria-label="task.title"
-      @click="ember.toggleTask(task.id)"
+      @click="act($event, () => ember.toggleTask(task.id))"
     >
       <Check v-if="done" :size="variant === 'upcoming' ? 12 : 14" :stroke-width="3.5" />
     </button>
@@ -55,7 +58,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
         :class="{ 'is-hidden': !canDefer }"
         aria-label="Move to tomorrow"
         title="Move to tomorrow"
-        @click="ember.moveToTomorrow(task.id)"
+        @click="act($event, () => ember.moveToTomorrow(task.id))"
       >
         <ArrowRightToLine :size="16" :stroke-width="2.25" />
       </button>
@@ -75,7 +78,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
       :class="{ 'is-hidden': !canPull }"
       aria-label="Move to today"
       title="Move to today"
-      @click="ember.moveToToday(task.id)"
+      @click="act($event, () => ember.moveToToday(task.id))"
     >
       <ArrowLeftToLine :size="16" :stroke-width="2.25" />
     </button>
