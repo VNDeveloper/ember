@@ -7,11 +7,15 @@ import type { Task } from '../core/model'
 import { sameTarget } from '../core/model'
 import { taskNote } from '../core/today'
 import { useEmberStore } from '../stores/ember'
+import { useUiStore } from '../stores/ui'
+import RowMenu from './RowMenu.vue'
+import TaskEditPanel from './TaskEditPanel.vue'
 import { popClass } from './anim'
 import { withFocusRescue } from './focusRescue'
 
 const props = withDefaults(defineProps<{ task: Task; variant: 'today' | 'upcoming' | 'goal'; showDate?: boolean }>(), { showDate: false })
 const ember = useEmberStore()
+const ui = useUiStore()
 const root = ref<HTMLElement | null>(null)
 const act = (e: Event, action: () => void) => withFocusRescue(root.value, e, action)
 
@@ -27,72 +31,86 @@ const target = computed(() => ({ kind: 'task' as const, taskId: props.task.id })
 const selected = computed(() => sameTarget(ember.selection, target.value))
 const justDone = computed(() => done.value && ember.lastDone?.key === `task:${props.task.id}`)
 const canDefer = computed(() => !done.value && props.task.date != null && props.task.date <= ember.today)
+const menuKey = computed(() => `task:${props.task.id}`)
+const editingThis = computed(() => ui.editing === menuKey.value)
+
+function onDelete(e: Event) {
+  void act(e, () => {
+    ui.editing = null
+    ui.showUndo(ember.deleteTask(props.task.id))
+  })
+}
 const canPull = computed(() => !done.value && (props.task.date == null || props.task.date > ember.today))
 </script>
 
 <template>
-  <div ref="root" class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant !== 'upcoming' }]">
-    <button
-      class="check"
-      :class="[{ 'check-sm': variant === 'upcoming', 'is-done': done }, justDone ? popClass(ember.lastDone!.n) : '']"
-      role="checkbox"
-      :aria-checked="done"
-      :aria-label="task.title"
-      @click="act($event, () => ember.toggleTask(task.id))"
-    >
-      <Check v-if="done" :size="variant === 'upcoming' ? 12 : 14" :stroke-width="3.5" />
-    </button>
-    <div class="tr-body">
-      <span class="tr-title">{{ task.title }}</span>
-      <span class="tr-meta">
-        <span class="tr-label">
-          <span v-if="goal" class="swatch swatch-sm" :style="{ background: goalColor(goalIndex) }"></span>{{ goal ? goal.title : task.tag || 'Task' }}
+  <div ref="root" class="task-item">
+    <div class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant !== 'upcoming' }]">
+      <button
+        class="check"
+        :class="[{ 'check-sm': variant === 'upcoming', 'is-done': done }, justDone ? popClass(ember.lastDone!.n) : '']"
+        role="checkbox"
+        :aria-checked="done"
+        :aria-label="task.title"
+        @click="act($event, () => ember.toggleTask(task.id))"
+      >
+        <Check v-if="done" :size="variant === 'upcoming' ? 12 : 14" :stroke-width="3.5" />
+      </button>
+      <div class="tr-body">
+        <span class="tr-title">{{ task.title }}</span>
+        <span class="tr-meta">
+          <span class="tr-label">
+            <span v-if="goal" class="swatch swatch-sm" :style="{ background: goalColor(goalIndex) }"></span>{{ goal ? goal.title : task.tag || 'Task' }}
+          </span>
+          <span v-if="note" class="tr-note" :class="{ 'is-accent': note.accent }">
+            <Flag v-if="task.deadline" :size="12" :stroke-width="2.5" />{{ note.text }}
+          </span>
         </span>
-        <span v-if="note" class="tr-note" :class="{ 'is-accent': note.accent }">
-          <Flag v-if="task.deadline" :size="12" :stroke-width="2.5" />{{ note.text }}
-        </span>
-      </span>
+      </div>
+      <template v-if="variant !== 'upcoming'">
+        <span class="tr-spent tabular">{{ spent }}</span>
+        <button
+          v-if="variant === 'today'"
+          class="icon-btn tr-defer"
+          :class="{ 'is-hidden': !canDefer }"
+          aria-label="Move to tomorrow"
+          title="Move to tomorrow"
+          @click="act($event, () => ember.moveToTomorrow(task.id))"
+        >
+          <ArrowRightToLine :size="16" :stroke-width="2.25" />
+        </button>
+        <button
+          class="icon-btn tr-focus"
+          :class="{ 'is-on': selected, 'is-hidden': done }"
+          aria-label="Focus on this task"
+          title="Focus on this task"
+          @click="ember.select(target)"
+        >
+          <Timer :size="16" :stroke-width="2.25" />
+        </button>
+      </template>
+      <button
+        v-else
+        class="icon-btn tr-pull"
+        :class="{ 'is-hidden': !canPull }"
+        aria-label="Move to today"
+        title="Move to today"
+        @click="act($event, () => ember.moveToToday(task.id))"
+      >
+        <ArrowLeftToLine :size="16" :stroke-width="2.25" />
+      </button>
+      <RowMenu :menu-key="menuKey" :label="task.title" @delete="onDelete" />
     </div>
-    <template v-if="variant !== 'upcoming'">
-      <span class="tr-spent tabular">{{ spent }}</span>
-      <button
-        v-if="variant === 'today'"
-        class="icon-btn tr-defer"
-        :class="{ 'is-hidden': !canDefer }"
-        aria-label="Move to tomorrow"
-        title="Move to tomorrow"
-        @click="act($event, () => ember.moveToTomorrow(task.id))"
-      >
-        <ArrowRightToLine :size="16" :stroke-width="2.25" />
-      </button>
-      <button
-        class="icon-btn tr-focus"
-        :class="{ 'is-on': selected, 'is-hidden': done }"
-        aria-label="Focus on this task"
-        title="Focus on this task"
-        @click="ember.select(target)"
-      >
-        <Timer :size="16" :stroke-width="2.25" />
-      </button>
-    </template>
-    <button
-      v-else
-      class="icon-btn tr-pull"
-      :class="{ 'is-hidden': !canPull }"
-      aria-label="Move to today"
-      title="Move to today"
-      @click="act($event, () => ember.moveToToday(task.id))"
-    >
-      <ArrowLeftToLine :size="16" :stroke-width="2.25" />
-    </button>
+    <TaskEditPanel v-if="editingThis" :task="task" @delete="onDelete" />
   </div>
 </template>
 
 <style scoped>
-.task-row { display: grid; align-items: center; border-bottom: 1px solid var(--color-divider); }
-.task-row.is-today { grid-template-columns: 22px minmax(0, 1fr) auto 28px 28px; gap: var(--space-2) var(--space-3); padding: var(--space-2); }
-.task-row.is-upcoming { grid-template-columns: 18px minmax(0, 1fr) 28px; gap: var(--space-3); padding: 6px var(--space-2); }
-.task-row.is-goal { grid-template-columns: 22px minmax(0, 1fr) auto 28px; gap: var(--space-3); padding: 6px var(--space-2); }
+.task-item { border-bottom: 1px solid var(--color-divider); }
+.task-row { display: grid; align-items: center; }
+.task-row.is-today { grid-template-columns: 22px minmax(0, 1fr) auto 28px 28px 28px; gap: var(--space-2) var(--space-3); padding: var(--space-2); }
+.task-row.is-upcoming { grid-template-columns: 18px minmax(0, 1fr) 28px 28px; gap: var(--space-3); padding: 6px var(--space-2); }
+.task-row.is-goal { grid-template-columns: 22px minmax(0, 1fr) auto 28px 28px; gap: var(--space-3); padding: 6px var(--space-2); }
 .task-row.is-selected { background: var(--color-accent-100); }
 .tr-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .tr-title { font-size: 14px; overflow-wrap: anywhere; }

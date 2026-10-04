@@ -1,3 +1,5 @@
+import { nextTick } from 'vue'
+import { useUiStore } from '../stores/ui'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -91,6 +93,24 @@ describe('TaskRow — today', () => {
     expect(w.find('.check').classes()).toContain('anim-pop1')
     await w.find('.check').trigger('click')
     expect(w.find('.check').classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+  })
+  it('edits through the row menu', async () => {
+    const { w, ember } = setup(taskFixture('Review PR'))
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-edit').trigger('click')
+    await nextTick()
+    await w.find('.ep-title').setValue('PR #482')
+    await w.find('.ep-save').trigger('click')
+    expect(ember.tasks[0].title).toBe('PR #482')
+    expect(w.find('.edit-panel').exists()).toBe(false)
+  })
+
+  it('deletes through the row menu and offers undo', async () => {
+    const { w, ember } = setup(taskFixture('Review PR'))
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-delete').trigger('click')
+    expect(ember.tasks[0].deletedOn).toBe('2026-09-23')
+    expect(useUiStore().undo?.record.label).toBe('Deleted “Review PR”')
   })
 })
 
