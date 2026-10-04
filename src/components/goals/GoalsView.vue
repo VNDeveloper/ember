@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { isLive } from '../../core/goals'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import GoalList from './GoalList.vue'
@@ -9,7 +10,7 @@ import Roadmap from './Roadmap.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
-const goal = computed(() => ember.goals.find((g) => g.id === ui.activeGoalId) ?? ember.goals[0] ?? null)
+const goal = computed(() => ember.goals.find((g) => g.id === ui.activeGoalId && isLive(g)) ?? ember.goals.find(isLive) ?? null)
 </script>
 
 <template>

@@ -4,7 +4,7 @@ import type { HeatMode } from '../core/activityView'
 import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
 import type { PickerTab } from '../core/picker'
-import type { When } from './ember'
+import type { UndoRecord, When } from './ember'
 
 export type View = 'today' | 'goals' | 'activity'
 
@@ -18,6 +18,13 @@ export const useUiStore = defineStore('ui', () => {
   const focusModeOpen = ref(false)
   /** Nav: the Data (back up / restore) panel is open. */
   const dataMenuOpen = ref(false)
+  /** Row "⋯" menu that is open (one at a time). */
+  const menuFor = ref<string | null>(null)
+  /** Inline edit panel that is open: task:<id> | step:<stepId> | ms:<msId> | goal:<goalId>. */
+  const editing = ref<string | null>(null)
+  /** Undo bar for the latest delete. */
+  const undo = ref<{ record: UndoRecord } | null>(null)
+  let undoTimer: ReturnType<typeof setTimeout> | undefined
   /** Add-task row draft; survives tab switches, not reloads. */
   const taskDraft = reactive<{ title: string; when: When; date: ISODate | ''; deadline: boolean; goalId: string }>({
     title: '', when: 'today', date: '', deadline: false, goalId: '',
@@ -66,10 +73,35 @@ export const useUiStore = defineStore('ui', () => {
     view.value = 'goals'
   }
 
-  /** Esc closes the data menu, then the picker, then Focus mode. Returns whether it closed anything. */
+  function startEdit(key: string) {
+    menuFor.value = null
+    editing.value = key
+  }
+
+  function showUndo(record: UndoRecord | null) {
+    if (!record) return
+    clearTimeout(undoTimer)
+    undo.value = { record }
+    undoTimer = setTimeout(() => { undo.value = null }, 8000)
+  }
+
+  function dismissUndo() {
+    clearTimeout(undoTimer)
+    undo.value = null
+  }
+
+  /** Esc closes the data menu, row menu, edit panel, picker, then Focus mode. Returns whether it closed anything. */
   function escape(): boolean {
     if (dataMenuOpen.value) {
       dataMenuOpen.value = false
+      return true
+    }
+    if (menuFor.value) {
+      menuFor.value = null
+      return true
+    }
+    if (editing.value) {
+      editing.value = null
       return true
     }
     if (pickerOpen.value) {
@@ -84,7 +116,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, dataMenuOpen, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
+    view, activeGoalId, dataMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }

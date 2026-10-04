@@ -395,6 +395,80 @@ describe('restore', () => {
   })
 })
 
+describe('edit', () => {
+  it('updates a task, trimming text, clearing the deadline for Someday, never un-ticking', () => {
+    const store = storeWith()
+    store.toggleTask('Review PR')
+    store.updateTask('Review PR', { title: '  PR #482 ', tag: ' Work ', date: '2026-09-25', deadline: true, goalId: 'D3' })
+    expect(store.tasks[0]).toMatchObject({ title: 'PR #482', tag: 'Work', date: '2026-09-25', deadline: true, goalId: 'D3', doneOn: '2026-09-23' })
+    store.updateTask('Review PR', { title: '   ', date: null })
+    expect(store.tasks[0]).toMatchObject({ title: 'PR #482', date: null, deadline: false })
+  })
+
+  it('updates a step, clamping the estimate to 25-minute units between 25m and 10h', () => {
+    const store = storeWith()
+    store.updateStep(LINE, { title: 'Line chart', estMin: 80 })
+    expect(store.goals[0].milestones[0].steps[1]).toMatchObject({ title: 'Line chart', estMin: 75 })
+    store.updateStep(LINE, { estMin: 5 })
+    expect(store.goals[0].milestones[0].steps[1].estMin).toBe(25)
+    store.updateStep(LINE, { estMin: 9999 })
+    expect(store.goals[0].milestones[0].steps[1].estMin).toBe(600)
+  })
+
+  it('renames milestones and goals, ignoring empty names', () => {
+    const store = storeWith()
+    store.renameMilestone('D3', 'D3/Motion', ' Animation ')
+    store.renameGoal('D3', 'D3 charts')
+    store.renameGoal('D3', ' ')
+    expect(store.goals[0].milestones[1].title).toBe('Animation')
+    expect(store.goals[0].title).toBe('D3 charts')
+  })
+})
+
+describe('delete and undo', () => {
+  it('soft-deletes a task and undoes it', () => {
+    const store = storeWith({ selection: { kind: 'task', taskId: 'Review PR' } })
+    const rec = store.deleteTask('Review PR')!
+    expect(rec.label).toBe('Deleted “Review PR”')
+    expect(store.tasks[0].deletedOn).toBe('2026-09-23')
+    expect(store.selection).toBeNull()
+    store.undoDelete(rec)
+    expect(store.tasks[0].deletedOn).toBeNull()
+    expect(store.selection).toEqual({ kind: 'task', taskId: 'Review PR' })
+  })
+
+  it('logs a running session as Unassigned when its step is deleted', () => {
+    const store = storeWith({ selection: LINE })
+    store.startPause()
+    store.deleteStep(LINE)
+    expect(store.selection).toBeNull()
+    store.tick(NOW + 25 * MIN)
+    expect(store.logs[0].target).toBeNull()
+  })
+
+  it('labels milestone and goal deletes, and undo brings the whole branch back', () => {
+    const store = storeWith({ selection: SCATTER })
+    const ms = store.deleteMilestone('D3', 'D3/First charts')!
+    expect(ms.label).toBe('Deleted milestone “First charts” and 3 steps')
+    expect(store.selection).toBeNull()
+    store.undoDelete(ms)
+    expect(store.goals[0].milestones[0].deletedOn).toBeNull()
+    expect(store.selection).toEqual(SCATTER)
+    const goal = store.deleteGoal('D3')!
+    expect(goal.label).toBe('Deleted goal “D3”')
+    expect(store.goals[0].deletedOn).toBe('2026-09-23')
+    store.undoDelete(goal)
+    expect(store.goals[0].deletedOn).toBeNull()
+  })
+
+  it('returns null for unknown or already deleted items', () => {
+    const store = storeWith()
+    expect(store.deleteTask('nope')).toBeNull()
+    store.deleteTask('Review PR')
+    expect(store.deleteTask('Review PR')).toBeNull()
+  })
+})
+
 describe('storage key', () => {
   it('uses ember:v1', () => {
     freshStore()

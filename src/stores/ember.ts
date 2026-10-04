@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { addDays, todayISO, type ISODate } from '../core/dates'
-import { findStep, nextOpenStep, stepTarget } from '../core/goals'
+import { findStep, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
+import { plural } from '../core/format'
 import { uid } from '../core/ids'
 import type {
   EmberData, FocusLog, Goal, Milestone, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
@@ -17,6 +18,14 @@ export interface NewTask { title: string; when: When; date?: ISODate; deadline: 
 
 const demoInUrl = (): boolean =>
   typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === '1'
+
+export type DeleteKey =
+  | { kind: 'task'; id: string }
+  | { kind: 'step'; goalId: string; msId: string; stepId: string }
+  | { kind: 'milestone'; goalId: string; msId: string }
+  | { kind: 'goal'; goalId: string }
+export interface UndoRecord { label: string; key: DeleteKey; selection: Selection }
+export type TaskPatch = Partial<Pick<Task, 'title' | 'date' | 'deadline' | 'goalId' | 'tag'>>
 
 export const useEmberStore = defineStore('ember', () => {
   const read = readData()
@@ -91,7 +100,14 @@ export const useEmberStore = defineStore('ember', () => {
   // — lookups —
   const taskById = (id: string): Task | null => tasks.value.find((t) => t.id === id) ?? null
   const goalById = (id: string): Goal | null => goals.value.find((g) => g.id === id) ?? null
-  const targetExists = (t: Target): boolean => (t.kind === 'task' ? !!taskById(t.taskId) : !!findStep(goals.value, t))
+  /** The target exists and isn't deleted (a deleted target makes a finished session Unassigned). */
+  const targetExists = (t: Target): boolean => {
+    if (t.kind === 'task') {
+      const task = taskById(t.taskId)
+      return !!task && isLive(task)
+    }
+    return isStepLive(goals.value, t)
+  }
 
   // — selection —
   function select(t: Selection) {
@@ -186,6 +202,79 @@ export const useEmberStore = defineStore('ember', () => {
     }
   }
 
+  // — edit —
+  function updateTask(id: string, patch: TaskPatch) {
+    const t = taskById(id)
+    if (!t) return
+    if (patch.title !== undefined && patch.title.trim()) t.title = patch.title.trim()
+    if (patch.tag !== undefined) t.tag = patch.tag.trim()
+    if (patch.goalId !== undefined) t.goalId = patch.goalId
+    if (patch.date !== undefined) t.date = patch.date
+    if (patch.deadline !== undefined) t.deadline = patch.deadline
+    if (t.date == null) t.deadline = false
+  }
+
+  function updateStep(target: StepTarget, patch: { title?: string; estMin?: number }) {
+    const loc = findStep(goals.value, target)
+    if (!loc) return
+    if (patch.title !== undefined && patch.title.trim()) loc.step.title = patch.title.trim()
+    if (patch.estMin !== undefined && Number.isFinite(patch.estMin)) {
+      loc.step.estMin = Math.min(600, Math.max(25, Math.round(patch.estMin / 25) * 25))
+    }
+  }
+
+  function renameMilestone(goalId: string, msId: string, title: string) {
+    const m = goalById(goalId)?.milestones.find((x) => x.id === msId)
+    if (m && title.trim()) m.title = title.trim()
+  }
+
+  function renameGoal(goalId: string, title: string) {
+    const g = goalById(goalId)
+    if (g && title.trim()) g.title = title.trim()
+  }
+
+  // — delete (soft) and undo —
+  function itemFor(key: DeleteKey): { deletedOn?: ISODate | null } | null {
+    if (key.kind === 'task') return taskById(key.id)
+    const g = goalById(key.goalId)
+    if (!g || key.kind === 'goal') return g
+    const m = g.milestones.find((x) => x.id === key.msId) ?? null
+    if (!m || key.kind === 'milestone') return m
+    return m.steps.find((x) => x.id === key.stepId) ?? null
+  }
+
+  function softDelete(key: DeleteKey, label: string): UndoRecord | null {
+    const item = itemFor(key)
+    if (!item || !isLive(item)) return null
+    const before = selection.value
+    item.deletedOn = today.value
+    if (selection.value && !targetExists(selection.value)) selection.value = null
+    return { label, key, selection: before }
+  }
+
+  const deleteTask = (id: string) =>
+    softDelete({ kind: 'task', id }, `Deleted “${taskById(id)?.title ?? ''}”`)
+
+  const deleteStep = (t: StepTarget) =>
+    softDelete({ kind: 'step', goalId: t.goalId, msId: t.msId, stepId: t.stepId }, `Deleted “${findStep(goals.value, t)?.step.title ?? ''}”`)
+
+  function deleteMilestone(goalId: string, msId: string) {
+    const m = goalById(goalId)?.milestones.find((x) => x.id === msId)
+    const n = m ? liveSteps(m).length : 0
+    const label = `Deleted milestone “${m?.title ?? ''}”${n ? ` and ${plural(n, 'step')}` : ''}`
+    return softDelete({ kind: 'milestone', goalId, msId }, label)
+  }
+
+  const deleteGoal = (goalId: string) =>
+    softDelete({ kind: 'goal', goalId }, `Deleted goal “${goalById(goalId)?.title ?? ''}”`)
+
+  /** Clears the flag set by that delete; restores the selection if nothing has been selected since. */
+  function undoDelete(record: UndoRecord) {
+    const item = itemFor(record.key)
+    if (item) item.deletedOn = null
+    if (!selection.value && record.selection && targetExists(record.selection)) selection.value = record.selection
+  }
+
   // — timer —
   function finishPhase(at: number) {
     const session = settings.value.session
@@ -232,6 +321,8 @@ export const useEmberStore = defineStore('ember', () => {
     snapshot, replaceData, restore, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
+    updateTask, updateStep, renameMilestone, renameGoal,
+    deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,
   }
 })

@@ -2,7 +2,7 @@
 import { ArrowLeftToLine, ArrowRightToLine, Check, Flag, Timer } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { fmtM } from '../core/format'
-import { goalColor } from '../core/goals'
+import { goalColor, isLive } from '../core/goals'
 import type { Task } from '../core/model'
 import { sameTarget } from '../core/model'
 import { taskNote } from '../core/today'
@@ -17,7 +17,7 @@ const act = (e: Event, action: () => void) => withFocusRescue(root.value, e, act
 
 const done = computed(() => props.task.doneOn != null)
 const goalIndex = computed(() => (props.task.goalId ? ember.goals.findIndex((g) => g.id === props.task.goalId) : -1))
-const goal = computed(() => (goalIndex.value >= 0 ? ember.goals[goalIndex.value] : null))
+const goal = computed(() => (goalIndex.value >= 0 && isLive(ember.goals[goalIndex.value]) ? ember.goals[goalIndex.value] : null))
 const note = computed(() => taskNote(props.task, ember.today, props.showDate))
 const spent = computed(() => {
   const min = ember.tally.spent.get(`task:${props.task.id}`) ?? 0
@@ -46,7 +46,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
       <span class="tr-title">{{ task.title }}</span>
       <span class="tr-meta">
         <span class="tr-label">
-          <span v-if="goal" class="swatch swatch-sm" :style="{ background: goalColor(goalIndex) }"></span>{{ goal ? goal.title : task.tag }}
+          <span v-if="goal" class="swatch swatch-sm" :style="{ background: goalColor(goalIndex) }"></span>{{ goal ? goal.title : task.tag || 'Task' }}
         </span>
         <span v-if="note" class="tr-note" :class="{ 'is-accent': note.accent }">
           <Flag v-if="task.deadline" :size="12" :stroke-width="2.5" />{{ note.text }}

@@ -39,4 +39,10 @@ describe('GoalsView', () => {
     expect(w.find('.gv-empty').text()).toBe('No goals yet. Add one on the left.')
     expect(w.find('.gl-input').exists()).toBe(true)
   })
+  it('skips deleted goals', () => {
+    const goals = two()
+    goals[0].deletedOn = '2026-09-23'
+    expect(setup(goals, 'D3').find('.gs-title').text()).toBe('Spanish')
+    expect(setup(goals).findAll('.gl-item')).toHaveLength(1)
+  })
 })

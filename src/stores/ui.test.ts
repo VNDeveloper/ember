@@ -1,8 +1,9 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from './ui'
 
 beforeEach(() => setActivePinia(createPinia()))
+afterEach(() => vi.useRealTimers())
 
 describe('ui store', () => {
   it('starts on Today with nothing open', () => {
@@ -81,5 +82,32 @@ describe('ui store', () => {
     expect(ui.escape()).toBe(true)
     expect(ui.dataMenuOpen).toBe(false)
     expect(ui.focusModeOpen).toBe(true)
+  })
+  it('tracks the open row menu and edit panel, closing them on Esc in order', () => {
+    const ui = useUiStore()
+    ui.menuFor = 'task:a'
+    ui.startEdit('task:b')
+    expect(ui.menuFor).toBeNull()
+    expect(ui.editing).toBe('task:b')
+    ui.menuFor = 'task:c'
+    expect(ui.escape()).toBe(true)
+    expect(ui.menuFor).toBeNull()
+    expect(ui.editing).toBe('task:b')
+    expect(ui.escape()).toBe(true)
+    expect(ui.editing).toBeNull()
+  })
+
+  it('shows the undo bar for 8 seconds', () => {
+    vi.useFakeTimers()
+    const ui = useUiStore()
+    const record = { label: 'Deleted “x”', key: { kind: 'task' as const, id: 'x' }, selection: null }
+    ui.showUndo(record)
+    expect(ui.undo?.record).toEqual(record)
+    vi.advanceTimersByTime(7999)
+    expect(ui.undo).not.toBeNull()
+    vi.advanceTimersByTime(1)
+    expect(ui.undo).toBeNull()
+    ui.showUndo(null)
+    expect(ui.undo).toBeNull()
   })
 })
