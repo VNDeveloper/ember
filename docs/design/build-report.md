@@ -69,7 +69,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
   - The heat map covers the calendar year; streaks continue across New Year.
 - **Focus mode:**
   - Sound starts muted, because of browser autoplay rules.
-  - If the YouTube API doesn't load within 15 seconds, the background stays ink and a later visit retries.
+  - If the YouTube API doesn't load within 15 seconds, the background stays ink. Opening Focus mode again retries when the script itself was slow or failed; if YouTube's script half-loaded, reload the page.
   - Page scroll is locked while Focus mode is open.
 - **Phones (to ~360px):**
   - The focus bar wraps to two rows; the nav date drops under the tabs.
@@ -88,6 +88,10 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 - 7-character log hashes can collide for keys differing only in the last character (cosmetic, as in the prototype).
 - Per-day heat-map values and done-wall brick names are only in hover tooltips. They aren't reachable by keyboard, touch or screen readers.
 - `resetTimer` and `skipBreak` are identical (kept as separate intents).
+- Hand-edited saved data with a garbage timer `phase` or a running timer without a valid `endsAt` isn't repaired on load (missing or invalid lengths and speeds are).
+- The draft "Pick date" only moves forward while the Today tab is open. Come back after midnight and the field can show a past date; the task is then filed under today.
+- Right after clearing the date field it looks empty while the last valid date is still used. It corrects on the next re-render.
+- Un-ticking a completion doesn't cancel its pending animations: opening Activity afterwards still pops today's cell and drops the last brick (the prototype turns these off after an undo).
 
 ## Suggested next steps
 
