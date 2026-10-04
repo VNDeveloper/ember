@@ -79,6 +79,9 @@ const columns = computed(() => ({ gridTemplateColumns: `28px repeat(${hm.value.c
 .hm-stat-value { font: 800 32px/1.1 var(--font-heading); }
 @media (max-width: 560px) {
   .hm-months, .hm-grid { gap: 1px; }
+  /* Month labels collide at phone width: label every other month. */
+  .hm-months span { overflow: visible; }
+  .hm-months span:nth-child(even) { visibility: hidden; }
   .hm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-stat:nth-child(3) { padding-left: 0; border-left: 0; }
   .hm-stat:nth-child(n + 3) { margin-top: var(--space-3); border-top: 2px solid var(--color-divider); }

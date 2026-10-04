@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
+import ActivityView from './components/activity/ActivityView.vue'
 import FocusBar from './components/FocusBar.vue'
 import FocusPicker from './components/FocusPicker.vue'
 import GoalsView from './components/goals/GoalsView.vue'
@@ -7,7 +8,7 @@ import NavBar from './components/NavBar.vue'
 import TodayView from './components/today/TodayView.vue'
 import { useTicker } from './composables/useTicker'
 import { useEmberStore } from './stores/ember'
-import { useUiStore, type View } from './stores/ui'
+import { useUiStore } from './stores/ui'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -19,8 +20,6 @@ function onKeydown(e: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
-
-const VIEW_NAMES: Record<View, string> = { today: 'Today', goals: 'Goals', activity: 'Activity' }
 </script>
 
 <template>
@@ -29,11 +28,7 @@ const VIEW_NAMES: Record<View, string> = { today: 'Today', goals: 'Goals', activ
     <FocusBar />
     <TodayView v-if="ui.view === 'today'" />
     <GoalsView v-else-if="ui.view === 'goals'" />
-    <!-- Phase 5 replaces this placeholder with ActivityView. -->
-    <main v-else class="view">
-      <span class="kicker">{{ VIEW_NAMES[ui.view] }}</span>
-      <p class="muted">This view arrives in a later phase.</p>
-    </main>
+    <ActivityView v-else />
     <FocusPicker v-if="ui.pickerOpen" />
   </div>
 </template>

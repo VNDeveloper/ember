@@ -74,13 +74,16 @@ describe('App shell', () => {
     w.unmount()
   })
 
-  it('switches between the Today view, the Goals view and the Activity placeholder', async () => {
+  it('switches between the Today, Goals and Activity views', async () => {
     const w = mountApp()
     expect(w.find('.today-view').exists()).toBe(true)
     await w.findAll('.tab')[1].trigger('click')
     expect(w.find('.goals-view').exists()).toBe(true)
     await w.findAll('.tab')[2].trigger('click')
-    expect(w.find('.view').text()).toContain('This view arrives in a later phase.')
+    expect(w.find('.activity-view').exists()).toBe(true)
+    expect(w.find('.hm-title').text()).toMatch(/hours focused in 2026$/)
+    expect(w.findAll('.al-entry')).toHaveLength(10)
+    expect(w.text()).not.toContain('This view arrives in a later phase.')
     w.unmount()
   })
 
