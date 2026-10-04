@@ -3,7 +3,7 @@ import {
   addDays, dayLabel, dayOfYear, daysInYear, diffDays, fromISO, mondayOf, monthName, startOfYear, yearOf, type ISODate,
 } from './dates'
 import { fmtInt, fmtM, hash7, pad2 } from './format'
-import { findStep, goalColor, goalStats } from './goals'
+import { findStep, goalColor, goalStats, isLive, isStepLive } from './goals'
 import type { FocusLog, Goal, Task } from './model'
 import { targetTitle } from './selection'
 
@@ -144,12 +144,12 @@ export function doneWall(goals: Goal[], tasks: Task[], today: ISODate, wallWeeks
     }),
     height: (Math.max(6, ...sizes) + 1) * BRICK_ROW,
     headline: `${fmtInt(sizes.reduce((a, n) => a + n, 0))} things finished`,
-    legend: goals.map((g, gi) => ({ name: g.title, color: goalColor(gi) })),
+    legend: goals.flatMap((g, gi) => (isLive(g) ? [{ name: g.title, color: goalColor(gi) }] : [])),
     stats: [
       stat('This week', String(sizes[0]), true),
       stat('Best week', String(Math.max(...sizes))),
       stat('Weeks in a row', String(inARow)),
-      stat('Milestones done', String(goals.reduce((a, g) => a + goalStats(g).milestonesDone, 0))),
+      stat('Milestones done', String(goals.filter(isLive).reduce((a, g) => a + goalStats(g).milestonesDone, 0))),
     ],
   }
 }
@@ -168,12 +168,16 @@ export function activityLog(goals: Goal[], tasks: Task[], logs: FocusLog[], toda
   }
   const taskSource = (t: Task) => {
     const g = t.goalId ? goals.find((x) => x.id === t.goalId) : undefined
-    return g ? g.title : t.tag ? `Task · ${t.tag}` : 'Task'
+    const base = g ? g.title : t.tag ? `Task · ${t.tag}` : 'Task'
+    return isLive(t) && (!g || isLive(g)) ? base : `${base} (deleted)`
   }
 
   const done: RawEntry[] = []
   for (const g of goals) for (const m of g.milestones) for (const s of m.steps) {
-    if (s.doneOn) done.push({ key: `step:${s.id}`, kind: 'done', date: s.doneOn, at: 0, text: `Completed “${s.title}”`, src: g.title })
+    if (s.doneOn) {
+      const src = isLive(g) && isLive(m) && isLive(s) ? g.title : `${g.title} (deleted)`
+      done.push({ key: `step:${s.id}`, kind: 'done', date: s.doneOn, at: 0, text: `Completed “${s.title}”`, src })
+    }
   }
   for (const t of tasks) {
     if (t.doneOn) done.push({ key: `task:${t.id}`, kind: 'done', date: t.doneOn, at: 0, text: `Completed task “${t.title}”`, src: taskSource(t) })
@@ -184,7 +188,7 @@ export function activityLog(goals: Goal[], tasks: Task[], logs: FocusLog[], toda
     let src = 'No step picked'
     if (l.target?.kind === 'step') {
       const loc = findStep(goals, l.target)
-      if (loc) src = loc.goal.title
+      if (loc) src = isStepLive(goals, l.target) ? loc.goal.title : `${loc.goal.title} (deleted)`
     } else if (l.target?.kind === 'task') {
       const taskId = l.target.taskId
       const t = tasks.find((x) => x.id === taskId)

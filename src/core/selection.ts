@@ -1,5 +1,5 @@
 import { fmtM, pad2 } from './format'
-import { findStep, stepAfter } from './goals'
+import { findStep, isLive, isStepLive, liveMilestones, stepAfter } from './goals'
 import type { Goal, Selection, Target, Task } from './model'
 import { targetKey } from './model'
 
@@ -17,16 +17,16 @@ export function describeSelection(goals: Goal[], tasks: Task[], sel: Selection, 
   const min = spent.get(targetKey(sel)) ?? 0
   if (sel.kind === 'step') {
     const loc = findStep(goals, sel)
-    if (!loc) return EMPTY_SELECTION
+    if (!loc || !isStepLive(goals, sel)) return EMPTY_SELECTION
     return {
       title: loc.step.title,
-      sub: `${loc.goal.title} · ${pad2(loc.mi + 1)} ${loc.milestone.title} · ${fmtM(min)} of est. ${fmtM(loc.step.estMin)}`,
+      sub: `${loc.goal.title} · ${pad2(liveMilestones(loc.goal).indexOf(loc.milestone) + 1)} ${loc.milestone.title} · ${fmtM(min)} of est. ${fmtM(loc.step.estMin)}`,
       empty: false,
     }
   }
   const task = tasks.find((t) => t.id === sel.taskId)
-  if (!task) return EMPTY_SELECTION
-  const goal = task.goalId ? goals.find((g) => g.id === task.goalId) : undefined
+  if (!task || !isLive(task)) return EMPTY_SELECTION
+  const goal = task.goalId ? goals.find((g) => g.id === task.goalId && isLive(g)) : undefined
   const head = goal ? `${goal.title} · task` : task.tag ? `Task · ${task.tag}` : 'Task'
   return { title: task.title, sub: `${head}${min ? ` · ${fmtM(min)} focused` : ''}`, empty: false }
 }
@@ -42,7 +42,7 @@ export function targetTitle(goals: Goal[], tasks: Task[], t: Target | null): str
 export function nextStepText(goals: Goal[], sel: Selection): string {
   if (sel?.kind !== 'step') return ''
   const loc = findStep(goals, sel)
-  if (!loc) return ''
+  if (!loc || !isStepLive(goals, sel)) return ''
   const next = stepAfter(loc.goal, loc.step.id)
   return next ? `Then: ${next.title}` : ''
 }

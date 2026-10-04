@@ -1,6 +1,6 @@
 import { addDays, dayLabel, type ISODate } from './dates'
 import { pad2 } from './format'
-import { goalColor, nextOpenStep, stepTarget } from './goals'
+import { goalColor, isLive, liveSteps, nextOpenStep, stepTarget } from './goals'
 import type { Goal, Selection, Target, Task } from './model'
 import { sameTarget, targetKey } from './model'
 
@@ -27,8 +27,9 @@ export function pickerSections(
 
   const taskItem = (t: Task, prefix = ''): PickerItem => {
     const gi = t.goalId ? goals.findIndex((g) => g.id === t.goalId) : -1
-    const base = gi >= 0 ? goals[gi].title : t.tag || 'Task'
-    return item(t.title, prefix + base, gi >= 0 ? goalColor(gi) : 'transparent', gi < 0, { kind: 'task', taskId: t.id })
+    const linked = gi >= 0 && isLive(goals[gi])
+    const base = linked ? goals[gi].title : t.tag || 'Task'
+    return item(t.title, prefix + base, linked ? goalColor(gi) : 'transparent', !linked, { kind: 'task', taskId: t.id })
   }
   const tomorrow = addDays(today, 1)
   const rel = (d: ISODate) => (d === today ? 'Today' : d === tomorrow ? 'Tomorrow' : dayLabel(d))
@@ -36,21 +37,21 @@ export function pickerSections(
   let sections: PickerSection[]
   if (tab === 'goals') {
     sections = goals.map((g, gi) => {
+      if (!isLive(g)) return { label: g.title, items: [] }
       const next = nextOpenStep(g)
       if (!next) return { label: g.title, items: [] }
       const m = next.milestone
-      const items = m.steps
-        .map((s, si) => ({ s, si }))
-        .filter(({ s }) => s.doneOn == null)
-        .map(({ s, si }) => item(
+      const items = liveSteps(m)
+        .filter((s) => s.doneOn == null)
+        .map((s) => item(
           s.title,
-          `${pad2(next.mi + 1)} ${m.title}${si === next.si ? ' · next step' : ''}`,
+          `${pad2(next.mi + 1)} ${m.title}${s.id === next.step.id ? ' · next step' : ''}`,
           goalColor(gi), false, stepTarget(g, m, s),
         ))
       return { label: g.title, items }
     })
   } else {
-    const open = tasks.filter((t) => t.doneOn == null)
+    const open = tasks.filter((t) => isLive(t) && t.doneOn == null)
     sections = [
       { label: 'Today', items: open.filter((t) => t.date != null && t.date <= today).map((t) => taskItem(t)) },
       {

@@ -1,30 +1,42 @@
+import type { ISODate } from './dates'
 import type { Goal, Milestone, Step, StepTarget } from './model'
 
-export const isMilestoneDone = (m: Milestone): boolean => m.steps.length > 0 && m.steps.every((s) => s.doneOn != null)
+/** Soft-deleted items keep their data for history but drop out of every live view. */
+export const isLive = (x: { deletedOn?: ISODate | null }): boolean => !x.deletedOn
+export const liveMilestones = (g: Goal): Milestone[] => g.milestones.filter(isLive)
+export const liveSteps = (m: Milestone): Step[] => m.steps.filter(isLive)
+
+export const isMilestoneDone = (m: Milestone): boolean => {
+  const steps = liveSteps(m)
+  return steps.length > 0 && steps.every((s) => s.doneOn != null)
+}
 
 export interface GoalStats { done: number; total: number; pct: number; milestonesDone: number; currentIndex: number }
 
 export function goalStats(g: Goal): GoalStats {
-  const all = g.milestones.flatMap((m) => m.steps)
+  const milestones = liveMilestones(g)
+  const all = milestones.flatMap(liveSteps)
   const done = all.filter((s) => s.doneOn != null).length
   return {
     done,
     total: all.length,
     pct: all.length ? Math.round((done / all.length) * 100) : 0,
-    milestonesDone: g.milestones.filter(isMilestoneDone).length,
-    /** First milestone with an open step (or no steps); -1 when all are done. */
-    currentIndex: g.milestones.findIndex((m) => !isMilestoneDone(m)),
+    milestonesDone: milestones.filter(isMilestoneDone).length,
+    /** First live milestone with an open step (or no steps); -1 when all are done. */
+    currentIndex: milestones.findIndex((m) => !isMilestoneDone(m)),
   }
 }
 
 export interface OpenStep { milestone: Milestone; mi: number; step: Step; si: number }
 
-/** First open step of the goal, in roadmap order. */
+/** First open step of the goal, in roadmap order; mi / si are positions among live items. */
 export function nextOpenStep(g: Goal): OpenStep | null {
-  for (let mi = 0; mi < g.milestones.length; mi++) {
-    const milestone = g.milestones[mi]
-    const si = milestone.steps.findIndex((s) => s.doneOn == null)
-    if (si >= 0) return { milestone, mi, step: milestone.steps[si], si }
+  const milestones = liveMilestones(g)
+  for (let mi = 0; mi < milestones.length; mi++) {
+    const milestone = milestones[mi]
+    const steps = liveSteps(milestone)
+    const si = steps.findIndex((s) => s.doneOn == null)
+    if (si >= 0) return { milestone, mi, step: steps[si], si }
   }
   return null
 }
@@ -46,11 +58,17 @@ export function findStep(goals: Goal[], t: StepTarget): StepLocation | null {
   return { goal, gi, milestone, mi, step: milestone.steps[si], si }
 }
 
+/** The step and its milestone and goal all exist and none is deleted. */
+export function isStepLive(goals: Goal[], t: StepTarget): boolean {
+  const loc = findStep(goals, t)
+  return !!loc && isLive(loc.goal) && isLive(loc.milestone) && isLive(loc.step)
+}
+
 /** The next open step after `stepId` in roadmap order — Focus mode's "Then:" line. */
 export function stepAfter(g: Goal, stepId: string): Step | null {
   let past = false
-  for (const m of g.milestones) {
-    for (const s of m.steps) {
+  for (const m of liveMilestones(g)) {
+    for (const s of liveSteps(m)) {
       if (s.id === stepId) past = true
       else if (past && s.doneOn == null) return s
     }

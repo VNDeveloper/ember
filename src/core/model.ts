@@ -3,9 +3,10 @@ import { DEFAULT_VIDEO_URL } from './youtube'
 
 export type { ISODate }
 
-export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number }
-export interface Milestone { id: string; title: string; steps: Step[] }
-export interface Goal { id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate }
+/** deletedOn (soft delete): hidden from live views, kept for history. */
+export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null }
+export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null }
+export interface Goal { id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate; deletedOn?: ISODate | null }
 
 export interface Task {
   id: string
@@ -17,6 +18,8 @@ export interface Task {
   /** Only meaningful when date != null. */
   deadline: boolean
   doneOn: ISODate | null
+  /** Soft delete: hidden from live views, kept for history. */
+  deletedOn?: ISODate | null
 }
 
 export interface TaskTarget { kind: 'task'; taskId: string }

@@ -1,6 +1,6 @@
 import { addDays, dayLabel, weekdayLong, type ISODate } from './dates'
 import { pad2, plural } from './format'
-import { goalColor, goalStats, nextOpenStep, stepTarget } from './goals'
+import { goalColor, goalStats, isLive, liveMilestones, liveSteps, nextOpenStep, stepTarget } from './goals'
 import type { Goal, Selection, StepTarget, Task } from './model'
 import { sameTarget } from './model'
 
@@ -29,7 +29,7 @@ export interface TodayLists { open: Task[]; done: Task[] }
 
 /** Open tasks dated today or earlier (missed deadlines first), plus tasks finished today. */
 export function todayList(tasks: Task[], today: ISODate): TodayLists {
-  const list = tasks.filter((t) => t.date != null && t.date <= today && (t.doneOn == null || t.doneOn === today))
+  const list = tasks.filter(isLive).filter((t) => t.date != null && t.date <= today && (t.doneOn == null || t.doneOn === today))
   const open = list.filter((t) => t.doneOn == null)
   return {
     open: [...open.filter((t) => isLate(t, today)), ...open.filter((t) => !isLate(t, today))],
@@ -48,7 +48,8 @@ export function upcomingGroups(tasks: Task[], today: ISODate): UpcomingGroup[] {
   const tomorrow = addDays(today, 1)
   const horizon = addDays(today, 6)
   const groups: UpcomingGroup[] = []
-  const future = tasks.filter((t) => t.date != null && t.date > today && visibleToday(t, today)).sort(byDate)
+  const live = tasks.filter(isLive)
+  const future = live.filter((t) => t.date != null && t.date > today && visibleToday(t, today)).sort(byDate)
   for (const t of future) {
     const date = t.date!
     const later = date > horizon
@@ -66,7 +67,7 @@ export function upcomingGroups(tasks: Task[], today: ISODate): UpcomingGroup[] {
     }
     g.items.push({ task: t, showDate: later })
   }
-  const someday = tasks.filter((t) => t.date == null && visibleToday(t, today))
+  const someday = live.filter((t) => t.date == null && visibleToday(t, today))
   if (someday.length) {
     groups.push({ key: 'someday', label: 'Someday', right: '', collapsible: true, items: someday.map((task) => ({ task, showDate: false })) })
   }
@@ -75,7 +76,7 @@ export function upcomingGroups(tasks: Task[], today: ISODate): UpcomingGroup[] {
 }
 
 export function upcomingSummary(tasks: Task[], today: ISODate): string {
-  const open = tasks.filter((t) => t.doneOn == null)
+  const open = tasks.filter((t) => isLive(t) && t.doneOn == null)
   const planned = open.filter((t) => t.date != null && t.date > today)
   const deadlines = planned.filter((t) => t.deadline).length
   const someday = open.filter((t) => t.date == null).length
@@ -98,6 +99,7 @@ export interface WorkingOnCard {
 
 export function workingOn(goals: Goal[], selection: Selection): WorkingOnCard[] {
   return goals.flatMap((g, gi) => {
+    if (!isLive(g)) return []
     const next = nextOpenStep(g)
     if (!next) return []
     const target = stepTarget(g, next.milestone, next.step)
@@ -106,9 +108,9 @@ export function workingOn(goals: Goal[], selection: Selection): WorkingOnCard[] 
       title: g.title,
       swatch: goalColor(gi),
       pct: goalStats(g).pct,
-      milestoneLabel: `Milestone ${pad2(next.mi + 1)} of ${pad2(g.milestones.length)}`,
+      milestoneLabel: `Milestone ${pad2(next.mi + 1)} of ${pad2(liveMilestones(g).length)}`,
       milestoneTitle: next.milestone.title,
-      segments: next.milestone.steps.map((s) => s.doneOn != null),
+      segments: liveSteps(next.milestone).map((s) => s.doneOn != null),
       nextTitle: next.step.title,
       target,
       selected: sameTarget(selection, target),
