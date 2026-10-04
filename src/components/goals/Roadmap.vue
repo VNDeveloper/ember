@@ -30,6 +30,10 @@ function startMilestone() {
 function cancel() {
   ui.adding = null
 }
+/** Leaving the field cancels, but switching to another window or app doesn't. */
+function onBlur() {
+  if (document.hasFocus()) cancel()
+}
 function commit(e: KeyboardEvent) {
   if (e.isComposing) return
   const a = ui.adding
@@ -107,7 +111,7 @@ function commit(e: KeyboardEvent) {
                 aria-label="New step"
                 @keydown.enter="commit"
                 @keydown.esc="cancel"
-                @blur="cancel"
+                @blur="onBlur"
               />
             </div>
             <button v-else class="btn btn-ghost rm-add-step" @click="startStep(r.id)">
@@ -129,7 +133,7 @@ function commit(e: KeyboardEvent) {
             aria-label="New milestone"
             @keydown.enter="commit"
             @keydown.esc="cancel"
-            @blur="cancel"
+            @blur="onBlur"
           />
           <button v-else class="btn btn-secondary rm-add-ms" @click="startMilestone">
             <Plus :size="16" :stroke-width="2.5" />Add milestone
