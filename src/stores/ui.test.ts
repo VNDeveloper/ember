@@ -52,4 +52,19 @@ describe('ui store', () => {
     ui.openGroups.later = true
     expect(ui.openGroups.later).toBe(true)
   })
+
+  it('holds Goals-tab state and closes any add input when another goal is selected', () => {
+    const ui = useUiStore()
+    expect(ui.expanded).toEqual({})
+    expect(ui.adding).toBeNull()
+    expect(ui.draft).toBe('')
+    expect(ui.goalDraft).toBe('')
+    expect(ui.goalTasksAll).toEqual({})
+    ui.adding = { kind: 'step', msId: 'm' }
+    ui.draft = 'half typed'
+    ui.selectGoal('Spanish')
+    expect(ui.activeGoalId).toBe('Spanish')
+    expect(ui.adding).toBeNull()
+    expect(ui.draft).toBe('')
+  })
 })

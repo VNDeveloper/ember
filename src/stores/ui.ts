@@ -23,6 +23,22 @@ export const useUiStore = defineStore('ui', () => {
   const doneOpen = ref(false)
   /** Upcoming: which collapsible groups (later, someday) are open. */
   const openGroups = reactive<Record<string, boolean>>({})
+  /** Goals: milestone expanded state the user chose (the current milestone defaults to open). */
+  const expanded = reactive<Record<string, boolean>>({})
+  /** Goals: the add-step or add-milestone input that is open, if any. */
+  const adding = ref<{ kind: 'step'; msId: string } | { kind: 'milestone' } | null>(null)
+  /** Goals: text in the open add-step / add-milestone input. */
+  const draft = ref('')
+  /** Goals: the "New goal" input. */
+  const goalDraft = ref('')
+  /** Goals: "Show all" tasks, per goal. */
+  const goalTasksAll = reactive<Record<string, boolean>>({})
+
+  function selectGoal(id: string) {
+    activeGoalId.value = id
+    adding.value = null
+    draft.value = ''
+  }
 
   function openPicker(selection: Selection) {
     pickerTab.value = selection?.kind === 'step' ? 'goals' : 'tasks'
@@ -58,6 +74,7 @@ export const useUiStore = defineStore('ui', () => {
 
   return {
     view, activeGoalId, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
+    expanded, adding, draft, goalDraft, goalTasksAll, selectGoal,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }
 })
