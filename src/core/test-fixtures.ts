@@ -1,5 +1,5 @@
-import type { ISODate } from './dates'
-import type { EmberData, Goal, Task } from './model'
+import { fromISO, type ISODate } from './dates'
+import type { EmberData, FocusLog, Goal, StepTarget, Target, Task } from './model'
 import { DEFAULT_SETTINGS } from './model'
 import { idleTimer } from './timer'
 
@@ -34,5 +34,33 @@ export function dataFixture(patch: Partial<EmberData> = {}): EmberData {
     timer: idleTimer('25/5'),
     settings: { ...DEFAULT_SETTINGS },
     ...patch,
+  }
+}
+
+export const logFixture = (date: ISODate, target: Target | null, min = 25): FocusLog =>
+  ({ id: `${date}-${Math.random()}`, at: fromISO(date).getTime(), date, min, target })
+
+export const stepRef = (goal: string, ms: string, step: string): StepTarget =>
+  ({ kind: 'step', goalId: goal, msId: `${goal}/${ms}`, stepId: `${goal}/${ms}/${step}` })
+
+/**
+ * Goals-view fixture (today = 2026-09-23): Foundations done (SVG, no time), First charts current
+ * (Bar done with 75m, Line open with 25m yesterday + 25m today, Scatter open), Motion future (Easing).
+ * 2h 5m focused, 4h 10m estimated.
+ */
+export function d3Fixture(): { goal: Goal; logs: FocusLog[] } {
+  const goal = goalFixture('D3', [
+    ['Foundations', [['SVG', '2026-07-01']]],
+    ['First charts', [['Bar', '2026-09-01'], ['Line', null], ['Scatter', null]]],
+    ['Motion', [['Easing', null]]],
+  ])
+  const bar = stepRef('D3', 'First charts', 'Bar')
+  const line = stepRef('D3', 'First charts', 'Line')
+  return {
+    goal,
+    logs: [
+      logFixture('2026-08-30', bar), logFixture('2026-08-31', bar), logFixture('2026-09-01', bar),
+      logFixture('2026-09-22', line), logFixture('2026-09-23', line),
+    ],
   }
 }
