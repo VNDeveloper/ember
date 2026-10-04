@@ -160,4 +160,28 @@ describe('Roadmap', () => {
     hasFocus.mockRestore()
     w.unmount()
   })
+
+  it('pops the step checkbox and retriggers on the next completion', async () => {
+    const { w, ui } = setup()
+    ui.expanded['D3/First charts'] = true // finishing the milestone would otherwise fold it away
+    const row = (i: number) => w.findAll('.step-row')[i]
+    await row(1).find('.check').trigger('click')
+    expect(row(1).find('.check').classes()).toContain('anim-pop1')
+    await row(2).find('.check').trigger('click')
+    expect(row(2).find('.check').classes()).toContain('anim-pop0')
+    w.unmount()
+  })
+
+  it('pops the newest session block when a session finishes', async () => {
+    const { w, ember } = setup()
+    ember.select(stepRef('D3', 'First charts', 'Line'))
+    ember.startPause()
+    ember.tick(new Date(2026, 8, 23, 10, 25).getTime())
+    await nextTick()
+    const lineBlocks = w.findAll('.step-row')[1].findAll('.blk')
+    expect(lineBlocks).toHaveLength(3)
+    expect(lineBlocks[2].classes()).toContain('anim-pop1')
+    expect(lineBlocks[1].classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+    w.unmount()
+  })
 })

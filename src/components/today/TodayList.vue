@@ -6,6 +6,7 @@ import { todayList } from '../../core/today'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import TaskRow from '../TaskRow.vue'
+import { popClass } from '../anim'
 import AddTask from './AddTask.vue'
 
 const ember = useEmberStore()
@@ -24,7 +25,7 @@ const streak = computed(() => streakLength(counts.value, ember.today))
       <h4>Today</h4>
       <div class="tl-stats">
         <div class="tl-week" title="Last 7 days">
-          <span v-for="d in week" :key="d.date" :title="d.tip" :class="{ 'is-today': d.isToday }" :style="{ background: d.color }"></span>
+          <span v-for="d in week" :key="d.date" :title="d.tip" :class="[{ 'is-today': d.isToday }, d.isToday && ember.lastDone ? popClass(ember.lastDone.n) : '']" :style="{ background: d.color }"></span>
         </div>
         <span class="tl-streak">{{ streak }}-day streak</span>
         <span class="tl-summary">{{ list.done.length }} of {{ total }} done</span>

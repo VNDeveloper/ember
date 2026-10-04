@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { doneWall, type Brick } from '../../core/activityView'
 import { useEmberStore } from '../../stores/ember'
+import { dropClass } from '../anim'
 
 const ember = useEmberStore()
 const wall = computed(() => doneWall(ember.goals, ember.tasks, ember.today, ember.settings.wallWeeks))
@@ -24,7 +25,7 @@ const brickStyle = (b: Brick) => (b.kind === 'step' ? { background: b.color } : 
           v-for="(b, i) in c.bricks"
           :key="i"
           class="dw-brick"
-          :class="`is-${b.kind}`"
+          :class="[`is-${b.kind}`, c.current && ember.lastDone && i === c.bricks.length - 1 ? dropClass(ember.lastDone.n) : '']"
           :style="brickStyle(b)"
           :title="b.tip"
         ></div>

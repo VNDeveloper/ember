@@ -5,6 +5,7 @@ import { finishLine, roadmap, type MilestoneRow } from '../../core/goalView'
 import type { Goal } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
+import { popClass } from '../anim'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -12,6 +13,10 @@ const ui = useUiStore()
 
 const rows = computed(() => roadmap(props.goal, ember.tally.spent, ember.tally.spentToday, ember.selection))
 const finish = computed(() => finishLine(props.goal))
+const justDone = (stepId: string) => ember.lastDone?.key === `step:${stepId}`
+/** The selected step's newest filled block pops when a focus session has just finished. */
+const sessionJustEnded = computed(() => ember.completions > 0 && ember.timer.phase === 'break')
+const newestBlock = (blocks: string[]) => blocks.reduce((last, b, i) => (b === 'remaining' ? last : i), -1)
 
 const vFocus: Directive<HTMLElement> = { mounted: (el) => el.focus() }
 
@@ -76,7 +81,7 @@ function commit(e: KeyboardEvent) {
             <div v-for="s in r.steps" :key="s.id" class="step-row" :class="{ 'is-done': s.done, 'is-selected': s.selected }">
               <button
                 class="check"
-                :class="{ 'is-done': s.done }"
+                :class="[{ 'is-done': s.done }, s.done && justDone(s.id) ? popClass(ember.lastDone!.n) : '']"
                 role="checkbox"
                 :aria-checked="s.done"
                 :aria-label="s.title"
@@ -86,7 +91,7 @@ function commit(e: KeyboardEvent) {
               </button>
               <span class="sr-title">{{ s.title }}</span>
               <div class="sr-blocks" aria-hidden="true">
-                <i v-for="(b, i) in s.blocks" :key="i" class="blk" :class="`is-${b}`"></i>
+                <i v-for="(b, i) in s.blocks" :key="i" class="blk" :class="[`is-${b}`, sessionJustEnded && s.selected && i === newestBlock(s.blocks) ? popClass(ember.completions) : '']"></i>
               </div>
               <div class="sr-ledger tabular">
                 <span>{{ s.ledger }}</span>

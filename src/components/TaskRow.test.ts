@@ -83,6 +83,15 @@ describe('TaskRow — today', () => {
     expect(w.find('.tr-note').classes()).not.toContain('is-accent')
     expect(w.find('.tr-note svg').exists()).toBe(false)
   })
+
+  it('pops the checkbox only when it is checked', async () => {
+    const { w } = setup(taskFixture('Review PR'))
+    expect(w.find('.check').classes()).not.toContain('anim-pop1')
+    await w.find('.check').trigger('click')
+    expect(w.find('.check').classes()).toContain('anim-pop1')
+    await w.find('.check').trigger('click')
+    expect(w.find('.check').classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+  })
 })
 
 describe('TaskRow — upcoming', () => {

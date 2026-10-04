@@ -73,4 +73,12 @@ describe('TodayList', () => {
     expect(document.activeElement).toBe(w.find('.tl-done-toggle').element)
     w.unmount()
   })
+
+  it("pops today's streak square on a completion", async () => {
+    const w = setup()
+    const today = () => w.findAll('.tl-week span')[6]
+    expect(today().classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+    await w.findAll('.task-row')[1].find('.check').trigger('click')
+    expect(today().classes()).toContain('anim-pop1')
+  })
 })

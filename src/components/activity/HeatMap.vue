@@ -4,6 +4,7 @@ import { LEVEL_COLORS, doneByDay } from '../../core/activity'
 import { focusByDay, heatMap } from '../../core/activityView'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
+import { popClass } from '../anim'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -11,6 +12,11 @@ const ui = useUiStore()
 const focus = computed(() => focusByDay(ember.logs))
 const counts = computed(() => doneByDay(ember.goals, ember.tasks))
 const hm = computed(() => heatMap(ui.heatMode, focus.value, counts.value, ember.today))
+/** Today pops on a finished session (focus view) or a completion (done view). */
+const todayPop = computed(() => {
+  if (ui.heatMode === 'focus') return ember.completions > 0 && ember.timer.phase === 'break' ? popClass(ember.completions) : ''
+  return ember.lastDone ? popClass(ember.lastDone.n) : ''
+})
 const columns = computed(() => ({ gridTemplateColumns: `28px repeat(${hm.value.columns}, minmax(0, 1fr))` }))
 </script>
 
@@ -37,7 +43,7 @@ const columns = computed(() => ({ gridTemplateColumns: `28px repeat(${hm.value.c
           v-for="(c, i) in hm.cells"
           :key="c.date ?? `blank-${i}`"
           class="hm-cell"
-          :class="{ 'is-today': c.isToday, 'is-future': c.future && ember.settings.showFuture }"
+          :class="[{ 'is-today': c.isToday, 'is-future': c.future && ember.settings.showFuture }, c.isToday ? todayPop : '']"
           :style="{ background: c.color }"
           :title="c.tip || undefined"
         ></div>

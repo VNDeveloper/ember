@@ -7,6 +7,7 @@ import type { Task } from '../core/model'
 import { sameTarget } from '../core/model'
 import { taskNote } from '../core/today'
 import { useEmberStore } from '../stores/ember'
+import { popClass } from './anim'
 import { withFocusRescue } from './focusRescue'
 
 const props = withDefaults(defineProps<{ task: Task; variant: 'today' | 'upcoming' | 'goal'; showDate?: boolean }>(), { showDate: false })
@@ -24,6 +25,7 @@ const spent = computed(() => {
 })
 const target = computed(() => ({ kind: 'task' as const, taskId: props.task.id }))
 const selected = computed(() => sameTarget(ember.selection, target.value))
+const justDone = computed(() => done.value && ember.lastDone?.key === `task:${props.task.id}`)
 const canDefer = computed(() => !done.value && props.task.date != null && props.task.date <= ember.today)
 const canPull = computed(() => !done.value && (props.task.date == null || props.task.date > ember.today))
 </script>
@@ -32,7 +34,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
   <div ref="root" class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant !== 'upcoming' }]">
     <button
       class="check"
-      :class="{ 'check-sm': variant === 'upcoming', 'is-done': done }"
+      :class="[{ 'check-sm': variant === 'upcoming', 'is-done': done }, justDone ? popClass(ember.lastDone!.n) : '']"
       role="checkbox"
       :aria-checked="done"
       :aria-label="task.title"

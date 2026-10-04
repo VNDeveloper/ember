@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -58,5 +59,21 @@ describe('HeatMap', () => {
     expect(w.find('.hm-title').text()).toBe('2 things done in 2026')
     expect(w.find('.hm-legend').text()).toBe('LessMore done')
     expect(w.findAll('.hm-stat').map((s) => s.text())).toEqual(['September2', 'Best day1', 'Streak2d', 'Active days2'])
+  })
+
+  it('pops the today cell on a finished session (focus) or a completion (done)', async () => {
+    const w = setup()
+    const ember = useEmberStore()
+    const today = () => w.find('.hm-cell.is-today')
+    ember.startPause()
+    ember.tick(new Date(2026, 8, 23, 10, 25).getTime())
+    await nextTick()
+    expect(today().classes()).toContain('anim-pop1')
+    await w.findAll('.seg-opt input')[1].setValue(true)
+    expect(today().classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+    ember.addTask({ title: 'x', when: 'today', deadline: false, goalId: null })
+    ember.toggleTask(ember.tasks.at(-1)!.id)
+    await nextTick()
+    expect(today().classes()).toContain('anim-pop1')
   })
 })

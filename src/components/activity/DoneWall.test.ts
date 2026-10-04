@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -58,5 +59,17 @@ describe('DoneWall', () => {
 
   it('follows the wall-weeks setting', () => {
     expect(setup(12).findAll('.dw-col')).toHaveLength(12)
+  })
+
+  it("drops the newest brick into this week's column on a completion", async () => {
+    const w = setup()
+    const ember = useEmberStore()
+    ember.addTask({ title: 'New', when: 'today', deadline: false, goalId: null })
+    ember.toggleTask(ember.tasks.at(-1)!.id)
+    await nextTick()
+    const bricks = w.findAll('.dw-col')[3].findAll('.dw-brick')
+    expect(bricks).toHaveLength(4)
+    expect(bricks[3].classes()).toContain('anim-drop1')
+    expect(bricks[2].classes().some((c) => c.startsWith('anim-drop'))).toBe(false)
   })
 })
