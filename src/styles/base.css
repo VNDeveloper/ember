@@ -47,6 +47,8 @@ a:hover { color: var(--color-accent-600); }
 .tabular { font-variant-numeric: tabular-nums; }
 .text-accent { color: var(--color-accent-700); }
 .muted { color: var(--color-neutral-700); }
+/* Keeps grid columns aligned while hiding a control (also removes it from the tab order). */
+.is-hidden { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
