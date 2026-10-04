@@ -67,4 +67,10 @@ describe('ui store', () => {
     expect(ui.adding).toBeNull()
     expect(ui.draft).toBe('')
   })
+
+  it('holds Activity-tab state', () => {
+    const ui = useUiStore()
+    expect(ui.heatMode).toBe('focus')
+    expect(ui.feedSize).toBe(10)
+  })
 })

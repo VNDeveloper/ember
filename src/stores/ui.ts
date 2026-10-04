@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
+import type { HeatMode } from '../core/activityView'
 import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
 import type { PickerTab } from '../core/picker'
@@ -33,6 +34,10 @@ export const useUiStore = defineStore('ui', () => {
   const goalDraft = ref('')
   /** Goals: "Show all" tasks, per goal. */
   const goalTasksAll = reactive<Record<string, boolean>>({})
+  /** Activity: heat map shows focus time or things done. */
+  const heatMode = ref<HeatMode>('focus')
+  /** Activity: how many log entries are shown ("Show earlier" adds 10). */
+  const feedSize = ref(10)
 
   function selectGoal(id: string) {
     activeGoalId.value = id
@@ -74,7 +79,7 @@ export const useUiStore = defineStore('ui', () => {
 
   return {
     view, activeGoalId, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
-    expanded, adding, draft, goalDraft, goalTasksAll, selectGoal,
+    expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }
 })
