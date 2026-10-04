@@ -95,6 +95,9 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 - The draft "Pick date" only moves forward while the Today tab is open. Come back after midnight and the field can show a past date; the task is then filed under today.
 - Right after clearing the date field it looks empty while the last valid date is still used. It corrects on the next re-render.
 - Un-ticking a completion doesn't cancel its pending animations: opening Activity afterwards still pops today's cell and drops the last brick (the prototype turns these off after an undo).
+- Focus mode: a bad YouTube link isn't announced to screen readers (no live region or `aria-invalid`).
+- Focus mode: the selected-item button doesn't say it opens a dialog (no `aria-haspopup`; the hint is only in `title`).
+- Focus mode tests don't pin that activity listeners use the capture phase, or that closing Focus mode (not only opening it) resets the settings panel.
 
 ## Suggested next steps
 
