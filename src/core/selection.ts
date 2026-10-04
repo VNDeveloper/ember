@@ -1,5 +1,5 @@
 import { fmtM, pad2 } from './format'
-import { findStep } from './goals'
+import { findStep, stepAfter } from './goals'
 import type { Goal, Selection, Target, Task } from './model'
 import { targetKey } from './model'
 
@@ -36,4 +36,13 @@ export function targetTitle(goals: Goal[], tasks: Task[], t: Target | null): str
   if (!t) return 'Unassigned'
   if (t.kind === 'step') return findStep(goals, t)?.step.title ?? 'Unassigned'
   return tasks.find((x) => x.id === t.taskId)?.title ?? 'Unassigned'
+}
+
+/** Focus mode's "Then: …" line: the next open step after the selected one. */
+export function nextStepText(goals: Goal[], sel: Selection): string {
+  if (sel?.kind !== 'step') return ''
+  const loc = findStep(goals, sel)
+  if (!loc) return ''
+  const next = stepAfter(loc.goal, loc.step.id)
+  return next ? `Then: ${next.title}` : ''
 }

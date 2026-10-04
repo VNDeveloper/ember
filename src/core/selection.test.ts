@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StepTarget } from './model'
-import { EMPTY_SELECTION, describeSelection, targetTitle } from './selection'
+import { EMPTY_SELECTION, describeSelection, nextStepText, targetTitle } from './selection'
 import { goalFixture, taskFixture } from './test-fixtures'
 
 const goals = [
@@ -43,5 +43,25 @@ describe('targetTitle', () => {
     expect(targetTitle(goals, tasks, { kind: 'task', taskId: 'Paper' })).toBe('Paper')
     expect(targetTitle(goals, tasks, null)).toBe('Unassigned')
     expect(targetTitle(goals, tasks, { kind: 'task', taskId: 'gone' })).toBe('Unassigned')
+  })
+})
+
+describe('nextStepText', () => {
+  const roadmap = [goalFixture('D3', [
+    ['First charts', [['Bar', '2026-09-01'], ['Line', null], ['Scatter', null]]],
+    ['Motion', [['Easing', null]]],
+  ])]
+  const step = (ms: string, s: string): StepTarget => ({ kind: 'step', goalId: 'D3', msId: `D3/${ms}`, stepId: `D3/${ms}/${s}` })
+
+  it('names the next open step, across milestones', () => {
+    expect(nextStepText(roadmap, step('First charts', 'Line'))).toBe('Then: Scatter')
+    expect(nextStepText(roadmap, step('First charts', 'Scatter'))).toBe('Then: Easing')
+  })
+
+  it('is empty for the last step, a task, nothing, or a missing step', () => {
+    expect(nextStepText(roadmap, step('Motion', 'Easing'))).toBe('')
+    expect(nextStepText(roadmap, { kind: 'task', taskId: 'x' })).toBe('')
+    expect(nextStepText(roadmap, null)).toBe('')
+    expect(nextStepText(roadmap, step('Motion', 'gone'))).toBe('')
   })
 })
