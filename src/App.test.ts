@@ -74,12 +74,20 @@ describe('App shell', () => {
     w.unmount()
   })
 
-  it('shows the Today view and a placeholder on other tabs', async () => {
+  it('switches between the Today view, the Goals view and the Activity placeholder', async () => {
     const w = mountApp()
     expect(w.find('.today-view').exists()).toBe(true)
     await w.findAll('.tab')[1].trigger('click')
-    expect(w.find('.today-view').exists()).toBe(false)
+    expect(w.find('.goals-view').exists()).toBe(true)
+    await w.findAll('.tab')[2].trigger('click')
     expect(w.find('.view').text()).toContain('This view arrives in a later phase.')
+    w.unmount()
+  })
+
+  it('opens the goal from a Working-on card', async () => {
+    const w = mountApp()
+    await w.findAll('.wo-goal')[1].trigger('click')
+    expect(w.find('.gs-title').text()).toBe('Speak Spanish at B1')
     w.unmount()
   })
 })

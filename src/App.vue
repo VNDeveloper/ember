@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import FocusBar from './components/FocusBar.vue'
 import FocusPicker from './components/FocusPicker.vue'
+import GoalsView from './components/goals/GoalsView.vue'
 import NavBar from './components/NavBar.vue'
 import TodayView from './components/today/TodayView.vue'
 import { useTicker } from './composables/useTicker'
@@ -27,7 +28,8 @@ const VIEW_NAMES: Record<View, string> = { today: 'Today', goals: 'Goals', activ
     <NavBar />
     <FocusBar />
     <TodayView v-if="ui.view === 'today'" />
-    <!-- Phases 4–5 replace this placeholder with GoalsView / ActivityView. -->
+    <GoalsView v-else-if="ui.view === 'goals'" />
+    <!-- Phase 5 replaces this placeholder with ActivityView. -->
     <main v-else class="view">
       <span class="kicker">{{ VIEW_NAMES[ui.view] }}</span>
       <p class="muted">This view arrives in a later phase.</p>
