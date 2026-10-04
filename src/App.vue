@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import ActivityView from './components/activity/ActivityView.vue'
 import FocusBar from './components/FocusBar.vue'
+import FocusMode from './components/FocusMode.vue'
 import FocusPicker from './components/FocusPicker.vue'
 import GoalsView from './components/goals/GoalsView.vue'
 import NavBar from './components/NavBar.vue'
@@ -29,6 +30,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <TodayView v-if="ui.view === 'today'" />
     <GoalsView v-else-if="ui.view === 'goals'" />
     <ActivityView v-else />
+    <FocusMode v-if="ui.focusModeOpen" />
     <FocusPicker v-if="ui.pickerOpen" />
   </div>
 </template>

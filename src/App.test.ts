@@ -93,4 +93,39 @@ describe('App shell', () => {
     expect(w.find('.gs-title').text()).toBe('Speak Spanish at B1')
     w.unmount()
   })
+
+  it('opens Focus mode from the focus bar and closes it with Esc', async () => {
+    ;(window as unknown as { YT: unknown }).YT = { Player: vi.fn(function () { return { mute() {}, unMute() {}, playVideo() {}, destroy() {} } }) }
+    const w = mountApp()
+    const scan = w.find('[aria-label="Focus mode"]')
+    ;(scan.element as HTMLElement).focus()
+    await scan.trigger('click')
+    expect(w.find('.focus-mode').exists()).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(w.find('.focus-mode').exists()).toBe(false)
+    expect(document.activeElement).toBe(scan.element)
+    w.unmount()
+    delete (window as unknown as { YT?: unknown }).YT
+  })
+
+  it('closes the picker before Focus mode', async () => {
+    ;(window as unknown as { YT: unknown }).YT = { Player: vi.fn(function () { return { mute() {}, unMute() {}, playVideo() {}, destroy() {} } }) }
+    const w = mountApp()
+    await w.find('[aria-label="Focus mode"]').trigger('click')
+    const title = w.find('.fm-title')
+    ;(title.element as HTMLElement).focus()
+    await title.trigger('click')
+    expect(w.find('.picker-backdrop').exists()).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(w.find('.picker-backdrop').exists()).toBe(false)
+    expect(w.find('.focus-mode').exists()).toBe(true)
+    expect(document.activeElement).toBe(w.find('.fm-title').element)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(w.find('.focus-mode').exists()).toBe(false)
+    w.unmount()
+    delete (window as unknown as { YT?: unknown }).YT
+  })
 })
