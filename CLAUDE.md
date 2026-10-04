@@ -18,4 +18,4 @@ Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/s
 - Plans: one per phase in `docs/superpowers/plans/`.
 
 ## Visual rules (non-negotiable)
-Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog.
+Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog. Exception: Focus mode's bottom legibility gradient, blurred translucent panels and text shadow over the video.

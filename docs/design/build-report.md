@@ -16,7 +16,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
   - Upcoming: next six days, then Later and Someday.
 - **Goals:** goal list, readme, ledger stats, the goal's tasks, and the roadmap with session blocks, add step, add milestone and finish line.
 - **Activity:** year heat map (focus time or things done), stats, done wall and activity log.
-- **Focus mode:** full-screen timer over a muted black-and-white YouTube video, using the IFrame Player API so sound toggles without restarting. Video/Off switch, paste-a-link, Mark done, Esc.
+- **Focus mode (video-first, reworked after the handoff):** a full-colour YouTube video fills the screen, with a small centred time and progress bar. Top right: video settings (Video/Off, paste a link), sound and exit. Bottom left: play/pause, Mark done or Skip break, and the selected item, which opens the picker. While a session runs, the controls and cursor fade out after 3 seconds without mouse, touch or key activity. Pausing, or opening the settings or picker, keeps them visible. Sound uses the IFrame Player API, so muting never restarts the video. Esc closes the picker, then the settings, then Focus mode.
 - **Animations:** pop (checkbox, today's heat-map cell, newest session block, streak square), drop (newest done-wall brick) and float (toast). All are retriggerable and respect reduced motion.
 - **Back up / restore (added after the handoff):** a Data menu in the nav downloads all data as a dated JSON file and restores from one. It confirms first, keeps a safety copy of the current data in the browser, and resets the timer.
 - **Seed data:** the prototype's goals and tasks plus a believable year of history, generated relative to the real date.
@@ -24,8 +24,9 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 ## Couldn't match, or known differences
 
 - **Default Focus-mode video:** `jfKfPfyJRdk` is a live-stream recording that YouTube reports as unavailable in the embed. The prototype shows the same message. Paste any other link to fix it.
-- **YouTube's own title and controls show faintly through the scrim.** `controls=0` no longer hides the title, and they can't be clicked.
-- **Focus-mode presentation (grayscale and scrim over a control-less embed)** follows the design, by explicit decision, for personal use. It doesn't follow YouTube's player-presentation policies. Revisit before any public release.
+- **YouTube's own title, captions and paused overlay can show over the video.** `controls=0` no longer hides the title, captions follow the viewer's YouTube settings, and none of it can be clicked.
+- **Focus-mode presentation (a control-less, muted background embed)** is for personal use. It doesn't follow YouTube's player-presentation policies. Revisit before any public release.
+- **Focus mode breaks two house rules on purpose:** a bottom legibility gradient and blurred translucent panels, so the controls read over bright footage.
 - **Segmented-control checked state:** ink, as the README says. The prototype's stylesheet used accent. It's one token (`--seg-checked-bg`).
 - **Sample numbers differ from the prototype's.** The prototype's spent-time formula had a sign bug, so done steps could show far less time than their estimate. Ember follows the README's "estimate ± 25 minutes".
 - **The done wall is taller than the prototype's** with the seeded history, because it shows every finished task, not only today's. The height follows the spec formula. Counting goal steps only, or a lighter seed, is a small change.
@@ -70,6 +71,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
   - The heat map covers the calendar year; streaks continue across New Year.
 - **Focus mode:**
   - Sound starts muted, because of browser autoplay rules.
+  - Key presses and taps count as activity too, so keyboard and touch users can bring the controls back.
   - If the YouTube API doesn't load within 15 seconds, the background stays ink. Opening Focus mode again retries when the script itself was slow or failed; if YouTube's script half-loaded, reload the page.
   - Page scroll is locked while Focus mode is open.
 - **Phones (to ~360px):**
