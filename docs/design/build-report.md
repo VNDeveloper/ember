@@ -35,9 +35,9 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 
 | Item | Call |
 |---|---|
-| Editing or deleting tasks, steps, milestones and goals | Not built. Steps and tasks can be ticked and un-ticked; goals, milestones, steps and tasks can be added. |
+| Editing or deleting tasks, steps, milestones and goals | Built after the handoff: a "⋯" row menu → inline edit panel; soft delete with an 8-second undo bar; history keeps deleted items (marked “(deleted)” in the log). Tasks of a deleted goal are kept. |
 | Reordering | Not built. |
-| Editing a step's estimate | Not built. New steps default to 50 minutes ("2 sessions"). |
+| Editing a step's estimate | Built: estimate stepper in 25-minute units, 25m–10h. |
 | Custom focus/break lengths | Not built. `settings.session` supports 25/5 and 50/10, with no settings screen yet. |
 | Deeper task↔goal integration | A task can be linked to a goal (colour and name). It appears under "Tasks for this goal". Time on a task counts on the task, not toward the goal's focused time. |
 
@@ -97,5 +97,4 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 ## Suggested next steps
 
 1. A small settings screen: session length, show future days, done-wall weeks, demo speed.
-2. Edit and delete for tasks, steps, milestones and goals, plus editing a step's estimate.
-3. PWA install (manifest and service worker) so Ember opens offline like an app.
+2. PWA install (manifest and service worker) so Ember opens offline like an app.
