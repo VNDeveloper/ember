@@ -16,6 +16,8 @@ export const useUiStore = defineStore('ui', () => {
   const pickerTab = ref<PickerTab>('tasks')
   const pickerQuery = ref('')
   const focusModeOpen = ref(false)
+  /** Nav: the Data (back up / restore) panel is open. */
+  const dataMenuOpen = ref(false)
   /** Add-task row draft; survives tab switches, not reloads. */
   const taskDraft = reactive<{ title: string; when: When; date: ISODate | ''; deadline: boolean; goalId: string }>({
     title: '', when: 'today', date: '', deadline: false, goalId: '',
@@ -64,8 +66,12 @@ export const useUiStore = defineStore('ui', () => {
     view.value = 'goals'
   }
 
-  /** Esc closes the picker first, then Focus mode. Returns whether it closed anything. */
+  /** Esc closes the data menu, then the picker, then Focus mode. Returns whether it closed anything. */
   function escape(): boolean {
+    if (dataMenuOpen.value) {
+      dataMenuOpen.value = false
+      return true
+    }
     if (pickerOpen.value) {
       closePicker()
       return true
@@ -78,7 +84,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
+    view, activeGoalId, dataMenuOpen, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }

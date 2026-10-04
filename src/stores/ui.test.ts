@@ -73,4 +73,13 @@ describe('ui store', () => {
     expect(ui.heatMode).toBe('focus')
     expect(ui.feedSize).toBe(10)
   })
+
+  it('Esc closes the data menu first', () => {
+    const ui = useUiStore()
+    ui.openFocusMode()
+    ui.dataMenuOpen = true
+    expect(ui.escape()).toBe(true)
+    expect(ui.dataMenuOpen).toBe(false)
+    expect(ui.focusModeOpen).toBe(true)
+  })
 })

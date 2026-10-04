@@ -7,7 +7,7 @@ import type {
   EmberData, FocusLog, Goal, Milestone, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
-import { STORAGE_KEY, parseStored, readData, saveData } from '../core/persist'
+import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
 import { tallyLogs } from '../core/tally'
 import { DEMO_SPEED, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
@@ -79,6 +79,13 @@ export const useEmberStore = defineStore('ember', () => {
       const d = parseStored(e.newValue)
       if (d) replaceData(d)
     })
+  }
+
+  /** Load a backup: keep a safety copy of the current data, then replace it with an idle timer. */
+  function restore(d: EmberData) {
+    saveBeforeRestore(snapshot())
+    replaceData({ ...d, timer: idleTimer(d.settings.session) })
+    storageWritable.value = true
   }
 
   // — lookups —
@@ -222,7 +229,7 @@ export const useEmberStore = defineStore('ember', () => {
   return {
     goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
     today, demo, speed, tally, remaining, lastLog,
-    snapshot, replaceData, select, targetExists,
+    snapshot, replaceData, restore, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,

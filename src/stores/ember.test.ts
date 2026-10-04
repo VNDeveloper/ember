@@ -375,6 +375,26 @@ describe('other tabs', () => {
   })
 })
 
+describe('restore', () => {
+  it('replaces everything, keeps a safety copy, and resets the timer', async () => {
+    const store = storeWith({ timer: { phase: 'focus', running: true, endsAt: NOW + 60_000, leftSec: 1500, speed: 1, lengthSec: 1500 } })
+    await nextTick()
+    const backup = dataFixture({
+      goals: [goalFixture('Spanish', [])],
+      timer: { phase: 'focus', running: true, endsAt: NOW - 3_600_000, leftSec: 1500, speed: 1, lengthSec: 1500 },
+    })
+    store.restore(backup)
+    expect(store.goals.map((g) => g.title)).toEqual(['Spanish'])
+    expect(store.timer).toMatchObject({ phase: 'focus', running: false, endsAt: null, leftSec: 1500 })
+    store.tick(NOW)
+    expect(store.logs).toHaveLength(0)
+    const safety = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:before-restore`)!)
+    expect(safety.data.goals.map((g: { title: string }) => g.title)).toEqual(['D3'])
+    await nextTick()
+    expect(loadData()?.goals.map((g) => g.title)).toEqual(['Spanish'])
+  })
+})
+
 describe('storage key', () => {
   it('uses ember:v1', () => {
     freshStore()
