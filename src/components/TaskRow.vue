@@ -9,7 +9,7 @@ import { taskNote } from '../core/today'
 import { useEmberStore } from '../stores/ember'
 import { withFocusRescue } from './focusRescue'
 
-const props = withDefaults(defineProps<{ task: Task; variant: 'today' | 'upcoming'; showDate?: boolean }>(), { showDate: false })
+const props = withDefaults(defineProps<{ task: Task; variant: 'today' | 'upcoming' | 'goal'; showDate?: boolean }>(), { showDate: false })
 const ember = useEmberStore()
 const root = ref<HTMLElement | null>(null)
 const act = (e: Event, action: () => void) => withFocusRescue(root.value, e, action)
@@ -29,7 +29,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
 </script>
 
 <template>
-  <div ref="root" class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant === 'today' }]">
+  <div ref="root" class="task-row" :class="[`is-${variant}`, { 'is-done': done, 'is-selected': selected && variant !== 'upcoming' }]">
     <button
       class="check"
       :class="{ 'check-sm': variant === 'upcoming', 'is-done': done }"
@@ -51,9 +51,10 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
         </span>
       </span>
     </div>
-    <template v-if="variant === 'today'">
+    <template v-if="variant !== 'upcoming'">
       <span class="tr-spent tabular">{{ spent }}</span>
       <button
+        v-if="variant === 'today'"
         class="icon-btn tr-defer"
         :class="{ 'is-hidden': !canDefer }"
         aria-label="Move to tomorrow"
@@ -89,6 +90,7 @@ const canPull = computed(() => !done.value && (props.task.date == null || props.
 .task-row { display: grid; align-items: center; border-bottom: 1px solid var(--color-divider); }
 .task-row.is-today { grid-template-columns: 22px minmax(0, 1fr) auto 28px 28px; gap: var(--space-2) var(--space-3); padding: var(--space-2); }
 .task-row.is-upcoming { grid-template-columns: 18px minmax(0, 1fr) 28px; gap: var(--space-3); padding: 6px var(--space-2); }
+.task-row.is-goal { grid-template-columns: 22px minmax(0, 1fr) auto 28px; gap: var(--space-3); padding: 6px var(--space-2); }
 .task-row.is-selected { background: var(--color-accent-100); }
 .tr-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .tr-title { font-size: 14px; overflow-wrap: anywhere; }

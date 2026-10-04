@@ -6,7 +6,7 @@ import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
 import TaskRow from './TaskRow.vue'
 
-function setup(task: Task, variant: 'today' | 'upcoming' = 'today', showDate = false, extra: Partial<EmberData> = {}) {
+function setup(task: Task, variant: 'today' | 'upcoming' | 'goal' = 'today', showDate = false, extra: Partial<EmberData> = {}) {
   setActivePinia(createPinia())
   const ember = useEmberStore()
   ember.replaceData(dataFixture({ goals: [goalFixture('D3', [['M', [['S', null]]]])], tasks: [task], ...extra }))
@@ -99,5 +99,19 @@ describe('TaskRow — upcoming', () => {
   it('shows the date where asked', () => {
     const { w } = setup(taskFixture('Car service', { date: '2026-10-09' }), 'upcoming', true)
     expect(w.find('.tr-note').text()).toBe('Oct 9')
+  })
+})
+
+describe('TaskRow — goal', () => {
+  it('shows time and a focus button but no move button, with the date shown', async () => {
+    const { w, ember } = setup(taskFixture('Paper', { goalId: 'D3', tag: '', date: '2026-09-26' }), 'goal', true)
+    expect(w.find('.task-row').classes()).toContain('is-goal')
+    expect(w.find('.tr-defer').exists()).toBe(false)
+    expect(w.find('.tr-pull').exists()).toBe(false)
+    expect(w.find('.tr-spent').exists()).toBe(true)
+    expect(w.find('.tr-note').text()).toBe('Sep 26')
+    await w.find('.tr-focus').trigger('click')
+    expect(ember.selection).toEqual({ kind: 'task', taskId: 'Paper' })
+    expect(w.find('.task-row').classes()).toContain('is-selected')
   })
 })
