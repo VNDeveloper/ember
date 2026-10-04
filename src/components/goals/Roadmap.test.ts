@@ -195,4 +195,45 @@ describe('Roadmap', () => {
     expect(w.findAll('.step-row')[1].find('.check').attributes('aria-label')).toBe('Line, First charts')
     w.unmount()
   })
+  it('edits a step estimate and the blocks follow', async () => {
+    const { w, ember } = setup()
+    const row = () => w.findAll('.step-item')[2]
+    await row().find('.rmn-trigger').trigger('click')
+    await row().find('.rmn-edit').trigger('click')
+    await nextTick()
+    await w.find('.ep-more').trigger('click')
+    await w.find('.ep-save').trigger('click')
+    expect(ember.goals[0].milestones[1].steps[2].estMin).toBe(75)
+    expect(row().findAll('.blk')).toHaveLength(3)
+    w.unmount()
+  })
+
+  it('deletes a step and a milestone with undo labels', async () => {
+    const { w, ember, ui } = setup()
+    await w.findAll('.step-item')[2].find('.rmn-trigger').trigger('click')
+    await w.findAll('.step-item')[2].find('.rmn-delete').trigger('click')
+    expect(ui.undo?.record.label).toBe('Deleted “Scatter”')
+    expect(w.findAll('.sr-title').map((t) => t.text())).toEqual(['Bar', 'Line'])
+    const head = w.findAll('.rm-head-row')[2]
+    await head.find('.rmn-trigger').trigger('click')
+    await head.find('.rmn-delete').trigger('click')
+    expect(ui.undo?.record.label).toBe('Deleted milestone “Motion” and 1 step')
+    expect(w.findAll('.rm-title').map((t) => t.text())).toEqual(['Foundations', 'First charts'])
+    ember.undoDelete(ui.undo!.record)
+    await nextTick()
+    expect(w.findAll('.rm-title')).toHaveLength(3)
+    w.unmount()
+  })
+
+  it('renames a milestone', async () => {
+    const { w, ember } = setup()
+    const head = w.findAll('.rm-head-row')[0]
+    await head.find('.rmn-trigger').trigger('click')
+    await head.find('.rmn-edit').trigger('click')
+    await nextTick()
+    await w.find('.ep-title').setValue('Basics')
+    await w.find('.ep-save').trigger('click')
+    expect(ember.goals[0].milestones[0].title).toBe('Basics')
+    w.unmount()
+  })
 })

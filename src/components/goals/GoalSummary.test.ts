@@ -1,3 +1,5 @@
+import { useUiStore } from '../../stores/ui'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -40,5 +42,18 @@ describe('GoalSummary', () => {
     const { w, ember } = setup()
     await w.find('.gs-outcome').setValue('Ship a chart')
     expect(ember.goals[0].outcome).toBe('Ship a chart')
+  })
+  it('renames and deletes the goal from its menu', async () => {
+    const { w, ember } = setup()
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-edit').trigger('click')
+    await nextTick()
+    await w.find('.ep-title').setValue('D3 charts')
+    await w.find('.ep-save').trigger('click')
+    expect(ember.goals[0].title).toBe('D3 charts')
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-delete').trigger('click')
+    expect(ember.goals[0].deletedOn).toBe('2026-09-23')
+    expect(useUiStore().undo?.record.label).toBe('Deleted goal “D3 charts”')
   })
 })

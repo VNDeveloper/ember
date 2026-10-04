@@ -4,9 +4,22 @@ import { goalKicker, goalLedger } from '../../core/goalView'
 import { goalStats } from '../../core/goals'
 import type { Goal } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
+import { useUiStore } from '../../stores/ui'
+import RowMenu from '../RowMenu.vue'
+import TitleEditPanel from '../TitleEditPanel.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
+const ui = useUiStore()
+
+function rename(title: string) {
+  ember.renameGoal(props.goal.id, title)
+  ui.editing = null
+}
+function remove() {
+  ui.editing = null
+  ui.showUndo(ember.deleteGoal(props.goal.id))
+}
 
 const kicker = computed(() => goalKicker(props.goal, ember.tally.spent))
 const pct = computed(() => goalStats(props.goal).pct)
@@ -28,8 +41,12 @@ const onOutcome = (e: Event) => ember.setOutcome(props.goal.id, (e.target as HTM
         <span class="kicker gs-kicker">{{ kicker }}</span>
         <h2 class="gs-title">{{ goal.title }}</h2>
       </div>
-      <div class="gs-pct">{{ pct }}%</div>
+      <div class="gs-side">
+        <div class="gs-pct">{{ pct }}%</div>
+        <RowMenu :menu-key="`goal:${goal.id}`" :label="goal.title" @delete="remove" />
+      </div>
     </div>
+    <TitleEditPanel v-if="ui.editing === `goal:${goal.id}`" what="goal" :title="goal.title" @save="rename" @delete="remove" />
     <div class="gs-readme">
       <div class="gs-readme-bar section-label">
         <span>Readme · what done looks like</span><span class="gs-hint">Click to edit</span>
@@ -56,6 +73,7 @@ const onOutcome = (e: Event) => ember.setOutcome(props.goal.id, (e.target as HTM
 .goal-summary { display: flex; flex-direction: column; gap: var(--space-6); }
 .gs-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-6); align-items: end; }
 .gs-title { margin-top: 4px; overflow-wrap: anywhere; }
+.gs-side { display: flex; align-items: flex-end; gap: var(--space-2); }
 .gs-pct { font: 800 64px/.9 var(--font-heading); letter-spacing: -.03em; }
 .gs-readme { border: 2px solid var(--color-divider); }
 .gs-readme-bar {

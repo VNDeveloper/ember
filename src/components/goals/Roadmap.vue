@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { Check, ChevronDown, Flag, Plus, Timer } from 'lucide-vue-next'
 import { computed, nextTick, ref, type Directive } from 'vue'
-import { finishLine, roadmap, type MilestoneRow } from '../../core/goalView'
+import { finishLine, roadmap, type MilestoneRow, type StepRow } from '../../core/goalView'
 import type { Goal } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import { popClass } from '../anim'
+import { withFocusRescue } from '../focusRescue'
+import RowMenu from '../RowMenu.vue'
+import TitleEditPanel from '../TitleEditPanel.vue'
+import StepEditPanel from './StepEditPanel.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -42,6 +46,22 @@ function onEsc() {
     const selector = was?.kind === 'step' ? `[data-add-step="${was.msId}"]` : '.rm-add-ms'
     root.value?.querySelector<HTMLElement>(selector)?.focus()
   })
+}
+
+function deleteStep(e: Event, s: StepRow) {
+  const row = (e.target as HTMLElement | null)?.closest<HTMLElement>('.step-item') ?? null
+  void withFocusRescue(row, e, () => {
+    ui.editing = null
+    ui.showUndo(ember.deleteStep(s.target))
+  })
+}
+function deleteMilestone(msId: string) {
+  ui.editing = null
+  ui.showUndo(ember.deleteMilestone(props.goal.id, msId))
+}
+function renameMilestone(msId: string, title: string) {
+  ember.renameMilestone(props.goal.id, msId, title)
+  ui.editing = null
 }
 
 function cancel() {
@@ -81,43 +101,63 @@ function commit(e: KeyboardEvent) {
           </div>
         </div>
         <div class="rm-body">
-          <button class="rm-head" :aria-expanded="isExpanded(r)" @click="toggle(r)">
-            <span class="rm-title">{{ r.title }}</span>
-            <span v-if="r.current" class="tag tag-accent">You are here</span>
-            <span class="rm-ledger">{{ r.ledger }}</span>
-            <span class="rm-count">{{ r.count }}</span>
-            <ChevronDown :size="18" :stroke-width="2.5" class="rm-chev" :class="{ 'is-open': isExpanded(r) }" />
-          </button>
+          <div class="rm-head-row">
+            <button class="rm-head" :aria-expanded="isExpanded(r)" @click="toggle(r)">
+              <span class="rm-title">{{ r.title }}</span>
+              <span v-if="r.current" class="tag tag-accent">You are here</span>
+              <span class="rm-ledger">{{ r.ledger }}</span>
+              <span class="rm-count">{{ r.count }}</span>
+              <ChevronDown :size="18" :stroke-width="2.5" class="rm-chev" :class="{ 'is-open': isExpanded(r) }" />
+            </button>
+            <RowMenu :menu-key="`ms:${r.id}`" :label="r.title" @delete="deleteMilestone(r.id)" />
+          </div>
+          <TitleEditPanel
+            v-if="ui.editing === `ms:${r.id}`"
+            what="milestone"
+            :title="r.title"
+            @save="(t) => renameMilestone(r.id, t)"
+            @delete="deleteMilestone(r.id)"
+          />
           <div class="rm-segs"><span v-for="(isDone, i) in r.segments" :key="i" :class="{ 'is-done': isDone }"></span></div>
           <div v-if="isExpanded(r)" class="rm-steps">
-            <div v-for="s in r.steps" :key="s.id" class="step-row" :class="{ 'is-done': s.done, 'is-selected': s.selected }">
-              <button
-                class="check"
-                :class="[{ 'is-done': s.done }, s.done && justDone(s.id) ? popClass(ember.lastDone!.n) : '']"
-                role="checkbox"
-                :aria-checked="s.done"
-                :aria-label="`${s.title}, ${r.title}`"
-                @click="ember.toggleStep(s.target)"
-              >
-                <Check v-if="s.done" :size="14" :stroke-width="3.5" />
-              </button>
-              <span class="sr-title">{{ s.title }}</span>
-              <div class="sr-blocks" aria-hidden="true">
-                <i v-for="(b, i) in s.blocks" :key="i" class="blk" :class="[`is-${b}`, sessionJustEnded && s.selected && i === newestBlock(s.blocks) ? popClass(ember.completions) : '']"></i>
+            <div v-for="s in r.steps" :key="s.id" class="step-item">
+              <div class="step-row" :class="{ 'is-done': s.done, 'is-selected': s.selected }">
+                <button
+                  class="check"
+                  :class="[{ 'is-done': s.done }, s.done && justDone(s.id) ? popClass(ember.lastDone!.n) : '']"
+                  role="checkbox"
+                  :aria-checked="s.done"
+                  :aria-label="`${s.title}, ${r.title}`"
+                  @click="ember.toggleStep(s.target)"
+                >
+                  <Check v-if="s.done" :size="14" :stroke-width="3.5" />
+                </button>
+                <span class="sr-title">{{ s.title }}</span>
+                <div class="sr-blocks" aria-hidden="true">
+                  <i v-for="(b, i) in s.blocks" :key="i" class="blk" :class="[`is-${b}`, sessionJustEnded && s.selected && i === newestBlock(s.blocks) ? popClass(ember.completions) : '']"></i>
+                </div>
+                <div class="sr-ledger tabular">
+                  <span>{{ s.ledger }}</span>
+                  <span class="sr-note" :class="{ 'is-accent': s.noteAccent }">{{ s.note }}</span>
+                </div>
+                <button
+                  class="icon-btn sr-focus"
+                  :class="{ 'is-on': s.selected, 'is-hidden': s.done }"
+                  aria-label="Focus on this step"
+                  title="Focus on this step"
+                  @click="ember.select(s.target)"
+                >
+                  <Timer :size="16" :stroke-width="2.25" />
+                </button>
+                <RowMenu :menu-key="`step:${s.id}`" :label="s.title" @delete="(e) => deleteStep(e, s)" />
               </div>
-              <div class="sr-ledger tabular">
-                <span>{{ s.ledger }}</span>
-                <span class="sr-note" :class="{ 'is-accent': s.noteAccent }">{{ s.note }}</span>
-              </div>
-              <button
-                class="icon-btn sr-focus"
-                :class="{ 'is-on': s.selected, 'is-hidden': s.done }"
-                aria-label="Focus on this step"
-                title="Focus on this step"
-                @click="ember.select(s.target)"
-              >
-                <Timer :size="16" :stroke-width="2.25" />
-              </button>
+              <StepEditPanel
+                v-if="ui.editing === `step:${s.id}`"
+                :target="s.target"
+                :title="s.title"
+                :est-min="s.estMin"
+                @delete="(e) => deleteStep(e, s)"
+              />
             </div>
             <div v-if="addingStepTo(r.id)" class="rm-add-input">
               <input
@@ -194,6 +234,8 @@ function commit(e: KeyboardEvent) {
 .rm-marker.is-complete { background: var(--color-accent); color: var(--color-bg); box-shadow: inset 0 0 0 2px var(--color-accent); }
 
 .rm-body { min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: 4px 0 var(--space-6); }
+.rm-head-row { display: flex; align-items: center; gap: var(--space-2); }
+.rm-head-row .rm-head { flex: 1; min-width: 0; }
 .rm-head {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
   padding: 0; border: 0; background: none; color: var(--color-text); text-align: left;
@@ -209,9 +251,10 @@ function commit(e: KeyboardEvent) {
 
 .rm-steps { display: flex; flex-direction: column; border-top: 1px solid var(--color-divider); }
 .step-row {
-  display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(0, auto) 104px 28px; gap: var(--space-3);
-  align-items: center; padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider);
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(0, auto) 104px 28px 28px; gap: var(--space-3);
+  align-items: center; padding: 6px var(--space-2);
 }
+.step-item { border-bottom: 1px solid var(--color-divider); }
 .step-row.is-selected { background: var(--color-accent-100); }
 .sr-title { font-size: 14px; overflow-wrap: anywhere; }
 .step-row.is-done .sr-title { text-decoration: line-through; color: var(--color-neutral-700); }
@@ -240,6 +283,7 @@ function commit(e: KeyboardEvent) {
   .sr-blocks { grid-column: 2; grid-row: 2; }
   .sr-ledger { grid-column: 2; grid-row: 3; }
   .sr-focus { grid-column: 3; grid-row: 1; }
+  .step-row .row-menu { grid-column: 3; grid-row: 2; }
 }
 @media (max-width: 560px) {
   .rm-title { flex-basis: 100%; }
