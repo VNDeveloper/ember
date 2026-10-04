@@ -154,3 +154,23 @@ describe('activityLog', () => {
     expect(new Set(entries.map((e) => e.key)).size).toBe(entries.length)
   })
 })
+
+describe('activity log and wall details', () => {
+  it('resolves sources from the target, even for a task called "Unassigned"', () => {
+    const odd = [taskFixture('Unassigned', { tag: 'Work' })]
+    const [e] = activityLog([], odd, [{ id: 'l', at: 0, date: TODAY, min: 25, target: { kind: 'task', taskId: 'Unassigned' } }], TODAY)
+    expect(e).toMatchObject({ text: 'Focused 25m on “Unassigned”', src: 'Task · Work' })
+  })
+
+  it('adds the year to dates from another year, and says "Task" for an empty tag', () => {
+    const [e] = activityLog([], [taskFixture('Old', { tag: '', doneOn: '2025-10-05' })], [], TODAY)
+    expect(e).toMatchObject({ src: 'Task', when: 'Oct 5, 2025' })
+  })
+
+  it('counts weeks in a row from last week while this week is still empty', () => {
+    const lastTwoWeeks = [taskFixture('a', { doneOn: '2026-09-15' }), taskFixture('b', { doneOn: '2026-09-08' })]
+    const wall = doneWall([], lastTwoWeeks, '2026-09-21', 4)
+    expect(wall.stats.find((s) => s.label === 'Weeks in a row')?.value).toBe('2')
+    expect(wall.stats.find((s) => s.label === 'This week')?.value).toBe('0')
+  })
+})

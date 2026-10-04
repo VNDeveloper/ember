@@ -27,7 +27,7 @@ export function describeSelection(goals: Goal[], tasks: Task[], sel: Selection, 
   const task = tasks.find((t) => t.id === sel.taskId)
   if (!task) return EMPTY_SELECTION
   const goal = task.goalId ? goals.find((g) => g.id === task.goalId) : undefined
-  const head = goal ? `${goal.title} · task` : `Task · ${task.tag}`
+  const head = goal ? `${goal.title} · task` : task.tag ? `Task · ${task.tag}` : 'Task'
   return { title: task.title, sub: `${head}${min ? ` · ${fmtM(min)} focused` : ''}`, empty: false }
 }
 

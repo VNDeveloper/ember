@@ -35,6 +35,11 @@ describe('describeSelection', () => {
     expect(describeSelection(goals, tasks, { kind: 'task', taskId: 'gone' }, new Map())).toBe(EMPTY_SELECTION)
     expect(describeSelection(goals, tasks, { ...LINE, stepId: 'gone' }, new Map())).toBe(EMPTY_SELECTION)
   })
+
+  it('says just "Task" for a task with no goal and no tag', () => {
+    const bare = [taskFixture('Bare', { tag: '' })]
+    expect(describeSelection(goals, bare, { kind: 'task', taskId: 'Bare' }, new Map()).sub).toBe('Task')
+  })
 })
 
 describe('targetTitle', () => {

@@ -53,4 +53,24 @@ describe('persistence', () => {
     saveData(dataFixture())
     expect(readData()).toEqual({ status: 'ok', data: dataFixture() })
   })
+
+  it('normalises old or hand-edited timer and settings', () => {
+    const data = dataFixture()
+    const { lengthSec: _l, ...oldTimer } = data.timer
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...data, timer: oldTimer, settings: { ...data.settings, session: '30/5' } } }))
+    const loaded = loadData()!
+    expect(loaded.timer.lengthSec).toBe(1500)
+    expect(loaded.settings.session).toBe('25/5')
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...data, timer: { ...data.timer, speed: 'fast' } } }))
+    expect(loadData()!.timer).toEqual(data.timer)
+  })
+
+  it('survives storage that throws', () => {
+    const denied = {
+      getItem: () => { throw new Error('SecurityError') },
+      setItem: () => { throw new Error('SecurityError') },
+    } as unknown as Storage
+    expect(readData(denied)).toEqual({ status: 'empty' })
+    expect(() => saveData(dataFixture(), denied)).not.toThrow()
+  })
 })

@@ -1,5 +1,6 @@
-import type { EmberData } from './model'
+import type { EmberData, SessionLength } from './model'
 import { DEFAULT_SETTINGS } from './model'
+import { idleTimer } from './timer'
 
 export const STORAGE_KEY = 'ember:v1'
 const VERSION = 1
@@ -18,12 +19,25 @@ function isData(d: unknown): d is EmberData {
   return Array.isArray(x.goals) && Array.isArray(x.tasks) && Array.isArray(x.logs) && !!x.timer && typeof x.timer === 'object'
 }
 
+const SESSIONS: SessionLength[] = ['25/5', '50/10']
+const positive = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
+
+/** Fill fields added since the data was saved, and repair hand-edited values that would break the timer. */
+function normalize(d: EmberData): EmberData {
+  const settings = { ...DEFAULT_SETTINGS, ...d.settings }
+  if (!SESSIONS.includes(settings.session)) settings.session = DEFAULT_SETTINGS.session
+  const base = idleTimer(settings.session, d.timer.phase === 'break' ? 'break' : 'focus')
+  const t = { ...base, ...d.timer }
+  const valid = positive(t.lengthSec) && positive(t.speed) && typeof t.leftSec === 'number' && Number.isFinite(t.leftSec)
+  return { ...d, settings, timer: valid ? t : base }
+}
+
 /** Parse a stored JSON string; null when it isn't readable data of this version. */
 export function parseStored(raw: string): EmberData | null {
   try {
     const parsed = JSON.parse(raw) as Stored
     if (parsed?.version !== VERSION || !isData(parsed.data)) return null
-    return { ...parsed.data, settings: { ...DEFAULT_SETTINGS, ...parsed.data.settings } }
+    return normalize(parsed.data)
   } catch {
     return null
   }
@@ -39,22 +53,36 @@ function backup(storage: Storage, raw: string): boolean {
   }
 }
 
-export function readData(storage: Storage | undefined = globalThis.localStorage): ReadResult {
-  const raw = storage?.getItem(STORAGE_KEY)
+/** localStorage, or undefined where touching it throws (blocked storage, sandboxed frames). */
+function defaultStorage(): Storage | undefined {
+  try {
+    return globalThis.localStorage
+  } catch {
+    return undefined
+  }
+}
+
+export function readData(storage: Storage | undefined = defaultStorage()): ReadResult {
+  let raw: string | null = null
+  try {
+    raw = storage?.getItem(STORAGE_KEY) ?? null
+  } catch {
+    return { status: 'empty' }
+  }
   if (!storage || !raw) return { status: 'empty' }
   const data = parseStored(raw)
   return data ? { status: 'ok', data } : { status: 'unreadable', backedUp: backup(storage, raw) }
 }
 
-export function loadData(storage: Storage | undefined = globalThis.localStorage): EmberData | null {
+export function loadData(storage: Storage | undefined = defaultStorage()): EmberData | null {
   const r = readData(storage)
   return r.status === 'ok' ? r.data : null
 }
 
-export function saveData(data: EmberData, storage: Storage | undefined = globalThis.localStorage): void {
+export function saveData(data: EmberData, storage: Storage | undefined = defaultStorage()): void {
   try {
     storage?.setItem(STORAGE_KEY, JSON.stringify({ version: VERSION, data } satisfies Stored))
   } catch {
-    // Quota exceeded or private mode: keep running in memory.
+    // Quota exceeded, private mode or blocked storage: keep running in memory.
   }
 }

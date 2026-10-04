@@ -3,7 +3,7 @@ import {
   addDays, dayLabel, dayOfYear, daysInYear, diffDays, fromISO, mondayOf, monthName, startOfYear, yearOf, type ISODate,
 } from './dates'
 import { fmtInt, fmtM, hash7, pad2 } from './format'
-import { goalColor, goalStats } from './goals'
+import { findStep, goalColor, goalStats } from './goals'
 import type { FocusLog, Goal, Task } from './model'
 import { targetTitle } from './selection'
 
@@ -131,8 +131,9 @@ export function doneWall(goals: Goal[], tasks: Task[], today: ISODate, wallWeeks
   for (const b of buckets) b.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0))
 
   const sizes = buckets.map((b) => b.length)
+  // Like the day streak: an empty current week doesn't break the run yet.
   let inARow = 0
-  while (inARow < weeks && sizes[inARow] > 0) inARow++
+  for (let w = sizes[0] > 0 ? 0 : 1; w < weeks && sizes[w] > 0; w++) inARow++
 
   return {
     weeks,
@@ -160,10 +161,14 @@ interface RawEntry { key: string; kind: 'done' | 'focus'; date: ISODate; at: num
 /** Today's completions first, then newest day first; on the same day focus sessions (latest first) precede completions. */
 export function activityLog(goals: Goal[], tasks: Task[], logs: FocusLog[], today: ISODate): LogEntry[] {
   const yesterday = addDays(today, -1)
-  const when = (d: ISODate) => (d === today ? 'Today' : d === yesterday ? 'Yesterday' : dayLabel(d))
+  const when = (d: ISODate) => {
+    if (d === today) return 'Today'
+    if (d === yesterday) return 'Yesterday'
+    return yearOf(d) === yearOf(today) ? dayLabel(d) : `${dayLabel(d)}, ${yearOf(d)}`
+  }
   const taskSource = (t: Task) => {
     const g = t.goalId ? goals.find((x) => x.id === t.goalId) : undefined
-    return g ? g.title : `Task · ${t.tag}`
+    return g ? g.title : t.tag ? `Task · ${t.tag}` : 'Task'
   }
 
   const done: RawEntry[] = []
@@ -177,15 +182,13 @@ export function activityLog(goals: Goal[], tasks: Task[], logs: FocusLog[], toda
   const focus: RawEntry[] = logs.map((l) => {
     const title = targetTitle(goals, tasks, l.target)
     let src = 'No step picked'
-    if (title !== 'Unassigned' && l.target) {
-      if (l.target.kind === 'step') {
-        const goalId = l.target.goalId
-        src = goals.find((g) => g.id === goalId)?.title ?? src
-      } else {
-        const taskId = l.target.taskId
-        const t = tasks.find((x) => x.id === taskId)
-        if (t) src = taskSource(t)
-      }
+    if (l.target?.kind === 'step') {
+      const loc = findStep(goals, l.target)
+      if (loc) src = loc.goal.title
+    } else if (l.target?.kind === 'task') {
+      const taskId = l.target.taskId
+      const t = tasks.find((x) => x.id === taskId)
+      if (t) src = taskSource(t)
     }
     return { key: `log:${l.id}`, kind: 'focus', date: l.date, at: l.at, text: `Focused ${fmtM(l.min)} on “${title}”`, src }
   })
