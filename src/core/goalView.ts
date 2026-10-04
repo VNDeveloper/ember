@@ -34,7 +34,7 @@ export function goalList(goals: Goal[], spent: Map<string, number>): GoalListIte
 
 export function goalKicker(g: Goal, spent: Map<string, number>): string {
   const st = goalStats(g)
-  return `Goal · ${fmtM(goalFocused(g, spent))} focused · ${st.milestonesDone} of ${g.milestones.length} milestones`
+  return `Goal · ${fmtM(goalFocused(g, spent))} focused · ${st.milestonesDone} of ${liveMilestones(g).length} milestones`
 }
 
 export interface GoalLedger { focused: string; estimated: string; left: string; accuracy: string }

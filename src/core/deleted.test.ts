@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { doneByDay } from './activity'
 import { activityLog, doneWall } from './activityView'
 import { goalStats, isStepLive, nextOpenStep, stepAfter } from './goals'
-import { goalList, goalTasks, roadmap } from './goalView'
+import { goalKicker, goalList, goalTasks, roadmap } from './goalView'
 import type { Goal } from './model'
 import { pickerSections } from './picker'
 import { describeSelection, nextStepText } from './selection'
@@ -39,6 +39,12 @@ describe('deleted steps and milestones', () => {
     const rows = roadmap(g, new Map(), new Map(), null)
     expect(rows.map((r) => [r.num, r.title])).toEqual([['01', 'Motion']])
     expect(rows[0].steps[0].estMin).toBe(50)
+  })
+
+  it('the goal header counts live milestones only', () => {
+    const g = d3()
+    g.milestones[1].deletedOn = TODAY
+    expect(goalKicker(g, new Map())).toBe('Goal · 0m focused · 0 of 1 milestones')
   })
 
   it('roadmap rows skip deleted steps', () => {

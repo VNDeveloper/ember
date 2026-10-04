@@ -78,4 +78,13 @@ describe('TaskEditPanel', () => {
     expect(ui.editing).toBeNull()
     w.unmount()
   })
+
+  it("doesn't unlink a task from its deleted goal unless the goal is changed", async () => {
+    const { w, ember } = setup(taskFixture('Paper', { goalId: 'Gone', tag: 'Home' }))
+    expect((w.find('.ep-goal').element as HTMLSelectElement).value).toBe('')
+    await w.find('.ep-title').setValue('Order paper')
+    await w.find('.ep-save').trigger('click')
+    expect(ember.tasks[0]).toMatchObject({ title: 'Order paper', goalId: 'Gone' })
+    w.unmount()
+  })
 })

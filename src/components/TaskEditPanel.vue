@@ -23,7 +23,8 @@ const when = ref<When>(startWhen)
 const date = ref<ISODate>(original ?? addDays(today, 2))
 const deadline = ref(props.task.deadline)
 const liveGoals = computed(() => ember.goals.filter(isLive))
-const goalId = ref(props.task.goalId && liveGoals.value.some((g) => g.id === props.task.goalId) ? props.task.goalId : '')
+const startGoal = props.task.goalId && liveGoals.value.some((g) => g.id === props.task.goalId) ? props.task.goalId : ''
+const goalId = ref(startGoal)
 const tag = ref(props.task.tag)
 /** A task that is already late keeps its date selectable. */
 const minDate = original && original < today ? original : today
@@ -39,7 +40,14 @@ function onDate(e: Event) {
 function save() {
   if (!title.value.trim()) return
   const d = when.value === 'someday' ? null : when.value === 'today' ? today : when.value === 'tomorrow' ? tomorrow : date.value
-  ember.updateTask(props.task.id, { title: title.value, date: d, deadline: d != null && deadline.value, goalId: goalId.value || null, tag: tag.value })
+  ember.updateTask(props.task.id, {
+    title: title.value,
+    date: d,
+    deadline: d != null && deadline.value,
+    tag: tag.value,
+    // Only touch the link if the user changed it: a task whose goal was deleted keeps it for undo.
+    ...(goalId.value !== startGoal ? { goalId: goalId.value || null } : {}),
+  })
   ui.editing = null
 }
 
