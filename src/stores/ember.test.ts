@@ -247,6 +247,17 @@ describe('selection hand-off', () => {
     expect(store.tasks[0].doneOn).toBe('2026-09-23')
   })
 
+  it('signals each completion for animations, but not un-completions', () => {
+    const store = storeWith()
+    expect(store.lastDone).toBeNull()
+    store.toggleTask('Review PR')
+    expect(store.lastDone).toEqual({ key: 'task:Review PR', n: 1 })
+    store.toggleTask('Review PR')
+    expect(store.lastDone).toEqual({ key: 'task:Review PR', n: 1 })
+    store.toggleStep(LINE)
+    expect(store.lastDone).toEqual({ key: `step:${LINE.stepId}`, n: 2 })
+  })
+
   it('completes whatever is selected (Focus mode "Mark done")', () => {
     const store = storeWith({ selection: LINE })
     store.completeSelected()

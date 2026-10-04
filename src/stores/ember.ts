@@ -35,6 +35,10 @@ export const useEmberStore = defineStore('ember', () => {
   const now = ref(Date.now())
   /** Increments on every finished focus session (toast and pop animations). */
   const completions = ref(0)
+  /** Last completed task or step (pop / drop animations); n increments on every completion. */
+  const lastDone = ref<{ key: string; n: number } | null>(null)
+  let doneSeq = 0
+  const signalDone = (key: string) => { lastDone.value = { key, n: ++doneSeq } }
   const demoFromUrl = demoInUrl()
 
   const today = computed(() => todayISO(now.value))
@@ -106,6 +110,7 @@ export const useEmberStore = defineStore('ember', () => {
     if (!t) return
     const completing = t.doneOn == null
     t.doneOn = completing ? today.value : null
+    if (completing) signalDone(`task:${id}`)
     if (completing && sameTarget(selection.value, { kind: 'task', taskId: id })) selection.value = null
   }
 
@@ -156,6 +161,7 @@ export const useEmberStore = defineStore('ember', () => {
     if (!loc) return
     const completing = loc.step.doneOn == null
     loc.step.doneOn = completing ? today.value : null
+    if (completing) signalDone(`step:${t.stepId}`)
     if (completing && sameTarget(selection.value, t)) {
       const next = nextOpenStep(loc.goal)
       selection.value = next ? stepTarget(loc.goal, next.milestone, next.step) : null
@@ -214,7 +220,7 @@ export const useEmberStore = defineStore('ember', () => {
   }
 
   return {
-    goals, tasks, logs, selection, timer, settings, now, completions, storageWritable,
+    goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
     today, demo, speed, tally, remaining, lastLog,
     snapshot, replaceData, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,

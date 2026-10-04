@@ -5,3 +5,9 @@
 @keyframes drop1 { 0% { transform: translateY(-220px); opacity: 0; } 70% { transform: translateY(3px); opacity: 1; } 100% { transform: translateY(0); } }
 @keyframes float0 { 0% { transform: translateY(8px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
 @keyframes float1 { 0% { transform: translateY(8px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+
+/* Alternate 0/1 per event so the same element animates again. */
+.anim-pop0 { animation: pop0 .45s var(--ease-pop); }
+.anim-pop1 { animation: pop1 .45s var(--ease-pop); }
+.anim-drop0 { animation: drop0 .55s var(--ease-drop); }
+.anim-drop1 { animation: drop1 .55s var(--ease-drop); }
