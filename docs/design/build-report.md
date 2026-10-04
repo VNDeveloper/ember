@@ -18,6 +18,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 - **Activity:** year heat map (focus time or things done), stats, done wall and activity log.
 - **Focus mode:** full-screen timer over a muted black-and-white YouTube video, using the IFrame Player API so sound toggles without restarting. Video/Off switch, paste-a-link, Mark done, Esc.
 - **Animations:** pop (checkbox, today's heat-map cell, newest session block, streak square), drop (newest done-wall brick) and float (toast). All are retriggerable and respect reduced motion.
+- **Back up / restore (added after the handoff):** a Data menu in the nav downloads all data as a dated JSON file and restores from one. It confirms first, keeps a safety copy of the current data in the browser, and resets the timer.
 - **Seed data:** the prototype's goals and tasks plus a believable year of history, generated relative to the real date.
 
 ## Couldn't match, or known differences
@@ -97,5 +98,4 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 
 1. A small settings screen: session length, show future days, done-wall weeks, demo speed.
 2. Edit and delete for tasks, steps, milestones and goals, plus editing a step's estimate.
-3. Export and import of the data (JSON), since everything lives in one browser.
-4. PWA install (manifest and service worker) so Ember opens offline like an app.
+3. PWA install (manifest and service worker) so Ember opens offline like an app.

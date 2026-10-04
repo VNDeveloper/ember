@@ -2,6 +2,7 @@
 import { navDate } from '../core/dates'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore, type View } from '../stores/ui'
+import DataMenu from './DataMenu.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -23,6 +24,7 @@ const TABS: [View, string][] = [['today', 'Today'], ['goals', 'Goals'], ['activi
         {{ label }}
       </button>
     </div>
+    <DataMenu />
     <span class="nav-date">{{ navDate(ember.today) }}</span>
   </nav>
 </template>

@@ -29,4 +29,13 @@ describe('NavBar', () => {
     expect(w.findAll('.tab')[1].attributes('aria-current')).toBe('page')
     expect(w.findAll('.tab')[0].attributes('aria-current')).toBeUndefined()
   })
+
+  it('has the Data menu before the date', () => {
+    const w = mount(NavBar)
+    const nav = w.find('nav').element
+    const toggle = w.find('.dm-toggle').element
+    expect(toggle.textContent).toContain('Data')
+    expect(toggle.compareDocumentPosition(w.find('.nav-date').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(nav.contains(toggle)).toBe(true)
+  })
 })

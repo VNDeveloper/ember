@@ -125,7 +125,4 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 .dm-error { font-size: 13px; font-weight: 700; color: var(--color-accent-700); }
 .dm-confirm { display: flex; flex-direction: column; gap: var(--space-3); font-size: 14px; }
 .dm-actions { display: flex; gap: var(--space-2); }
-@media (max-width: 520px) {
-  .dm-panel { right: auto; left: 0; }
-}
 </style>
