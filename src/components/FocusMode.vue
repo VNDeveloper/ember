@@ -37,7 +37,11 @@ useYouTubePlayer(host, videoId, muted)
 const IDLE_MS = 3000
 const idle = ref(false)
 let idleTimer: ReturnType<typeof setTimeout> | undefined
-function wake() {
+function wake(e?: Event) {
+  // While hidden, the first Enter/Space on a focused control only reveals the controls; it never acts unseen.
+  if (hideUI.value && e instanceof KeyboardEvent && (e.key === 'Enter' || e.key === ' ') && e.target instanceof HTMLButtonElement) {
+    e.preventDefault()
+  }
   idle.value = false
   clearTimeout(idleTimer)
   idleTimer = setTimeout(() => { idle.value = true }, IDLE_MS)
@@ -71,6 +75,12 @@ watch(() => ui.fmSettingsOpen, async (open) => {
   await nextTick()
   if (open) linkInput.value?.focus()
   else if (!document.activeElement || document.activeElement === document.body) settingsButton.value?.focus()
+})
+
+/** Skip break or Mark done can vanish under keyboard focus (phase change, last step done): keep focus on Play/Pause. */
+watch([() => ember.timer.phase, canMarkDone], async () => {
+  await nextTick()
+  if (!document.activeElement || document.activeElement === document.body) startButton.value?.focus()
 })
 
 let previousOverflow = ''
@@ -245,6 +255,8 @@ onBeforeUnmount(() => {
 .fm-bg .seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
 .fm-link { display: flex; gap: var(--space-2); }
 .fm-input { flex: 1; min-width: 0; background: var(--fm-light); color: var(--fm-ink); }
+/* 16px stops iOS Safari zooming the fixed overlay when the field is focused. */
+@media (max-width: 560px) { .fm-input { font-size: 16px; } }
 .fm-now { font-size: 12px; overflow-wrap: anywhere; }
 
 .fm-bl {

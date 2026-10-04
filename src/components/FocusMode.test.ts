@@ -255,6 +255,53 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
+  it('keeps keyboard focus on Play/Pause when Skip break or Mark done disappears', async () => {
+    const brk = await setup({ timer: { phase: 'break', running: false, endsAt: null, leftSec: 300, speed: 1, lengthSec: 300 } })
+    ;(brk.w.find('.fm-skip').element as HTMLElement).focus()
+    await brk.w.find('.fm-skip').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(brk.w.find('.fm-start').element)
+    brk.w.unmount()
+
+    const last = await setup({ selection: { ...LINE, stepId: 'D3/First charts/Scatter' } })
+    last.ember.goals[0].milestones[0].steps[1].doneOn = '2026-09-22'
+    await flushPromises()
+    ;(last.w.find('.fm-done').element as HTMLElement).focus()
+    await last.w.find('.fm-done').trigger('click')
+    await flushPromises()
+    expect(last.w.find('.fm-done').exists()).toBe(false)
+    expect(document.activeElement).toBe(last.w.find('.fm-start').element)
+    last.w.unmount()
+  })
+
+  it('moves focus to Play/Pause when the session ends on Mark done', async () => {
+    const { w, ember } = await setup({ timer: RUNNING })
+    ;(w.find('.fm-done').element as HTMLElement).focus()
+    ember.tick(new Date(2026, 8, 23, 10, 25).getTime())
+    await flushPromises()
+    expect(ember.timer.phase).toBe('break')
+    expect(document.activeElement).toBe(w.find('.fm-start').element)
+    w.unmount()
+  })
+
+  it.each([['Enter'], [' ']])('only reveals the controls when %j is pressed on a hidden button', async (key) => {
+    const { w } = await setup({ timer: RUNNING })
+    const exit = w.find('.fm-exit').element as HTMLElement
+    exit.focus()
+    vi.advanceTimersByTime(3000)
+    await flushPromises()
+    expect(hidden(w)).toBe(true)
+    const hiddenPress = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+    exit.dispatchEvent(hiddenPress)
+    expect(hiddenPress.defaultPrevented).toBe(true)
+    await flushPromises()
+    expect(hidden(w)).toBe(false)
+    const visiblePress = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+    exit.dispatchEvent(visiblePress)
+    expect(visiblePress.defaultPrevented).toBe(false)
+    w.unmount()
+  })
+
   it('labels every icon button', async () => {
     const { w } = await setup()
     expect(w.find('.focus-mode').attributes()).toMatchObject({ role: 'dialog', 'aria-label': 'Focus mode' })
