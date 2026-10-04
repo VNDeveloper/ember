@@ -38,6 +38,28 @@ describe('ui store', () => {
     expect(ui.escape()).toBe(false)
   })
 
+  it('Esc closes the picker, then the video settings, then Focus mode', () => {
+    const ui = useUiStore()
+    ui.openFocusMode()
+    ui.fmSettingsOpen = true
+    ui.openPicker(null)
+    expect(ui.escape()).toBe(true)
+    expect(ui).toMatchObject({ pickerOpen: false, fmSettingsOpen: true, focusModeOpen: true })
+    expect(ui.escape()).toBe(true)
+    expect(ui).toMatchObject({ fmSettingsOpen: false, focusModeOpen: true })
+    expect(ui.escape()).toBe(true)
+    expect(ui.focusModeOpen).toBe(false)
+  })
+
+  it('opens Focus mode with the video settings closed', () => {
+    const ui = useUiStore()
+    ui.openFocusMode()
+    ui.fmSettingsOpen = true
+    ui.closeFocusMode()
+    ui.openFocusMode()
+    expect(ui.fmSettingsOpen).toBe(false)
+  })
+
   it('opens a goal on the Goals tab', () => {
     const ui = useUiStore()
     ui.openGoal('D3')

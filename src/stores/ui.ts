@@ -16,6 +16,8 @@ export const useUiStore = defineStore('ui', () => {
   const pickerTab = ref<PickerTab>('tasks')
   const pickerQuery = ref('')
   const focusModeOpen = ref(false)
+  /** Focus mode's video settings panel. */
+  const fmSettingsOpen = ref(false)
   /** Nav: the Data (back up / restore) panel is open. */
   const dataMenuOpen = ref(false)
   /** Row "⋯" menu that is open (one at a time). */
@@ -65,8 +67,14 @@ export const useUiStore = defineStore('ui', () => {
     pickerQuery.value = ''
   }
 
-  const openFocusMode = () => { focusModeOpen.value = true }
-  const closeFocusMode = () => { focusModeOpen.value = false }
+  const openFocusMode = () => {
+    fmSettingsOpen.value = false
+    focusModeOpen.value = true
+  }
+  const closeFocusMode = () => {
+    fmSettingsOpen.value = false
+    focusModeOpen.value = false
+  }
 
   function openGoal(id: string) {
     activeGoalId.value = id
@@ -90,7 +98,7 @@ export const useUiStore = defineStore('ui', () => {
     undo.value = null
   }
 
-  /** Esc closes the data menu, row menu, edit panel, picker, then Focus mode. Returns whether it closed anything. */
+  /** Esc closes the data menu, row menu, edit panel, picker, Focus mode's video settings, then Focus mode. Returns whether it closed anything. */
   function escape(): boolean {
     if (dataMenuOpen.value) {
       dataMenuOpen.value = false
@@ -108,6 +116,10 @@ export const useUiStore = defineStore('ui', () => {
       closePicker()
       return true
     }
+    if (focusModeOpen.value && fmSettingsOpen.value) {
+      fmSettingsOpen.value = false
+      return true
+    }
     if (focusModeOpen.value) {
       closeFocusMode()
       return true
@@ -116,7 +128,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, dataMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, taskDraft, doneOpen, openGroups,
+    view, activeGoalId, dataMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }

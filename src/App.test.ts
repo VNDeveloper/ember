@@ -113,7 +113,7 @@ describe('App shell', () => {
     ;(window as unknown as { YT: unknown }).YT = { Player: vi.fn(function () { return { mute() {}, unMute() {}, playVideo() {}, destroy() {} } }) }
     const w = mountApp()
     await w.find('[aria-label="Focus mode"]').trigger('click')
-    const title = w.find('.fm-title')
+    const title = w.find('.fm-item')
     ;(title.element as HTMLElement).focus()
     await title.trigger('click')
     expect(w.find('.picker-backdrop').exists()).toBe(true)
@@ -121,7 +121,7 @@ describe('App shell', () => {
     await nextTick()
     expect(w.find('.picker-backdrop').exists()).toBe(false)
     expect(w.find('.focus-mode').exists()).toBe(true)
-    expect(document.activeElement).toBe(w.find('.fm-title').element)
+    expect(document.activeElement).toBe(w.find('.fm-item').element)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await nextTick()
     expect(w.find('.focus-mode').exists()).toBe(false)
