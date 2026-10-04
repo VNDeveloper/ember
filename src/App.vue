@@ -7,6 +7,7 @@ import FocusPicker from './components/FocusPicker.vue'
 import GoalsView from './components/goals/GoalsView.vue'
 import NavBar from './components/NavBar.vue'
 import TodayView from './components/today/TodayView.vue'
+import UndoBar from './components/UndoBar.vue'
 import { useTicker } from './composables/useTicker'
 import { useEmberStore } from './stores/ember'
 import { useUiStore } from './stores/ui'
@@ -30,6 +31,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <TodayView v-if="ui.view === 'today'" />
     <GoalsView v-else-if="ui.view === 'goals'" />
     <ActivityView v-else />
+    <UndoBar />
     <FocusMode v-if="ui.focusModeOpen" />
     <FocusPicker v-if="ui.pickerOpen" />
   </div>

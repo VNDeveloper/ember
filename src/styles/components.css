@@ -81,3 +81,19 @@
 
 .swatch { flex: none; width: 10px; height: 10px; }
 .swatch-sm { width: 8px; height: 8px; }
+
+/* — inline edit panels (row menu → Edit) — */
+.edit-panel {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  margin: var(--space-2) var(--space-2) var(--space-3); padding: var(--space-3);
+  background: var(--color-surface); border: 2px solid var(--color-text);
+}
+.ep-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.ep-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); }
+.ep-delete { margin-left: auto; color: var(--color-accent-700); }
+.flag-toggle {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 13px;
+  border: 1px solid var(--color-divider); background: transparent; color: var(--color-text);
+}
+.flag-toggle:hover { border-color: var(--color-accent); }
+.flag-toggle.is-on { background: var(--color-accent-100); border-color: var(--color-accent); color: var(--color-accent-800); }

@@ -1,0 +1,54 @@
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { useUiStore } from '../stores/ui'
+import RowMenu from './RowMenu.vue'
+
+beforeEach(() => setActivePinia(createPinia()))
+const mountMenu = () => mount(RowMenu, { props: { menuKey: 'task:a', label: 'Review PR' }, attachTo: document.body })
+
+describe('RowMenu', () => {
+  it('opens a menu with Edit and Delete, focusing Edit', async () => {
+    const w = mountMenu()
+    const trigger = w.find('.rmn-trigger')
+    expect(trigger.attributes('aria-label')).toBe('More actions for “Review PR”')
+    expect(trigger.attributes('aria-haspopup')).toBe('menu')
+    await trigger.trigger('click')
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+    await nextTick()
+    expect(document.activeElement).toBe(w.find('.rmn-edit').element)
+    expect(w.find('.rmn-delete').attributes('aria-label')).toBe('Delete “Review PR”')
+    w.unmount()
+  })
+
+  it('Edit opens the panel; Delete emits and closes', async () => {
+    const w = mountMenu()
+    const ui = useUiStore()
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-edit').trigger('click')
+    expect(ui.editing).toBe('task:a')
+    expect(ui.menuFor).toBeNull()
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-delete').trigger('click')
+    expect(w.emitted('delete')).toHaveLength(1)
+    expect(ui.menuFor).toBeNull()
+    w.unmount()
+  })
+
+  it('closes on an outside click and gives focus back to the trigger after Esc', async () => {
+    const w = mountMenu()
+    const ui = useUiStore()
+    await w.find('.rmn-trigger').trigger('click')
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+    await nextTick()
+    expect(ui.menuFor).toBeNull()
+    await w.find('.rmn-trigger').trigger('click')
+    await nextTick()
+    ui.escape()
+    await nextTick()
+    await nextTick()
+    expect(document.activeElement).toBe(w.find('.rmn-trigger').element)
+    w.unmount()
+  })
+})

@@ -1,9 +1,10 @@
 import { nextTick } from 'vue'
 
-/** First focus target walking from `start`: a task row's checkbox, or a button. */
+/** First focus target walking from `start`: a task or step row's checkbox (or a wrapper's), or a button. */
 function nearest(start: Element | null, step: (el: Element) => Element | null): HTMLElement | null {
   for (let el = start; el; el = step(el)) {
-    if (el.matches('.task-row')) return el.querySelector<HTMLElement>('.check')
+    const row = el.matches('.task-row, .step-row') ? el : el.querySelector(':scope > .task-row, :scope > .step-row')
+    if (row) return row.querySelector<HTMLElement>('.check')
     if (el instanceof HTMLButtonElement) return el
   }
   return null
