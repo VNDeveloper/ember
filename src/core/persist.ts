@@ -3,7 +3,9 @@ import { DEFAULT_SETTINGS } from './model'
 import { idleTimer } from './timer'
 
 export const STORAGE_KEY = 'ember:v1'
-const VERSION = 1
+/** Version of the saved data shape (also used in backup files). */
+export const DATA_VERSION = 1
+const VERSION = DATA_VERSION
 
 interface Stored { version: number; data: EmberData }
 
@@ -54,7 +56,7 @@ function backup(storage: Storage, raw: string): boolean {
 }
 
 /** localStorage, or undefined where touching it throws (blocked storage, sandboxed frames). */
-function defaultStorage(): Storage | undefined {
+export function defaultStorage(): Storage | undefined {
   try {
     return globalThis.localStorage
   } catch {
@@ -84,5 +86,14 @@ export function saveData(data: EmberData, storage: Storage | undefined = default
     storage?.setItem(STORAGE_KEY, JSON.stringify({ version: VERSION, data } satisfies Stored))
   } catch {
     // Quota exceeded, private mode or blocked storage: keep running in memory.
+  }
+}
+
+/** Keep the current data aside before a restore replaces it, in case the wrong file was picked. */
+export function saveBeforeRestore(data: EmberData, storage: Storage | undefined = defaultStorage()): void {
+  try {
+    storage?.setItem(`${STORAGE_KEY}:before-restore`, JSON.stringify({ version: VERSION, data } satisfies Stored))
+  } catch {
+    // Storage full or blocked: the restore still goes ahead.
   }
 }
