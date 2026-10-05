@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type { StepTarget } from '../core/model'
 import { STORAGE_KEY, loadData, saveData } from '../core/persist'
+import { sharedPart } from '../core/sync'
 import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore, type NewTask } from './ember'
 
@@ -496,5 +497,57 @@ describe('storage key', () => {
   it('uses ember:v1', () => {
     freshStore()
     expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull()
+  })
+})
+
+describe('sync support', () => {
+  it('stamps what changed when the store saves', async () => {
+    const store = storeWith()
+    await nextTick()
+    vi.setSystemTime(NOW + MIN)
+    store.updateTask('Review PR', { title: 'Review PR #2' })
+    await nextTick()
+    expect(store.tasks.find((t) => t.id === 'Review PR')!.updatedAt).toBe(NOW + MIN)
+    expect(store.tasks.find((t) => t.id === 'Dentist')!.updatedAt).toBeUndefined()
+    expect(loadData()!.tasks.find((t) => t.id === 'Review PR')!.updatedAt).toBe(NOW + MIN)
+  })
+
+  it('never stamps data that arrives from elsewhere', async () => {
+    const store = storeWith()
+    await nextTick()
+    const other = fixture()
+    other.tasks[0].title = 'Changed in another tab'
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify({ version: 1, data: other }) }))
+    await nextTick()
+    expect(store.tasks[0].title).toBe('Changed in another tab')
+    expect(store.tasks[0].updatedAt).toBeUndefined()
+  })
+
+  it("applies shared data from sync, keeping this device's timer, selection and sound", async () => {
+    const store = storeWith({ selection: { kind: 'task', taskId: 'Review PR' } })
+    store.startPause()
+    store.updateSettings({ muted: false })
+    await nextTick()
+    const remote = sharedPart({ ...fixture(), tasks: [...fixture().tasks, taskFixture('From phone')] })
+    remote.settings = { ...remote.settings, wallWeeks: 20 }
+    store.applyShared(remote)
+    await nextTick()
+    expect(store.tasks.map((t) => t.id)).toContain('From phone')
+    expect(store.timer.running).toBe(true)
+    expect(store.selection).toEqual({ kind: 'task', taskId: 'Review PR' })
+    expect(store.settings).toMatchObject({ wallWeeks: 20, muted: false })
+    expect(store.tasks.find((t) => t.id === 'From phone')!.updatedAt).toBeUndefined()
+  })
+
+  it('keeps a safety copy when asked, and clears a selection deleted on the other device', async () => {
+    const store = storeWith({ selection: { kind: 'task', taskId: 'Review PR' } })
+    store.startPause()
+    await nextTick()
+    const remote = sharedPart(fixture())
+    remote.tasks = remote.tasks.map((t) => (t.id === 'Review PR' ? { ...t, deletedOn: '2026-09-23' } : t))
+    store.applyShared(remote, { safetyCopy: true })
+    expect(store.selection).toBeNull()
+    expect(store.timer.running).toBe(true)
+    expect(localStorage.getItem(`${STORAGE_KEY}:before-restore`)).toContain('Review PR')
   })
 })

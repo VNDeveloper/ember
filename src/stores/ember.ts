@@ -10,6 +10,7 @@ import type {
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
+import { stampChanges, withDeviceState, type SharedData } from '../core/sync'
 import { tallyLogs } from '../core/tally'
 import { DEMO_SPEED, hasProgress, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
 
@@ -39,6 +40,7 @@ export const useEmberStore = defineStore('ember', () => {
   const selection = ref<Selection>(initial.selection)
   const timer = ref<Timer>(initial.timer)
   const settings = ref<Settings>(initial.settings)
+  const deviceUpdatedAt = ref<number | undefined>(initial.deviceUpdatedAt)
 
   /** Wall clock, advanced by tick(). Everything date- or time-based derives from it. */
   const now = ref(Date.now())
@@ -65,19 +67,33 @@ export const useEmberStore = defineStore('ember', () => {
       selection: selection.value,
       timer: timer.value,
       settings: settings.value,
+      deviceUpdatedAt: deviceUpdatedAt.value,
     }
   }
 
+  const clone = (d: EmberData): EmberData => JSON.parse(JSON.stringify(d)) as EmberData
+  /** What was last saved; the next save stamps everything that differs from it (sync merge). */
+  let baseline = clone(snapshot())
+
+  /** Data from outside (another tab, restore, sync, tests): adopted as-is, never stamped as a local edit. */
   function replaceData(d: EmberData) {
+    baseline = clone(d)
     goals.value = d.goals
     tasks.value = d.tasks
     logs.value = d.logs
     selection.value = d.selection
     timer.value = d.timer
     settings.value = d.settings
+    deviceUpdatedAt.value = d.deviceUpdatedAt
   }
 
-  const persist = () => { if (storageWritable.value) saveData(snapshot()) }
+  const persist = () => {
+    const current = snapshot()
+    stampChanges(baseline, current, Date.now())
+    deviceUpdatedAt.value = current.deviceUpdatedAt
+    baseline = clone(current)
+    if (storageWritable.value) saveData(current)
+  }
   if (read.status !== 'ok') persist()
   watch([goals, tasks, logs, selection, timer, settings], persist, { deep: true })
 
@@ -95,6 +111,13 @@ export const useEmberStore = defineStore('ember', () => {
     saveBeforeRestore(snapshot())
     replaceData({ ...d, timer: idleTimer(d.settings.session) })
     storageWritable.value = true
+  }
+
+  /** Shared data from sync: this device keeps its timer, selection, sound and demo speed. */
+  function applyShared(shared: SharedData, opts: { safetyCopy?: boolean } = {}) {
+    if (opts.safetyCopy) saveBeforeRestore(snapshot())
+    replaceData(withDeviceState(shared, snapshot()))
+    if (selection.value && !targetExists(selection.value)) selection.value = null
   }
 
   // — lookups —
@@ -320,7 +343,7 @@ export const useEmberStore = defineStore('ember', () => {
   return {
     goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
-    snapshot, replaceData, restore, select, targetExists,
+    snapshot, replaceData, restore, applyShared, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
     updateTask, updateStep, renameMilestone, renameGoal,
