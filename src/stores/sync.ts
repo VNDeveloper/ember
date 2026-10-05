@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { dayLabel, todayISO } from '../core/dates'
 import { uid } from '../core/ids'
 import { defaultStorage } from '../core/persist'
@@ -12,6 +12,8 @@ export type SyncStatus = 'unconfigured' | 'signed-out' | 'choose' | 'syncing' | 
 
 const STATE_KEY = 'ember:sync'
 const RETRY_MS = [60_000, 300_000, 900_000]
+const DEBOUNCE_MS = 5_000
+const POLL_MS = 60_000
 
 interface SavedState { connected: boolean; generation: string | null; lastSyncedAt: number | null; newGeneration: boolean }
 const EMPTY: SavedState = { connected: false, generation: null, lastSyncedAt: null, newGeneration: false }
@@ -208,11 +210,61 @@ export const useSyncStore = defineStore('sync', () => {
     save()
   }
 
+  let stops: (() => void)[] = []
+
+  /** Sync on open, on becoming visible, 5 s after a local change, every minute while visible (or on remote change for live backends), and when back online. */
+  function start() {
+    if (!backend || stops.length) return
+    const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden'
+    const onVisible = () => { if (visible()) void syncNow() }
+    const onOnline = () => { void syncNow() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    let debounce: ReturnType<typeof setTimeout> | undefined
+    const stopWatch = watch(
+      () => [ember.goals, ember.tasks, ember.logs, ember.settings],
+      () => {
+        clearTimeout(debounce)
+        debounce = setTimeout(() => { if (hasLocalChanges()) void syncNow() }, DEBOUNCE_MS)
+      },
+      { deep: true },
+    )
+
+    let stopRemote: () => void
+    if (backend.subscribe) stopRemote = backend.subscribe(() => { void syncNow() })
+    else {
+      const id = setInterval(() => { if (visible()) void syncNow() }, POLL_MS)
+      stopRemote = () => clearInterval(id)
+    }
+
+    stops = [
+      () => document.removeEventListener('visibilitychange', onVisible),
+      () => window.removeEventListener('online', onOnline),
+      stopWatch,
+      () => clearTimeout(debounce),
+      stopRemote,
+      () => clearTimeout(retryTimer),
+    ]
+
+    if (connected.value) {
+      void backend.connect(false).then((r) => {
+        if (r === 'ok') void syncNow()
+        else status.value = 'needs-reconnect'
+      })
+    }
+  }
+
+  function stop() {
+    stops.forEach((f) => f())
+    stops = []
+  }
+
   return {
     status, lastSyncedAt, choice, connected, configured, needsAttention,
     connect, reconnect: connect, syncNow, useDriveData, replaceDrive: startNewGeneration, cancelChoice: disconnect,
     disconnect, afterRestore: startNewGeneration,
     // Used by the triggers (Task 7).
-    hasLocalChanges,
+    hasLocalChanges, start, stop,
   }
 })

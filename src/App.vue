@@ -10,18 +10,26 @@ import TodayView from './components/today/TodayView.vue'
 import UndoBar from './components/UndoBar.vue'
 import { useTicker } from './composables/useTicker'
 import { useEmberStore } from './stores/ember'
+import { useSyncStore } from './stores/sync'
 import { useUiStore } from './stores/ui'
 
 const ember = useEmberStore()
 const ui = useUiStore()
+const sync = useSyncStore()
 
 useTicker(() => ember.tick())
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && ui.escape()) e.preventDefault()
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  sync.start()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  sync.stop()
+})
 </script>
 
 <template>

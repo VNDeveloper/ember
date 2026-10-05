@@ -5,7 +5,7 @@ import { STORAGE_KEY } from '../core/persist'
 import { makeSyncFile, readSyncFile, sharedPart } from '../core/sync'
 import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { SyncAuthError, SyncOfflineError } from '../sync/backend'
-import { FakeBackend } from '../sync/test-backend'
+import { FakeBackend, LiveFakeBackend } from '../sync/test-backend'
 import { useEmberStore } from './ember'
 import { provideSyncBackend, useSyncStore } from './sync'
 
@@ -196,5 +196,120 @@ describe('sync controller', () => {
     expect(JSON.parse(localStorage.getItem('ember:sync')!)).toMatchObject({ connected: false, generation: null })
     expect(backend.file).not.toBeNull()
     expect(ember.tasks.map((t) => t.id)).toEqual(['Here'])
+  })
+})
+
+describe('sync triggers', () => {
+  const setVisibility = (v: 'visible' | 'hidden') => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+  afterEach(() => setVisibility('visible'))
+
+  it('syncs on start when connected', async () => {
+    const { sync, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(backend.pulls).toBe(1)
+    sync.stop()
+  })
+
+  it('asks to reconnect on start when the sign-in pass has expired', async () => {
+    const { sync, backend } = setup({ saved: connectedTo('g1') })
+    backend.connectResult = 'needs-user'
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sync.status).toBe('needs-reconnect')
+    expect(backend.pulls).toBe(0)
+    sync.stop()
+  })
+
+  it('syncs 5 seconds after a local change, not before, and not for data that came from sync', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(10_000)
+    const p = backend.pulls
+    ember.addTask({ title: 'New', when: 'today', deadline: false, goalId: null })
+    await vi.advanceTimersByTimeAsync(4_900)
+    expect(backend.pulls).toBe(p)
+    await vi.advanceTimersByTimeAsync(200)
+    expect(backend.pulls).toBe(p + 1)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(backend.pulls).toBe(p + 1)
+    sync.stop()
+  })
+
+  it('polls every minute while visible, not while hidden, and syncs on becoming visible', async () => {
+    const { sync, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    const p = backend.pulls
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(backend.pulls).toBe(p + 1)
+    setVisibility('hidden')
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(backend.pulls).toBe(p + 1)
+    setVisibility('visible')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(backend.pulls).toBe(p + 2)
+    sync.stop()
+  })
+
+  it('syncs when the network comes back', async () => {
+    const { sync, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    const p = backend.pulls
+    window.dispatchEvent(new Event('online'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(backend.pulls).toBe(p + 1)
+    sync.stop()
+  })
+
+  it('uses subscribe instead of polling when the backend offers it', async () => {
+    const live = new LiveFakeBackend()
+    live.file = driveFile('g1')
+    const { sync } = setup({ backend: live, saved: connectedTo('g1') })
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    const p = live.pulls
+    await vi.advanceTimersByTimeAsync(180_000)
+    expect(live.pulls).toBe(p)
+    live.subscribers.forEach((f) => f())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(live.pulls).toBe(p + 1)
+    sync.stop()
+    expect(live.subscribers).toHaveLength(0)
+  })
+
+  it('keeps an edit made during an upload and sends it on the next sync', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    backend.onPush = () => {
+      backend.onPush = null
+      ember.addTask({ title: 'Typed during upload', when: 'today', deadline: false, goalId: null })
+    }
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(ember.tasks.some((t) => t.title === 'Typed during upload')).toBe(true)
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(fileOf(backend).data.tasks.some((t) => t.title === 'Typed during upload')).toBe(true)
+    sync.stop()
+  })
+
+  it('stops every trigger on stop', async () => {
+    const { sync, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(0)
+    sync.stop()
+    const p = backend.pulls
+    window.dispatchEvent(new Event('online'))
+    await vi.advanceTimersByTimeAsync(300_000)
+    expect(backend.pulls).toBe(p)
   })
 })
