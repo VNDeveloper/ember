@@ -5,7 +5,7 @@ Local-first, single-user app: daily tasks, learning goals (goal → milestones �
 - `docs/design/reference/Ember.dc.html` — working prototype; source of truth for formulas and copy when the spec is ambiguous. Its logic is in the `<script data-dc-script>` block. Recreate, never ship or wrap it.
 
 ## Commands
-- `npm run dev` · `npm test` · `npm run build` (vue-tsc + vite) · `npm run typecheck`
+- `npm run dev` (port 5199) · `npm test` · `npm run build` (vue-tsc + vite) · `npm run typecheck`
 
 ## Stack
 Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/styles/`; lucide-vue-next; Vitest + jsdom. No UI kit, no Tailwind, no backend. TypeScript pinned to ~6 (vue-tsc can't load TS 7).
@@ -16,6 +16,7 @@ Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/s
 - Derive, don't store: spent minutes, today's totals, streaks and goal % come from `FocusLog` + `doneOn`.
 - Timer uses wall-clock `endsAt`, never tick counting.
 - Plans: one per phase in `docs/superpowers/plans/`.
+- Sync: `src/core/sync.ts` (pure merge/stamp), `src/stores/sync.ts` (controller), `src/sync/` (backends). The store stamps `updatedAt` on save; data from outside goes through `replaceData`/`applyShared` and is never stamped.
 
 ## Visual rules (non-negotiable)
 Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog. Exception: Focus mode's bottom legibility gradient, blurred translucent panels and text shadow over the video.
