@@ -6,10 +6,13 @@ import { dayLabel, todayISO } from '../core/dates'
 import { plural } from '../core/format'
 import type { EmberData } from '../core/model'
 import { useEmberStore } from '../stores/ember'
+import { useSyncStore } from '../stores/sync'
 import { useUiStore } from '../stores/ui'
+import SyncBlock from './SyncBlock.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
+const sync = useSyncStore()
 
 const root = ref<HTMLElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -56,6 +59,7 @@ async function onFile() {
 function replace() {
   if (!pending.value) return
   ember.restore(pending.value.data)
+  if (sync.connected) void sync.afterRestore()
   pending.value = null
   ui.dataMenuOpen = false
 }
@@ -72,6 +76,7 @@ watch(() => ui.dataMenuOpen, (open) => {
   if (open) document.addEventListener('pointerdown', onPointerDown)
   else {
     document.removeEventListener('pointerdown', onPointerDown)
+    if (sync.status === 'choose') void sync.cancelChoice()
     pending.value = null
     error.value = ''
   }
@@ -81,10 +86,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 
 <template>
   <div ref="root" class="data-menu">
-    <button class="dm-toggle" :aria-expanded="ui.dataMenuOpen" aria-controls="ember-data-panel" @click="toggle">
-      Data<ChevronDown :size="14" :stroke-width="2.5" :class="{ 'is-open': ui.dataMenuOpen }" />
+    <button
+      class="dm-toggle"
+      :aria-expanded="ui.dataMenuOpen"
+      aria-controls="ember-data-panel"
+      :aria-label="sync.needsAttention ? 'Data, sync needs attention' : undefined"
+      @click="toggle"
+    >
+      Data<span v-if="sync.needsAttention" class="dm-attn" aria-hidden="true"></span><ChevronDown :size="14" :stroke-width="2.5" :class="{ 'is-open': ui.dataMenuOpen }" />
     </button>
     <div v-if="ui.dataMenuOpen" id="ember-data-panel" class="dm-panel" role="region" aria-label="Your data">
+      <SyncBlock v-if="sync.configured" />
       <span class="section-label">Your data</span>
       <p class="dm-note">Everything is stored in this browser. Keep a backup file somewhere safe.</p>
       <template v-if="!pending">
@@ -95,7 +107,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
         <p class="dm-last">Last backup: {{ last ? dayLabel(last) : 'Never' }}</p>
       </template>
       <div v-else class="dm-confirm">
-        <p>Replace everything with the backup from {{ pending.from }}? ({{ pending.summary }}) This can't be undone.</p>
+        <p>Replace everything with the backup from {{ pending.from }}? ({{ pending.summary }}) This can't be undone.<template v-if="sync.connected"> This also replaces the data on your other devices.</template></p>
         <div class="dm-actions">
           <button class="btn btn-primary dm-replace" @click="replace">Replace</button>
           <button class="btn btn-ghost dm-cancel" @click="pending = null">Cancel</button>
@@ -114,6 +126,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 }
 .dm-toggle:hover, .dm-toggle[aria-expanded='true'] { color: var(--color-accent); }
 .dm-toggle svg { transition: transform .15s; }
+.dm-attn { width: 8px; height: 8px; background: var(--color-accent); }
 .dm-toggle svg.is-open { transform: rotate(180deg); }
 .dm-panel {
   position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 50;
@@ -125,4 +138,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 .dm-error { font-size: 13px; font-weight: 700; color: var(--color-accent-700); }
 .dm-confirm { display: flex; flex-direction: column; gap: var(--space-3); font-size: 14px; }
 .dm-actions { display: flex; gap: var(--space-2); }
+/* On phones the toggle can wrap to the nav's second row: hang the panel from the nav, inside the gutters. */
+@media (max-width: 520px) {
+  .data-menu { position: static; }
+  .dm-panel { top: calc(100% + 2px); left: var(--space-4); right: var(--space-4); width: auto; }
+}
 </style>

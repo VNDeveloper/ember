@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeBackup } from '../core/backup'
 import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
+import { provideSyncBackend, useSyncStore } from '../stores/sync'
 import { useUiStore } from '../stores/ui'
+import { FakeBackend } from '../sync/test-backend'
 import DataMenu from './DataMenu.vue'
 
 const NOW = new Date(2026, 8, 23, 10, 0).getTime()
@@ -30,6 +32,7 @@ beforeEach(() => {
   localStorage.clear()
 })
 afterEach(() => {
+  provideSyncBackend(undefined)
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -94,6 +97,56 @@ describe('DataMenu', () => {
     expect(w.find('.dm-error').text()).toBe("That file isn't an Ember backup.")
     expect(w.find('.dm-confirm').exists()).toBe(false)
     expect(ember.goals.map((g) => g.title)).toEqual(['D3'])
+    w.unmount()
+  })
+
+  it('hides sync when no Google client is configured', async () => {
+    const { w } = setup()
+    await w.find('.dm-toggle').trigger('click')
+    expect(w.find('.sync-block').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('marks the Data button when sync needs attention', async () => {
+    provideSyncBackend(new FakeBackend())
+    const { w } = setup()
+    const sync = useSyncStore()
+    expect(w.find('.dm-attn').exists()).toBe(false)
+    expect(w.find('.dm-toggle').attributes('aria-label')).toBeUndefined()
+    sync.status = 'needs-reconnect'
+    await flushPromises()
+    expect(w.find('.dm-attn').exists()).toBe(true)
+    expect(w.find('.dm-toggle').attributes('aria-label')).toBe('Data, sync needs attention')
+    w.unmount()
+  })
+
+  it('warns that a restore replaces other devices too, and starts a new generation', async () => {
+    localStorage.setItem('ember:sync', JSON.stringify({ connected: true, generation: 'g1', lastSyncedAt: null }))
+    const backend = new FakeBackend()
+    provideSyncBackend(backend)
+    const { w } = setup()
+    await w.find('.dm-toggle').trigger('click')
+    await pickFile(w, makeBackup(dataFixture({ tasks: [taskFixture('From backup')] }), NOW))
+    expect(w.find('.dm-confirm p').text()).toContain('This also replaces the data on your other devices.')
+    await w.find('.dm-replace').trigger('click')
+    await flushPromises()
+    expect(backend.file).toContain('From backup')
+    expect(backend.file).not.toContain('"generation":"g1"')
+    w.unmount()
+  })
+
+  it('cancels a pending first-connection choice when the menu closes', async () => {
+    const backend = new FakeBackend()
+    backend.file = '{"app":"ember","version":1,"generation":"g1","data":{"goals":[],"tasks":[],"logs":[],"settings":{}}}'
+    provideSyncBackend(backend)
+    const { w, ui } = setup()
+    const sync = useSyncStore()
+    await w.find('.dm-toggle').trigger('click')
+    await sync.connect()
+    expect(sync.status).toBe('choose')
+    ui.dataMenuOpen = false
+    await flushPromises()
+    expect(sync).toMatchObject({ status: 'signed-out', connected: false })
     w.unmount()
   })
 })
