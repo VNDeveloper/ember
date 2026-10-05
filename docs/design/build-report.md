@@ -18,6 +18,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 - **Activity:** year heat map (focus time or things done), stats, done wall and activity log.
 - **Focus mode (video-first, reworked after the handoff):** a full-colour YouTube video fills the screen, with a small centred time and progress bar. Top right: video settings (Video/Off, paste a link), sound and exit. Bottom left: play/pause, Mark done or Skip break, and the selected item, which opens the picker. While a session runs, the controls and cursor fade out after 3 seconds without mouse, touch or key activity. Pausing, or opening the settings or picker, keeps them visible. Sound uses the IFrame Player API, so muting never restarts the video. Esc closes the picker, then the settings, then Focus mode.
 - **Animations:** pop (checkbox, today's heat-map cell, newest session block, streak square), drop (newest done-wall brick) and float (toast). All are retriggerable and respect reduced motion.
+- **Settings (added after the handoff):** a Settings menu in the nav, beside Data, with the prototype's Tweaks. Timer: session length (25/5 or 50/10) and demo speed. Charts: show future days and done-wall weeks (4–26). A new length resets an idle timer, while a running session keeps its length ("Applies from the next session"). When `?demo=1` is in the link, demo speed shows as on and locked. On phones the panel hangs full-width from the nav.
 - **Back up / restore (added after the handoff):** a Data menu in the nav downloads all data as a dated JSON file and restores from one. It confirms first, keeps a safety copy of the current data in the browser, and resets the timer.
 - **Seed data:** the prototype's goals and tasks plus a believable year of history, generated relative to the real date.
 
@@ -39,7 +40,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 | Editing or deleting tasks, steps, milestones and goals | Built after the handoff: a "⋯" row menu → inline edit panel; soft delete with an 8-second undo bar; history keeps deleted items (marked “(deleted)” in the log). Tasks of a deleted goal are kept. |
 | Reordering | Not built. |
 | Editing a step's estimate | Built: estimate stepper in 25-minute units, 25m–10h. |
-| Custom focus/break lengths | Not built. `settings.session` supports 25/5 and 50/10, with no settings screen yet. |
+| Custom focus/break lengths | 25/5 or 50/10 from the Settings menu; no custom minutes. |
 | Deeper task↔goal integration | A task can be linked to a goal (colour and name). It appears under "Tasks for this goal". Time on a task counts on the task, not toward the goal's focused time. |
 
 ## Other decisions, by area
@@ -101,5 +102,4 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 
 ## Suggested next steps
 
-1. A small settings screen: session length, show future days, done-wall weeks, demo speed.
-2. PWA install (manifest and service worker) so Ember opens offline like an app.
+1. PWA install (manifest and service worker) so Ember opens offline like an app.

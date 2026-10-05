@@ -114,4 +114,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 .sm-note { font-size: 12px; color: var(--color-neutral-700); }
 .sm-stepper { display: flex; align-items: center; gap: var(--space-2); }
 .sm-weeks { min-width: 64px; font-weight: 700; text-align: center; }
+/* On phones the toggle wraps to the nav's second row: hang the panel from the nav, inside the gutters. */
+@media (max-width: 520px) {
+  .settings-menu { position: static; }
+  .sm-panel { top: calc(100% + 2px); left: var(--space-4); right: var(--space-4); width: auto; }
+}
 </style>

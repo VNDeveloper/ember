@@ -32,7 +32,7 @@ const TABS: [View, string][] = [['today', 'Today'], ['goals', 'Goals'], ['activi
 </template>
 
 <style scoped>
-.nav { flex-wrap: wrap; row-gap: var(--space-2); }
+.nav { position: relative; flex-wrap: wrap; row-gap: var(--space-2); }
 .nav-brand { margin-right: var(--space-2); }
 .tabs { display: flex; gap: var(--space-6); margin-right: auto; }
 .tab {
