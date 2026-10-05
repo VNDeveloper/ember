@@ -72,3 +72,50 @@ export function stampChanges(before: EmberData, after: EmberData, now: number): 
   if (canonical([before.timer, before.selection]) !== canonical([after.timer, after.selection])) after.deviceUpdatedAt = now
   return n
 }
+
+type Stamped = { updatedAt?: number }
+const stampOf = (x: Stamped): number => x.updatedAt ?? 0
+
+/** Newer wins; equal stamps fall back to content, so every device picks the same copy. */
+function newer<T extends Stamped>(a: T, b: T): T {
+  if (stampOf(a) !== stampOf(b)) return stampOf(a) > stampOf(b) ? a : b
+  return canonical(a) >= canonical(b) ? a : b
+}
+
+/** Drive's order first (the file is the hub, so devices converge on it), then items only this device has. */
+function unionById<T extends { id: string }>(local: T[], remote: T[], pick: (l: T, r: T) => T): T[] {
+  const mine = new Map(local.map((x) => [x.id, x]))
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (const r of remote) {
+    const l = mine.get(r.id)
+    out.push(l ? pick(l, r) : r)
+    seen.add(r.id)
+  }
+  for (const l of local) if (!seen.has(l.id)) out.push(l)
+  return out
+}
+
+/** An item's own fields from the newer copy; its children merged one by one. */
+function mergeWithChildren<T extends Stamped, K extends keyof T>(l: T, r: T, child: K, mergeChildren: (a: T[K], b: T[K]) => T[K]): T {
+  const strip = (x: T) => without(x, [child as string]) as T
+  return { ...newer(strip(l), strip(r)), [child]: mergeChildren(l[child], r[child]) } as T
+}
+
+const mergeMilestone = (l: Goal['milestones'][number], r: Goal['milestones'][number]) =>
+  mergeWithChildren(l, r, 'steps', (a, b) => unionById(a, b, newer))
+
+const mergeGoal = (l: Goal, r: Goal): Goal =>
+  mergeWithChildren(l, r, 'milestones', (a, b) => unionById(a, b, mergeMilestone))
+
+/** Merge this device's shared data with Drive's: union by id at every level, newer updatedAt wins. */
+export function mergeData(local: SharedData, remote: SharedData): SharedData {
+  const logs = unionById(local.logs, remote.logs, (l) => l)
+    .sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  return {
+    goals: unionById(local.goals, remote.goals, mergeGoal),
+    tasks: unionById(local.tasks, remote.tasks, newer),
+    logs,
+    settings: newer(local.settings, remote.settings),
+  }
+}

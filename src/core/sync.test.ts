@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEVICE_ONLY, canonical, sharedPart, stampChanges, withDeviceState } from './sync'
+import type { EmberData } from './model'
+import { DEVICE_ONLY, canonical, mergeData, sharedPart, stampChanges, withDeviceState } from './sync'
 import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
 
 const T = 1_800_000_000_000
@@ -105,5 +106,98 @@ describe('stampChanges', () => {
     a.selection = { kind: 'task', taskId: 'A' }
     expect(stampChanges(b, a, T)).toBe(0)
     expect(a.deviceUpdatedAt).toBe(T)
+  })
+})
+
+const shared = (patch: Partial<EmberData> = {}) => sharedPart(dataFixture(patch))
+const ids = (xs: { id: string }[]) => xs.map((x) => x.id)
+
+describe('mergeData', () => {
+  it('keeps items that exist on one side only, Drive order first', () => {
+    const m = mergeData(shared({ tasks: [taskFixture('A')] }), shared({ tasks: [taskFixture('B')] }))
+    expect(ids(m.tasks)).toEqual(['B', 'A'])
+  })
+
+  it('picks the newer copy of an item on both sides', () => {
+    const local = shared({ tasks: [taskFixture('A', { title: 'old', updatedAt: 1 })] })
+    const remote = shared({ tasks: [taskFixture('A', { title: 'new', updatedAt: 2 })] })
+    expect(mergeData(local, remote).tasks[0].title).toBe('new')
+    expect(mergeData(remote, local).tasks[0].title).toBe('new')
+  })
+
+  it('breaks equal stamps by content, the same way on every device', () => {
+    const a = shared({ tasks: [taskFixture('A', { title: 'Apple', updatedAt: 5 })] })
+    const b = shared({ tasks: [taskFixture('A', { title: 'Banana', updatedAt: 5 })] })
+    expect(mergeData(a, b).tasks[0].title).toBe(mergeData(b, a).tasks[0].title)
+  })
+
+  it('a later stamp wins even when its device has older stamps elsewhere', () => {
+    const local = shared({ tasks: [taskFixture('A', { title: 'phone', updatedAt: 900 }), taskFixture('B', { updatedAt: 100 })] })
+    const remote = shared({ tasks: [taskFixture('A', { title: 'mac', updatedAt: 1000 }), taskFixture('B', { updatedAt: 50 })] })
+    const m = mergeData(local, remote)
+    expect(m.tasks.find((t) => t.id === 'A')!.title).toBe('mac')
+    expect(m.tasks.find((t) => t.id === 'B')!.updatedAt).toBe(100)
+  })
+
+  it('merges goals per milestone and step, so edits on two devices both survive', () => {
+    const base = goalFixture('D3', [['Charts', [['Bar', null], ['Line', null]]]])
+    const local = clone(base)
+    local.milestones[0].steps[1] = { ...local.milestones[0].steps[1], doneOn: '2026-09-23', updatedAt: 2 }
+    const remote = clone(base)
+    remote.milestones[0].steps.push({ id: 'D3/Charts/Scatter', title: 'Scatter', doneOn: null, estMin: 50, updatedAt: 3 })
+    const m = mergeData(shared({ goals: [local] }), shared({ goals: [remote] }))
+    const steps = m.goals[0].milestones[0].steps
+    expect(ids(steps)).toEqual(['D3/Charts/Bar', 'D3/Charts/Line', 'D3/Charts/Scatter'])
+    expect(steps[1].doneOn).toBe('2026-09-23')
+  })
+
+  it("takes a goal's own fields from the newer goal without dropping the other side's milestones", () => {
+    const local = { ...goalFixture('D3', [['Charts', []]]), title: 'Learn D3', updatedAt: 9 }
+    const remote = { ...goalFixture('D3', [['Charts', []], ['Motion', []]]), updatedAt: 1 }
+    const m = mergeData(shared({ goals: [local] }), shared({ goals: [remote] }))
+    expect(m.goals[0].title).toBe('Learn D3')
+    expect(ids(m.goals[0].milestones)).toEqual(['D3/Charts', 'D3/Motion'])
+  })
+
+  it('keeps a newer soft delete', () => {
+    const local = shared({ tasks: [taskFixture('A', { deletedOn: '2026-09-23', updatedAt: 5 })] })
+    const remote = shared({ tasks: [taskFixture('A', { title: 'renamed', updatedAt: 3 })] })
+    expect(mergeData(local, remote).tasks[0].deletedOn).toBe('2026-09-23')
+  })
+
+  it('unions focus logs by id, in time order', () => {
+    const log = (id: string, at: number) => ({ id, at, date: '2026-09-23', min: 25, target: null })
+    const m = mergeData(shared({ logs: [log('a', 3), log('b', 1)] }), shared({ logs: [log('b', 1), log('c', 2)] }))
+    expect(ids(m.logs)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('takes shared settings from the newer side', () => {
+    const s = dataFixture().settings
+    const local = shared({ settings: { ...s, wallWeeks: 8, updatedAt: 2 } })
+    const remote = shared({ settings: { ...s, wallWeeks: 20, session: '50/10', updatedAt: 1 } })
+    expect(mergeData(local, remote).settings).toMatchObject({ wallWeeks: 8, session: '25/5' })
+  })
+
+  it('gives every device the same goal order once both have synced (goal colours match)', () => {
+    const g = (id: string) => goalFixture(id, [])
+    let file = shared({ goals: [g('G1')] })
+    const a = mergeData(shared({ goals: [g('G1'), g('GA')] }), file)
+    file = a
+    const b = mergeData(shared({ goals: [g('G1'), g('GB')] }), file)
+    file = b
+    const a2 = mergeData(a, file)
+    expect(ids(a2.goals)).toEqual(ids(b.goals))
+    expect(ids(b.goals)).toEqual(['G1', 'GA', 'GB'])
+  })
+
+  it('is idempotent, and heals an upload that was overwritten', () => {
+    const empty = shared()
+    const onA = mergeData(shared({ tasks: [taskFixture('X', { updatedAt: 1 })] }), empty)
+    expect(canonical(mergeData(onA, onA))).toBe(canonical(onA))
+    // B merged against the empty file before A's upload landed, then overwrote it.
+    const onB = mergeData(shared({ tasks: [taskFixture('Y', { updatedAt: 2 })] }), empty)
+    const file = onB
+    const healed = mergeData(onA, file)
+    expect(ids(healed.tasks).sort()).toEqual(['X', 'Y'])
   })
 })
