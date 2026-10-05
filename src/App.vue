@@ -8,6 +8,7 @@ import GoalsView from './components/goals/GoalsView.vue'
 import NavBar from './components/NavBar.vue'
 import TodayView from './components/today/TodayView.vue'
 import UndoBar from './components/UndoBar.vue'
+import UpdateBar from './components/UpdateBar.vue'
 import { useTicker } from './composables/useTicker'
 import { useEmberStore } from './stores/ember'
 import { useSyncStore } from './stores/sync'
@@ -40,6 +41,7 @@ onBeforeUnmount(() => {
     <GoalsView v-else-if="ui.view === 'goals'" />
     <ActivityView v-else />
     <UndoBar />
+    <UpdateBar />
     <FocusMode v-if="ui.focusModeOpen" />
     <FocusPicker v-if="ui.pickerOpen" />
   </div>
