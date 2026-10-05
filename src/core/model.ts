@@ -3,10 +3,10 @@ import { DEFAULT_VIDEO_URL } from './youtube'
 
 export type { ISODate }
 
-/** deletedOn (soft delete): hidden from live views, kept for history. */
-export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null }
-export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null }
-export interface Goal { id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate; deletedOn?: ISODate | null }
+/** deletedOn (soft delete): hidden from live views, kept for history. updatedAt: last edit (sync merge). */
+export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null; updatedAt?: number }
+export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null; updatedAt?: number }
+export interface Goal { id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate; deletedOn?: ISODate | null; updatedAt?: number }
 
 export interface Task {
   id: string
@@ -20,6 +20,8 @@ export interface Task {
   doneOn: ISODate | null
   /** Soft delete: hidden from live views, kept for history. */
   deletedOn?: ISODate | null
+  /** Last edit, epoch ms (sync merge: newer wins). Missing = oldest. */
+  updatedAt?: number
 }
 
 export interface TaskTarget { kind: 'task'; taskId: string }
@@ -53,6 +55,8 @@ export interface Settings {
   focusBg: FocusBg
   youtubeUrl: string
   muted: boolean
+  /** Last change to the shared settings (not muted/demo), epoch ms. */
+  updatedAt?: number
 }
 
 export interface EmberData {
@@ -62,6 +66,8 @@ export interface EmberData {
   selection: Selection
   timer: Timer
   settings: Settings
+  /** Last change to this device's timer or selection, epoch ms (for a shared timer later). */
+  deviceUpdatedAt?: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {

@@ -99,6 +99,15 @@ describe('timer', () => {
     expect(store.logs[0].target).toBeNull()
   })
 
+  it('names a finished session after its end time, so two devices log the same run once', () => {
+    const store = storeWith()
+    store.startPause()
+    const endsAt = store.timer.endsAt!
+    store.tick(NOW + 25 * MIN)
+    expect(store.logs).toHaveLength(1)
+    expect(store.logs[0].id).toBe(`focus-${endsAt}`)
+  })
+
   it('logs 50 minutes with the 50/10 setting', () => {
     const store = storeWith()
     store.setSession('50/10')

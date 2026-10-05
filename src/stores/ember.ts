@@ -284,7 +284,8 @@ export const useEmberStore = defineStore('ember', () => {
     }
     const sel = selection.value
     logs.value.push({
-      id: uid(), at, date: todayISO(at), min: timer.value.lengthSec / 60,
+      // The run's end time names the session, so devices that both log it produce one record.
+      id: `focus-${at}`, at, date: todayISO(at), min: timer.value.lengthSec / 60,
       target: sel && targetExists(sel) ? sel : null,
     })
     timer.value = idleTimer(session, 'break')
