@@ -38,4 +38,18 @@ describe('NavBar', () => {
     expect(toggle.compareDocumentPosition(w.find('.nav-date').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(nav.contains(toggle)).toBe(true)
   })
+
+  it('has the Settings menu after Data, and opening one closes the other', async () => {
+    const w = mount(NavBar, { attachTo: document.body })
+    const ui = useUiStore()
+    const settings = w.find('.sm-toggle')
+    expect(settings.text()).toBe('Settings')
+    expect(w.find('.dm-toggle').element.compareDocumentPosition(settings.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await w.find('.dm-toggle').trigger('click')
+    await settings.trigger('click')
+    expect(ui).toMatchObject({ settingsMenuOpen: true, dataMenuOpen: false })
+    expect(w.find('.dm-panel').exists()).toBe(false)
+    expect(w.find('.sm-panel').exists()).toBe(true)
+    w.unmount()
+  })
 })

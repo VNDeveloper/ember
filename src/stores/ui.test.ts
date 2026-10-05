@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { useUiStore } from './ui'
 
 beforeEach(() => setActivePinia(createPinia()))
@@ -58,6 +59,22 @@ describe('ui store', () => {
     ui.closeFocusMode()
     ui.openFocusMode()
     expect(ui.fmSettingsOpen).toBe(false)
+  })
+
+  it('keeps one nav menu open at a time, and Esc closes it first', async () => {
+    const ui = useUiStore()
+    ui.openPicker(null)
+    ui.dataMenuOpen = true
+    ui.settingsMenuOpen = true
+    await nextTick()
+    expect(ui).toMatchObject({ settingsMenuOpen: true, dataMenuOpen: false })
+    ui.dataMenuOpen = true
+    await nextTick()
+    expect(ui).toMatchObject({ settingsMenuOpen: false, dataMenuOpen: true })
+    ui.settingsMenuOpen = true
+    await nextTick()
+    expect(ui.escape()).toBe(true)
+    expect(ui).toMatchObject({ settingsMenuOpen: false, pickerOpen: true })
   })
 
   it('opens a goal on the Goals tab', () => {

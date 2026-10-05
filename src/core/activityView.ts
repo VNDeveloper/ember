@@ -6,6 +6,7 @@ import { fmtInt, fmtM, hash7, pad2 } from './format'
 import { findStep, goalColor, goalStats, isLive, isStepLive } from './goals'
 import type { FocusLog, Goal, Task } from './model'
 import { targetTitle } from './selection'
+import { clampWallWeeks } from './settings'
 
 export type HeatMode = 'focus' | 'done'
 
@@ -111,7 +112,7 @@ const BRICK_ROW = 21
 
 /** One column per week (Monday start, oldest left); finished steps are filled bricks, tasks outlined. */
 export function doneWall(goals: Goal[], tasks: Task[], today: ISODate, wallWeeks: number): DoneWallModel {
-  const weeks = Math.max(4, Math.min(26, Math.round(wallWeeks) || 12))
+  const weeks = clampWallWeeks(wallWeeks)
   const mon0 = mondayOf(today)
   const buckets: Brick[][] = Array.from({ length: weeks }, () => [])
   const place = (b: Brick) => {

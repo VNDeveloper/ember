@@ -317,7 +317,7 @@ export const useEmberStore = defineStore('ember', () => {
 
   return {
     goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
-    today, demo, speed, tally, remaining, lastLog,
+    today, demo, demoFromUrl, speed, tally, remaining, lastLog,
     snapshot, replaceData, restore, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,

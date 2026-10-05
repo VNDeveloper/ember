@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import type { HeatMode } from '../core/activityView'
 import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
@@ -20,6 +20,10 @@ export const useUiStore = defineStore('ui', () => {
   const fmSettingsOpen = ref(false)
   /** Nav: the Data (back up / restore) panel is open. */
   const dataMenuOpen = ref(false)
+  const settingsMenuOpen = ref(false)
+  // The nav's Data and Settings menus share the corner: opening one closes the other.
+  watch(dataMenuOpen, (open) => { if (open) settingsMenuOpen.value = false }, { flush: 'sync' })
+  watch(settingsMenuOpen, (open) => { if (open) dataMenuOpen.value = false }, { flush: 'sync' })
   /** Row "⋯" menu that is open (one at a time). */
   const menuFor = ref<string | null>(null)
   /** Inline edit panel that is open: task:<id> | step:<stepId> | ms:<msId> | goal:<goalId>. */
@@ -98,10 +102,11 @@ export const useUiStore = defineStore('ui', () => {
     undo.value = null
   }
 
-  /** Esc closes the data menu, row menu, edit panel, picker, Focus mode's video settings, then Focus mode. Returns whether it closed anything. */
+  /** Esc closes the data or settings menu, row menu, edit panel, picker, Focus mode's video settings, then Focus mode. Returns whether it closed anything. */
   function escape(): boolean {
-    if (dataMenuOpen.value) {
+    if (dataMenuOpen.value || settingsMenuOpen.value) {
       dataMenuOpen.value = false
+      settingsMenuOpen.value = false
       return true
     }
     if (menuFor.value) {
@@ -128,7 +133,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, dataMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, taskDraft, doneOpen, openGroups,
+    view, activeGoalId, dataMenuOpen, settingsMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }
