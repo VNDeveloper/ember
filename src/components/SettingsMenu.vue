@@ -4,6 +4,7 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { plural } from '../core/format'
 import type { SessionLength } from '../core/model'
 import { clampWallWeeks, stepWallWeeks, WALL_WEEKS_MAX, WALL_WEEKS_MIN } from '../core/settings'
+import { hasProgress } from '../core/timer'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
 
@@ -43,7 +44,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
             </label>
           </div>
         </div>
-        <p v-if="ember.timer.running" class="sm-note sm-session-note">Applies from the next session</p>
+        <p v-if="ember.timer.running || hasProgress(ember.timer)" class="sm-note sm-session-note">Applies from the next session</p>
         <div class="sm-row">
           <span>Demo speed</span>
           <button

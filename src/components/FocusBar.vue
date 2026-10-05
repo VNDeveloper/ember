@@ -10,7 +10,6 @@ import { useUiStore } from '../stores/ui'
 const ember = useEmberStore()
 const ui = useUiStore()
 
-const session = computed(() => ember.settings.session)
 const info = computed(() => describeSelection(ember.goals, ember.tasks, ember.selection, ember.tally.spent))
 const state = computed(() => {
   if (ember.timer.phase === 'break') return 'break'
@@ -30,7 +29,7 @@ const toastText = computed(() => {
     <div class="fb-row">
       <span class="fb-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fb-stack">
-        <span class="fb-phase">{{ phaseLabel(ember.timer, session) }}</span>
+        <span class="fb-phase">{{ phaseLabel(ember.timer) }}</span>
         <button class="fb-title" title="Change what you're focusing on" aria-haspopup="dialog" @click="ui.openPicker(ember.selection)">
           <span>{{ info.title }}</span>
           <ChevronDown :size="16" :stroke-width="2.5" />
@@ -45,7 +44,7 @@ const toastText = computed(() => {
         <button class="btn btn-primary fb-start" @click="ember.startPause()">
           <Pause v-if="ember.timer.running" :size="16" fill="currentColor" :stroke-width="0" />
           <Play v-else :size="16" fill="currentColor" :stroke-width="0" />
-          {{ startLabel(ember.timer, session) }}
+          {{ startLabel(ember.timer) }}
         </button>
         <button
           class="btn btn-secondary btn-icon btn-outline-current"
@@ -55,7 +54,7 @@ const toastText = computed(() => {
         >
           <Scan :size="16" :stroke-width="2.25" />
         </button>
-        <button v-if="canReset(ember.timer, session)" class="btn btn-ghost fb-ghost fb-reset" @click="ember.resetTimer()">Reset</button>
+        <button v-if="canReset(ember.timer)" class="btn btn-ghost fb-ghost fb-reset" @click="ember.resetTimer()">Reset</button>
         <button v-if="ember.timer.phase === 'break'" class="btn btn-ghost fb-ghost fb-skip" @click="ember.skipBreak()">Skip break</button>
       </div>
     </div>

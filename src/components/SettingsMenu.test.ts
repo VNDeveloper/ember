@@ -62,6 +62,14 @@ describe('SettingsMenu', () => {
     w.unmount()
   })
 
+  it('keeps a paused, partly-run session and says so', async () => {
+    const { w, ember } = await setup({ timer: { phase: 'focus', running: false, endsAt: null, leftSec: 300, speed: 1, lengthSec: 1500 } })
+    await w.findAll('.sm-session input')[1].setValue(true)
+    expect(ember.timer).toMatchObject({ leftSec: 300, lengthSec: 1500 })
+    expect(w.find('.sm-session-note').text()).toBe('Applies from the next session')
+    w.unmount()
+  })
+
   it('turns demo speed and future days on and off', async () => {
     const { w, ember } = await setup()
     const demo = w.find('.sm-demo')

@@ -11,7 +11,7 @@ import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
 import { buildSeed } from '../core/seed'
 import { tallyLogs } from '../core/tally'
-import { DEMO_SPEED, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
+import { DEMO_SPEED, hasProgress, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
 
 export type When = 'today' | 'tomorrow' | 'date' | 'someday'
 export interface NewTask { title: string; when: When; date?: ISODate; deadline: boolean; goalId: string | null }
@@ -308,7 +308,8 @@ export const useEmberStore = defineStore('ember', () => {
 
   function setSession(s: SessionLength) {
     settings.value.session = s
-    if (!timer.value.running) timer.value = idleTimer(s, timer.value.phase)
+    // Only a fresh timer takes the new length; a running or paused-partway phase keeps its own.
+    if (!timer.value.running && !hasProgress(timer.value)) timer.value = idleTimer(s, timer.value.phase)
   }
 
   function updateSettings(patch: Partial<Settings>) {

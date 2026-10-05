@@ -21,12 +21,11 @@ const linkInput = ref<HTMLInputElement | null>(null)
 const host = ref<HTMLElement | null>(null)
 const { onKeydown } = useDialogFocus(root, startButton)
 
-const session = computed(() => ember.settings.session)
 const info = computed(() => describeSelection(ember.goals, ember.tasks, ember.selection, ember.tally.spent))
 const itemSub = computed(() => nextStepText(ember.goals, ember.selection) || info.value.sub)
 const canMarkDone = computed(() => !info.value.empty && ember.timer.phase === 'focus')
 const pct = computed(() => `${Math.round(Math.min(1, Math.max(0, progress(ember.timer, ember.now))) * 100_000) / 1000}%`)
-const startText = computed(() => startLabel(ember.timer, session.value))
+const startText = computed(() => startLabel(ember.timer))
 
 const currentId = computed(() => ytId(ember.settings.youtubeUrl))
 const videoId = computed(() => (ember.settings.focusBg === 'video' ? currentId.value : null))
@@ -113,7 +112,7 @@ onBeforeUnmount(() => {
     <div class="fm-center">
       <span class="fm-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fm-bar"><div class="fm-bar-fill" :style="{ width: pct }"></div></div>
-      <span class="fm-phase fm-chrome">{{ phaseLabel(ember.timer, session) }}</span>
+      <span class="fm-phase fm-chrome">{{ phaseLabel(ember.timer) }}</span>
     </div>
 
     <div class="fm-tr fm-chrome">

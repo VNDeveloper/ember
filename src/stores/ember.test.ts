@@ -194,6 +194,20 @@ describe('timer', () => {
     expect(store.remaining).toBe(3000)
   })
 
+  it('keeps a paused, partly-run session when the length changes, and logs it at its own length', () => {
+    const store = storeWith()
+    store.startPause()
+    vi.setSystemTime(NOW + 20 * MIN)
+    store.startPause()
+    expect(store.timer.leftSec).toBe(300)
+    store.setSession('50/10')
+    expect(store.timer).toMatchObject({ running: false, leftSec: 300, lengthSec: 1500 })
+    store.startPause()
+    store.tick(NOW + 25 * MIN)
+    expect(store.logs[0].min).toBe(25)
+    expect(store.timer).toMatchObject({ phase: 'break', leftSec: 600 })
+  })
+
   it('logs the length a run actually ran when the session changes mid-run', () => {
     const store = storeWith()
     store.setSession('50/10')

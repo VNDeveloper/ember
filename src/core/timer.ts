@@ -36,16 +36,19 @@ export const isDue = (t: Timer, now: number): boolean => t.running && t.endsAt !
 
 export const progress = (t: Timer, now: number): number => 1 - remainingSec(t, now) / t.lengthSec
 
-export function phaseLabel(t: Timer, session: SessionLength): string {
-  if (t.phase === 'break') return t.running ? 'Break' : `Session done — take ${LENGTHS[session].brk / 60}`
+/** Labels read the timer's own length, so a session-length change mid-run can't mislabel it. */
+export function phaseLabel(t: Timer): string {
+  if (t.phase === 'break') return t.running ? 'Break' : `Session done — take ${t.lengthSec / 60}`
   return t.running ? 'Focusing on' : 'Next focus session'
 }
 
-export function startLabel(t: Timer, session: SessionLength): string {
+/** Paused partway through a phase. */
+export const hasProgress = (t: Timer): boolean => !t.running && t.leftSec < t.lengthSec
+
+export function startLabel(t: Timer): string {
   if (t.running) return 'Pause'
   if (t.phase === 'break') return 'Start break'
-  return t.leftSec < phaseLength('focus', session) ? 'Resume' : 'Start focus'
+  return hasProgress(t) ? 'Resume' : 'Start focus'
 }
 
-export const canReset = (t: Timer, session: SessionLength): boolean =>
-  t.phase === 'focus' && (t.running || t.leftSec < phaseLength('focus', session))
+export const canReset = (t: Timer): boolean => t.phase === 'focus' && (t.running || hasProgress(t))
