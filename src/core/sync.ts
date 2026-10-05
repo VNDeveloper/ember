@@ -1,4 +1,7 @@
-import type { EmberData, FocusLog, Goal, Settings, Task } from './model'
+import { dayLabel, todayISO } from './dates'
+import { pad2, plural } from './format'
+import { DEFAULT_SETTINGS, type EmberData, type FocusLog, type Goal, type SessionLength, type Settings, type Task } from './model'
+import { DATA_VERSION } from './persist'
 
 /** What never leaves this device. Moving timer/selection to shared later = removing them here (+ a merge rule). */
 export const DEVICE_ONLY = {
@@ -118,4 +121,47 @@ export function mergeData(local: SharedData, remote: SharedData): SharedData {
     logs,
     settings: newer(local.settings, remote.settings),
   }
+}
+
+/** The Drive file: the backup format, shared data only, plus the generation it belongs to. */
+export function makeSyncFile(shared: SharedData, generation: string, now: number): string {
+  return JSON.stringify({ app: 'ember', version: DATA_VERSION, exportedAt: new Date(now).toISOString(), generation, data: shared })
+}
+
+export type SyncFileResult = { ok: true; generation: string; exportedAt: string | null; data: SharedData } | { ok: false }
+
+const SESSIONS: SessionLength[] = ['25/5', '50/10']
+
+export function readSyncFile(text: string): SyncFileResult {
+  try {
+    const f = JSON.parse(text) as { app?: unknown; version?: unknown; generation?: unknown; exportedAt?: unknown; data?: Partial<SharedData> }
+    const d = f?.data
+    if (f?.app !== 'ember' || f.version !== DATA_VERSION || typeof f.generation !== 'string' || !f.generation) return { ok: false }
+    if (!d || !Array.isArray(d.goals) || !Array.isArray(d.tasks) || !Array.isArray(d.logs)) return { ok: false }
+    const settings = sharedSettings({ ...DEFAULT_SETTINGS, ...(d.settings ?? {}) } as Settings)
+    if (!SESSIONS.includes(settings.session)) settings.session = DEFAULT_SETTINGS.session
+    return {
+      ok: true,
+      generation: f.generation,
+      exportedAt: typeof f.exportedAt === 'string' ? f.exportedAt : null,
+      data: { goals: d.goals, tasks: d.tasks, logs: d.logs, settings },
+    }
+  } catch {
+    return { ok: false }
+  }
+}
+
+export const syncSummary = (s: SharedData): string =>
+  `${plural(s.goals.filter((g) => !g.deletedOn).length, 'goal')} · ${plural(s.tasks.filter((t) => !t.deletedOn).length, 'task')} · ${plural(s.logs.length, 'focus session')}`
+
+/** "just now", "3 min ago", "at 14:05" (earlier today) or "on Sep 16". */
+export function syncedAgo(last: number, now: number): string {
+  const min = Math.floor((now - last) / 60_000)
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min} min ago`
+  if (todayISO(last) === todayISO(now)) {
+    const d = new Date(last)
+    return `at ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  }
+  return `on ${dayLabel(todayISO(last))}`
 }

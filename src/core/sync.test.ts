@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EmberData } from './model'
-import { DEVICE_ONLY, canonical, mergeData, sharedPart, stampChanges, withDeviceState } from './sync'
+import { DEVICE_ONLY, canonical, makeSyncFile, mergeData, readSyncFile, sharedPart, stampChanges, syncSummary, syncedAgo, withDeviceState } from './sync'
 import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
 
 const T = 1_800_000_000_000
@@ -199,5 +199,57 @@ describe('mergeData', () => {
     const file = onB
     const healed = mergeData(onA, file)
     expect(ids(healed.tasks).sort()).toEqual(['X', 'Y'])
+  })
+})
+
+describe('sync file', () => {
+  it('round-trips shared data with its generation', () => {
+    const s = shared({ tasks: [taskFixture('A', { updatedAt: 3 })] })
+    const r = readSyncFile(makeSyncFile(s, 'gen-1', T))
+    expect(r).toMatchObject({ ok: true, generation: 'gen-1', exportedAt: new Date(T).toISOString() })
+    if (r.ok) expect(canonical(r.data)).toBe(canonical(s))
+  })
+
+  it('never carries per-device state', () => {
+    const text = makeSyncFile(shared(), 'g', T)
+    expect(text).not.toContain('"timer"')
+    expect(text).not.toContain('"muted"')
+  })
+
+  it.each([
+    ['junk', 'not json'],
+    ['a backup (no generation)', JSON.stringify({ app: 'ember', version: 1, data: shared() })],
+    ['another app', JSON.stringify({ app: 'other', version: 1, generation: 'g', data: shared() })],
+    ['a future version', JSON.stringify({ app: 'ember', version: 2, generation: 'g', data: shared() })],
+    ['missing lists', JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [] } })],
+  ])('rejects %s', (_, text) => {
+    expect(readSyncFile(text).ok).toBe(false)
+  })
+
+  it('fills settings added since the file was written, and repairs a bad session length', () => {
+    const text = JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [], tasks: [], logs: [], settings: { session: '90/5' } } })
+    const r = readSyncFile(text)
+    expect(r.ok && r.data.settings).toMatchObject({ session: '25/5', showFuture: true, wallWeeks: 12 })
+    expect(r.ok && r.data.settings).not.toHaveProperty('muted')
+  })
+
+  it('summarises live goals and tasks, and all focus sessions', () => {
+    const s = shared({
+      goals: [goalFixture('D3', []), { ...goalFixture('Old', []), deletedOn: '2026-09-01' }],
+      tasks: [taskFixture('A'), taskFixture('B')],
+    })
+    expect(syncSummary(s)).toBe('1 goal · 2 tasks · 0 focus sessions')
+  })
+})
+
+describe('syncedAgo', () => {
+  const at = (h: number, m: number, day = 23) => new Date(2026, 8, day, h, m).getTime()
+  it.each([
+    [at(10, 0), at(10, 0) + 30_000, 'just now'],
+    [at(10, 0), at(10, 3), '3 min ago'],
+    [at(9, 5), at(14, 0), 'at 09:05'],
+    [at(9, 5, 16), at(14, 0), 'on Sep 16'],
+  ])('%s → %s', (last, now, text) => {
+    expect(syncedAgo(last, now)).toBe(text)
   })
 })
