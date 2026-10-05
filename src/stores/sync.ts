@@ -77,8 +77,26 @@ export const useSyncStore = defineStore('sync', () => {
     await backend!.push(makeSyncFile(shared, generation.value!, Date.now()))
   }
 
+  /** Another tab may have synced, restored or adopted a generation since: storage is the truth. */
+  function adoptSavedState() {
+    const s = readState()
+    generation.value = s.generation
+    newGeneration.value = s.newGeneration
+    if (s.lastSyncedAt) lastSyncedAt.value = s.lastSyncedAt
+  }
+
+  /** One sync at a time across tabs, where the browser supports it. */
+  const withLock = (f: () => Promise<void>): Promise<void> =>
+    typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request('ember-sync', f) : f()
+
   /** One round: pull, then upload a pending new generation, adopt Drive's, or merge. */
   async function once() {
+    adoptSavedState()
+    // Sample data (nothing saved could be read) is never merged into Drive: ask first, as on a new device.
+    if (ember.seeded && generation.value !== null && !newGeneration.value) {
+      generation.value = null
+      save()
+    }
     if (newGeneration.value) {
       const shared = localShared()
       await pushShared(shared)
@@ -86,7 +104,13 @@ export const useSyncStore = defineStore('sync', () => {
       synced(canonical(shared))
       return
     }
+    const startedWith = generation.value
     const pulled = await backend!.pull()
+    // A restore or "Replace Drive" happened during the download: leave it to the queued run.
+    if (newGeneration.value || generation.value !== startedWith) {
+      again = true
+      return
+    }
     if (!pulled) {
       // Drive is empty: this device's data starts the first generation.
       generation.value = uid()
@@ -150,7 +174,7 @@ export const useSyncStore = defineStore('sync', () => {
         clearTimeout(retryTimer)
         status.value = 'syncing'
         try {
-          await once()
+          await withLock(once)
         } catch (e) {
           fail(e)
           again = false
@@ -215,9 +239,11 @@ export const useSyncStore = defineStore('sync', () => {
   /** Sync on open, on becoming visible, 5 s after a local change, every minute while visible (or on remote change for live backends), and when back online. */
   function start() {
     if (!backend || stops.length) return
+    // Automatic syncs wait while the user is deciding (first connection) or Drive's file is unreadable.
+    const auto = () => { if (status.value !== 'choose' && status.value !== 'unreadable') void syncNow() }
     const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden'
-    const onVisible = () => { if (visible()) void syncNow() }
-    const onOnline = () => { void syncNow() }
+    const onVisible = () => { if (visible()) auto() }
+    const onOnline = () => auto()
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('online', onOnline)
 
@@ -226,15 +252,15 @@ export const useSyncStore = defineStore('sync', () => {
       () => [ember.goals, ember.tasks, ember.logs, ember.settings],
       () => {
         clearTimeout(debounce)
-        debounce = setTimeout(() => { if (hasLocalChanges()) void syncNow() }, DEBOUNCE_MS)
+        debounce = setTimeout(() => { if (hasLocalChanges()) auto() }, DEBOUNCE_MS)
       },
       { deep: true },
     )
 
     let stopRemote: () => void
-    if (backend.subscribe) stopRemote = backend.subscribe(() => { void syncNow() })
+    if (backend.subscribe) stopRemote = backend.subscribe(auto)
     else {
-      const id = setInterval(() => { if (visible()) void syncNow() }, POLL_MS)
+      const id = setInterval(() => { if (visible()) auto() }, POLL_MS)
       stopRemote = () => clearInterval(id)
     }
 

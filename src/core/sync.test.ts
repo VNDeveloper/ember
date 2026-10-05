@@ -100,6 +100,24 @@ describe('stampChanges', () => {
     expect(a.settings.updatedAt).toBe(T)
   })
 
+  it("stamps an edit later than the version it replaced, even when this device's clock is behind", () => {
+    const ahead = T + 120_000
+    const b = dataFixture({
+      goals: [{ ...goalFixture('D3', [['Charts', [['Bar', null]]]]), updatedAt: ahead }],
+      tasks: [taskFixture('A', { updatedAt: ahead })],
+    })
+    b.settings = { ...b.settings, updatedAt: ahead }
+    b.goals[0].milestones[0].steps[0].updatedAt = ahead
+    const a = clone(b)
+    a.tasks[0].title = 'edited on the slow device'
+    a.goals[0].title = 'Learn D3'
+    a.goals[0].milestones[0].steps[0].doneOn = '2026-09-23'
+    a.settings.wallWeeks = 8
+    stampChanges(b, a, T)
+    expect([a.tasks[0].updatedAt, a.goals[0].updatedAt, a.goals[0].milestones[0].steps[0].updatedAt, a.settings.updatedAt]).toEqual([ahead + 1, ahead + 1, ahead + 1, ahead + 1])
+    expect(mergeData(sharedPart(a), sharedPart(b)).tasks[0].title).toBe('edited on the slow device')
+  })
+
   it("stamps this device's timer and selection separately, without counting them", () => {
     const b = dataFixture()
     const a = clone(b)

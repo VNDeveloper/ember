@@ -11,12 +11,15 @@ export class FakeBackend implements SyncBackend {
   /** Runs inside push, before the file is written (simulate edits during an upload). */
   onPush: (() => void) | null = null
   subscribers: (() => void)[] = []
+  /** While set, pull waits for it (simulate a slow download). */
+  pullGate: Promise<void> | null = null
   live = false
 
   async connect(): Promise<'ok' | 'needs-user' | 'denied'> { return this.connectResult }
   async disconnect(): Promise<void> {}
   async pull(): Promise<{ text: string } | null> {
     this.pulls++
+    if (this.pullGate) await this.pullGate
     this.throwIfFailing()
     return this.file === null ? null : { text: this.file }
   }

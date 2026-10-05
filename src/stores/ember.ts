@@ -33,6 +33,8 @@ export const useEmberStore = defineStore('ember', () => {
   const initial = read.status === 'ok' ? read.data : buildSeed(Date.now())
   /** False when saved data couldn't be read or backed up: run in memory rather than destroy it. */
   const storageWritable = ref(!(read.status === 'unreadable' && !read.backedUp))
+  /** True while the data is the generated sample (nothing saved could be read); sync must not merge it into Drive. */
+  const seeded = ref(read.status !== 'ok')
 
   const goals = ref<Goal[]>(initial.goals)
   const tasks = ref<Task[]>(initial.tasks)
@@ -78,6 +80,7 @@ export const useEmberStore = defineStore('ember', () => {
   /** Data from outside (another tab, restore, sync, tests): adopted as-is, never stamped as a local edit. */
   function replaceData(d: EmberData) {
     baseline = clone(d)
+    seeded.value = false
     goals.value = d.goals
     tasks.value = d.tasks
     logs.value = d.logs
@@ -343,7 +346,7 @@ export const useEmberStore = defineStore('ember', () => {
   return {
     goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
-    snapshot, replaceData, restore, applyShared, select, targetExists,
+    snapshot, replaceData, restore, applyShared, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
     updateTask, updateStep, renameMilestone, renameGoal,

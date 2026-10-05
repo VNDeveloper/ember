@@ -313,3 +313,92 @@ describe('sync triggers', () => {
     expect(backend.pulls).toBe(p)
   })
 })
+
+describe('review fixes', () => {
+  const tab = (data: EmberData = local()) => {
+    setActivePinia(createPinia())
+    const ember = useEmberStore()
+    ember.replaceData(JSON.parse(JSON.stringify(data)))
+    return { ember, sync: useSyncStore() }
+  }
+
+  it('a restore made while a sync is downloading wins, and is not undone', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    let release!: () => void
+    backend.pullGate = new Promise<void>((r) => { release = r })
+    const first = sync.syncNow()
+    await Promise.resolve()
+    ember.restore(dataFixture({ tasks: [taskFixture('Restored')] }))
+    const second = sync.afterRestore()
+    backend.pullGate = null
+    release()
+    await first
+    await second
+    const f = fileOf(backend)
+    expect(f.generation).not.toBe('g1')
+    expect(f.data.tasks.map((t) => t.id)).toEqual(['Restored'])
+    expect(ember.tasks.map((t) => t.id)).toEqual(['Restored'])
+  })
+
+  it('a second tab with stale sync state neither re-adopts a generation nor overwrites the safety copy', async () => {
+    const backend = new FakeBackend()
+    backend.file = driveFile('g2')
+    localStorage.setItem('ember:sync', JSON.stringify(connectedTo('g1')))
+    provideSyncBackend(backend)
+    const one = tab()
+    const two = tab()
+    await one.sync.syncNow()
+    expect(localStorage.getItem(`${STORAGE_KEY}:before-restore`)).toContain('Here')
+    two.ember.replaceData(JSON.parse(JSON.stringify(one.ember.snapshot())))
+    await two.sync.syncNow()
+    expect(localStorage.getItem(`${STORAGE_KEY}:before-restore`)).toContain('Here')
+    expect(JSON.parse(localStorage.getItem('ember:sync')!).generation).toBe('g2')
+  })
+
+  it("a restore still waiting to upload in another tab goes up as a new generation, not a merge", async () => {
+    const backend = new FakeBackend()
+    backend.file = driveFile('g1')
+    localStorage.setItem('ember:sync', JSON.stringify(connectedTo('g1')))
+    provideSyncBackend(backend)
+    const one = tab()
+    const two = tab()
+    one.ember.restore(dataFixture({ tasks: [taskFixture('Restored')] }))
+    backend.failNext = new Error('Drive 500')
+    await one.sync.afterRestore()
+    two.ember.replaceData(JSON.parse(JSON.stringify(one.ember.snapshot())))
+    await two.sync.syncNow()
+    const f = fileOf(backend)
+    expect(f.generation).not.toBe('g1')
+    expect(f.data.tasks.map((t) => t.id)).toEqual(['Restored'])
+  })
+
+  it('a device whose saved data was unreadable asks first, instead of merging sample data into Drive', async () => {
+    localStorage.setItem(STORAGE_KEY, 'garbage')
+    localStorage.setItem('ember:sync', JSON.stringify(connectedTo('g1')))
+    const backend = new FakeBackend()
+    backend.file = driveFile('g1')
+    provideSyncBackend(backend)
+    setActivePinia(createPinia())
+    useEmberStore()
+    const sync = useSyncStore()
+    await sync.syncNow()
+    expect(sync.status).toBe('choose')
+    expect(backend.pushes).toHaveLength(0)
+  })
+
+  it('leaves the first-connection choice alone while the app polls', async () => {
+    const { sync, backend } = setup()
+    backend.file = driveFile('g1')
+    sync.start()
+    await sync.connect()
+    expect(sync.status).toBe('choose')
+    const p = backend.pulls
+    await vi.advanceTimersByTimeAsync(180_000)
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sync.status).toBe('choose')
+    expect(backend.pulls).toBe(p)
+    sync.stop()
+  })
+})
