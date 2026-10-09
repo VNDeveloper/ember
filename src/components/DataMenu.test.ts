@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeBackup } from '../core/backup'
-import { readSyncFile } from '../core/sync'
+import { makeSyncFile, readSyncFile, sharedPart } from '../core/sync'
 import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
 import { provideSyncBackend, useSyncStore } from '../stores/sync'
@@ -185,6 +185,7 @@ describe('DataMenu', () => {
     it('when synced, offers deleting everywhere or on this device only', async () => {
       localStorage.setItem('ember:sync', JSON.stringify({ connected: true, generation: 'g1', lastSyncedAt: null }))
       const backend = new FakeBackend()
+      backend.file = makeSyncFile(sharedPart(dataFixture({ tasks: [taskFixture('On Drive')] })), 'g1', NOW)
       provideSyncBackend(backend)
       const { w, ember } = setup()
       await openDelete(w)
@@ -193,6 +194,7 @@ describe('DataMenu', () => {
       await flushPromises()
       expect(ember.tasks).toEqual([])
       const f = readSyncFile(backend.file!)
+      expect(f.ok && f.generation).not.toBe('g1')
       expect(f.ok && f.data.tasks).toEqual([])
       w.unmount()
     })

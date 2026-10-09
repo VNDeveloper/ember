@@ -66,6 +66,7 @@ export const useSyncStore = defineStore('sync', () => {
   const hasLocalChanges = () => canonical(localShared()) !== syncedSig
 
   function synced(sig: string) {
+    if (!connected.value) return
     syncedSig = sig
     lastSyncedAt.value = Date.now()
     failures = 0
@@ -98,16 +99,25 @@ export const useSyncStore = defineStore('sync', () => {
       save()
     }
     if (newGeneration.value) {
+      const gen = generation.value
       const shared = localShared()
       await pushShared(shared)
+      if (!connected.value) return
+      // Another restore or delete started a newer generation during the upload: let the queued run send that.
+      if (generation.value !== gen) {
+        again = true
+        return
+      }
       newGeneration.value = false
       synced(canonical(shared))
       return
     }
     const startedWith = generation.value
     const pulled = await backend!.pull()
-    // A restore or "Replace Drive" happened during the download: leave it to the queued run.
-    if (newGeneration.value || generation.value !== startedWith) {
+    if (!connected.value) return
+    // A restore, delete or "Replace Drive" happened during the download, here or in another tab: leave it to the queued run.
+    const stored = readState()
+    if (newGeneration.value || generation.value !== startedWith || stored.newGeneration || stored.generation !== startedWith) {
       again = true
       return
     }
@@ -146,6 +156,7 @@ export const useSyncStore = defineStore('sync', () => {
   }
 
   function fail(e: unknown) {
+    if (!connected.value) return
     if (e instanceof SyncAuthError) {
       status.value = 'needs-reconnect'
       return
@@ -179,7 +190,7 @@ export const useSyncStore = defineStore('sync', () => {
           fail(e)
           again = false
         }
-      } while (again)
+      } while (again && connected.value)
     })()
     try {
       await running

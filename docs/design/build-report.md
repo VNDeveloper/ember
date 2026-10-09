@@ -113,6 +113,10 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
 - Settings: the done-wall stepper disables its own button at 4 or 26 weeks, which drops keyboard focus to the page.
 - Settings: the On/Off toggles are named by `aria-label` only, so voice control must say "Demo speed", not the visible "On"/"Off".
 - Settings test: clicking the locked demo toggle is a no-op in the test tool, so that one assertion can't fail (the `disabled` check is the real guard).
+- Delete data on this device only waits for Google to confirm the sign-out before erasing (a moment; edits made in that moment are erased too).
+- Two devices uploading within the same second can overwrite each other's file version (no conditional write); after a delete everywhere, that could bring data back. Rare.
+- Delete data: keyboard focus isn't moved into the confirm panel or back to "Delete data…" on Cancel.
+- Delete data tests don't cover a running session finishing after the erase, or the done-only Today case.
 
 ## Suggested next steps
 

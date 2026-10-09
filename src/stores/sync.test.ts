@@ -422,7 +422,76 @@ describe('delete data', () => {
     await sync.eraseHere()
     expect(ember.tasks).toEqual([])
     expect(sync).toMatchObject({ status: 'signed-out', connected: false })
+    const pulls = backend.pulls
+    await sync.syncNow()
+    expect(ember.tasks).toEqual([])
+    expect([backend.pulls, backend.pushes.length]).toEqual([pulls, 0])
     expect(backend.file).toBe(before)
-    expect(backend.pushes).toHaveLength(0)
+  })
+
+  const gate = () => {
+    let open!: () => void
+    const p = new Promise<void>((r) => { open = r })
+    return { p, open }
+  }
+
+  it('"Delete everywhere" clicked while a restore is still uploading wins', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    const g = gate()
+    backend.pushGate = g.p
+    ember.restore(dataFixture({ tasks: [taskFixture('Restored')] }))
+    const restoring = sync.afterRestore()
+    await Promise.resolve()
+    const erasing = sync.eraseEverywhere()
+    backend.pushGate = null
+    g.open()
+    await restoring
+    await erasing
+    const f = fileOf(backend)
+    expect(f.data.tasks).toEqual([])
+    expect(ember.tasks).toEqual([])
+  })
+
+  it('another tab syncing at the same moment does not undo "Delete everywhere"', async () => {
+    const backend = new FakeBackend()
+    backend.file = driveFile('g1')
+    localStorage.setItem('ember:sync', JSON.stringify(connectedTo('g1')))
+    provideSyncBackend(backend)
+    const tab = () => {
+      setActivePinia(createPinia())
+      const ember = useEmberStore()
+      ember.replaceData(local())
+      return { ember, sync: useSyncStore() }
+    }
+    const a = tab()
+    const b = tab()
+    const g = gate()
+    backend.pullGate = g.p
+    const aSync = a.sync.syncNow()
+    await Promise.resolve()
+    backend.pullGate = null
+    await b.sync.eraseEverywhere()
+    a.ember.replaceData(JSON.parse(JSON.stringify(b.ember.snapshot())))
+    g.open()
+    await aSync
+    const f = fileOf(backend)
+    expect(f.generation).not.toBe('g1')
+    expect([f.data.tasks, a.ember.tasks]).toEqual([[], []])
+  })
+
+  it('"Delete on this device only" during a sync ends signed out, not "Synced"', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    const g = gate()
+    backend.pushGate = g.p
+    const syncing = sync.syncNow()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.eraseHere()
+    backend.pushGate = null
+    g.open()
+    await syncing
+    expect(sync).toMatchObject({ status: 'signed-out', connected: false })
+    expect(ember.tasks).toEqual([])
   })
 })
