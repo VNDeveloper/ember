@@ -68,4 +68,9 @@ describe('WorkingOn', () => {
     expect(w.find('.wo-card').exists()).toBe(false)
     expect(w.find('.wo-empty').text()).toBe('No goal has an open step. Add steps on the Goals tab.')
   })
+
+  it('says there are no goals yet when there are none', () => {
+    const { w } = setup([])
+    expect(w.find('.wo-empty').text()).toBe('No goals yet. Add one on the Goals tab.')
+  })
 })

@@ -50,4 +50,11 @@ describe('ActivityLog', () => {
     expect(w.findAll('.al-entry')).toHaveLength(15)
     expect(w.find('.al-more').exists()).toBe(false)
   })
+
+  it('says what will appear when there is no activity yet', () => {
+    setActivePinia(createPinia())
+    useEmberStore().replaceData(dataFixture())
+    const w = mount(ActivityLog)
+    expect(w.find('.al-empty').text()).toBe('Nothing yet. Finished tasks, steps and focus sessions show up here.')
+  })
 })

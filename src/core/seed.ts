@@ -4,7 +4,7 @@ import {
 import { hashStr } from './format'
 import { nextOpenStep, stepTarget } from './goals'
 import { uid } from './ids'
-import type { EmberData, FocusLog, Goal, Target, Task } from './model'
+import type { EmberData, FocusLog, Goal, Settings, Target, Task } from './model'
 import { DEFAULT_SETTINGS } from './model'
 import { idleTimer } from './timer'
 
@@ -183,3 +183,8 @@ export function buildSeed(now: number = Date.now()): EmberData {
     settings: { ...DEFAULT_SETTINGS },
   }
 }
+
+/** Nothing tracked yet: what "Delete data" leaves behind. Settings are preferences, so they stay. */
+export const emptyData = (settings: Settings): EmberData => ({
+  goals: [], tasks: [], logs: [], selection: null, timer: idleTimer(settings.session), settings,
+})

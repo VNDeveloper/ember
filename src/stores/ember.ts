@@ -9,7 +9,7 @@ import type {
 } from '../core/model'
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
-import { buildSeed } from '../core/seed'
+import { buildSeed, emptyData } from '../core/seed'
 import { stampChanges, withDeviceState, type SharedData } from '../core/sync'
 import { tallyLogs } from '../core/tally'
 import { DEMO_SPEED, hasProgress, idleTimer, isDue, pauseTimer, remainingSec, startTimer } from '../core/timer'
@@ -113,6 +113,13 @@ export const useEmberStore = defineStore('ember', () => {
   function restore(d: EmberData) {
     saveBeforeRestore(snapshot())
     replaceData({ ...d, timer: idleTimer(d.settings.session) })
+    storageWritable.value = true
+  }
+
+  /** Delete data: keep a safety copy, then start empty with the same settings. */
+  function eraseAll() {
+    saveBeforeRestore(snapshot())
+    replaceData(emptyData(settings.value))
     storageWritable.value = true
   }
 
@@ -346,7 +353,7 @@ export const useEmberStore = defineStore('ember', () => {
   return {
     goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
-    snapshot, replaceData, restore, applyShared, seeded, select, targetExists,
+    snapshot, replaceData, restore, applyShared, eraseAll, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
     addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
     updateTask, updateStep, renameMilestone, renameGoal,

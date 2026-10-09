@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeBackup } from '../core/backup'
+import { readSyncFile } from '../core/sync'
 import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
 import { provideSyncBackend, useSyncStore } from '../stores/sync'
@@ -148,5 +149,67 @@ describe('DataMenu', () => {
     await flushPromises()
     expect(sync).toMatchObject({ status: 'signed-out', connected: false })
     w.unmount()
+  })
+
+  describe('delete data', () => {
+    const openDelete = async (w: ReturnType<typeof mount>) => {
+      await w.find('.dm-toggle').trigger('click')
+      await w.find('.dm-delete').trigger('click')
+    }
+
+    it('asks first, offers a backup, and deletes everything but settings', async () => {
+      const { w, ember, ui } = setup()
+      ember.updateSettings({ wallWeeks: 20 })
+      await openDelete(w)
+      expect(w.find('.dm-delete-confirm p').text()).toBe('Delete all tasks, goals and focus history? Your settings stay. Back up first if you might want them back.')
+      expect(w.find('.dm-delete-confirm .dm-backup').exists()).toBe(true)
+      expect(w.findAll('.dm-delete-confirm .dm-actions button').map((b) => b.text())).toEqual(['Delete', 'Cancel'])
+      expect([ember.goals.length, ember.tasks.length]).toEqual([1, 1])
+      await w.find('.dm-erase').trigger('click')
+      expect([ember.goals, ember.tasks, ember.logs]).toEqual([[], [], []])
+      expect(ember.settings.wallWeeks).toBe(20)
+      expect(ui.dataMenuOpen).toBe(false)
+      w.unmount()
+    })
+
+    it('cancel keeps everything and goes back to the menu', async () => {
+      const { w, ember } = setup()
+      await openDelete(w)
+      await w.find('.dm-cancel-delete').trigger('click')
+      expect(w.find('.dm-delete-confirm').exists()).toBe(false)
+      expect(w.find('.dm-delete').exists()).toBe(true)
+      expect(ember.tasks).toHaveLength(1)
+      w.unmount()
+    })
+
+    it('when synced, offers deleting everywhere or on this device only', async () => {
+      localStorage.setItem('ember:sync', JSON.stringify({ connected: true, generation: 'g1', lastSyncedAt: null }))
+      const backend = new FakeBackend()
+      provideSyncBackend(backend)
+      const { w, ember } = setup()
+      await openDelete(w)
+      expect(w.findAll('.dm-delete-confirm .dm-actions button').map((b) => b.text())).toEqual(['Delete everywhere', 'Delete on this device only', 'Cancel'])
+      await w.find('.dm-erase-all').trigger('click')
+      await flushPromises()
+      expect(ember.tasks).toEqual([])
+      const f = readSyncFile(backend.file!)
+      expect(f.ok && f.data.tasks).toEqual([])
+      w.unmount()
+    })
+
+    it('deleting on this device only stops syncing here', async () => {
+      localStorage.setItem('ember:sync', JSON.stringify({ connected: true, generation: 'g1', lastSyncedAt: null }))
+      const backend = new FakeBackend()
+      provideSyncBackend(backend)
+      const { w, ember } = setup()
+      const sync = useSyncStore()
+      await openDelete(w)
+      await w.find('.dm-erase-here').trigger('click')
+      await flushPromises()
+      expect(ember.tasks).toEqual([])
+      expect(sync.connected).toBe(false)
+      expect(backend.pushes).toHaveLength(0)
+      w.unmount()
+    })
   })
 })

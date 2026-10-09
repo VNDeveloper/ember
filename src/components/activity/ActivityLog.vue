@@ -14,6 +14,7 @@ const shown = computed(() => entries.value.slice(0, ui.feedSize))
 <template>
   <section class="log">
     <span class="kicker al-kicker">Activity log</span>
+    <p v-if="!entries.length" class="muted al-empty">Nothing yet. Finished tasks, steps and focus sessions show up here.</p>
     <div class="al-list">
       <div v-for="e in shown" :key="e.key" class="al-entry">
         <Check v-if="e.kind === 'done'" class="al-icon is-done" :size="16" :stroke-width="3" />
@@ -44,4 +45,5 @@ const shown = computed(() => entries.value.slice(0, ui.feedSize))
 .al-meta { display: flex; flex-wrap: wrap; gap: 0 8px; margin-top: 2px; font-size: 11px; color: var(--color-neutral-700); }
 .al-hash { font-weight: 700; }
 .al-more { align-self: flex-start; padding-left: 0; }
+.al-empty { padding: var(--space-3) 0; font-size: 13px; }
 </style>

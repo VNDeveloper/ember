@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isLive } from '../../core/goals'
 import { ArrowRight, Timer } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { workingOn } from '../../core/today'
@@ -45,7 +46,7 @@ const cards = computed(() => workingOn(ember.goals, ember.selection))
         </div>
       </div>
     </div>
-    <p v-else class="muted wo-empty">No goal has an open step. Add steps on the Goals tab.</p>
+    <p v-else class="muted wo-empty">{{ ember.goals.some(isLive) ? 'No goal has an open step. Add steps on the Goals tab.' : 'No goals yet. Add one on the Goals tab.' }}</p>
   </section>
 </template>
 

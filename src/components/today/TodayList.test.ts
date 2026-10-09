@@ -81,4 +81,12 @@ describe('TodayList', () => {
     await w.findAll('.task-row')[1].find('.check').trigger('click')
     expect(today().classes()).toContain('anim-pop1')
   })
+
+  it('says so when nothing is planned for today', () => {
+    setActivePinia(createPinia())
+    useEmberStore().replaceData(dataFixture())
+    const w = mount(TodayList, { attachTo: document.body })
+    expect(w.find('.tl-empty').text()).toBe('Nothing for today. Add a task above.')
+    w.unmount()
+  })
 })

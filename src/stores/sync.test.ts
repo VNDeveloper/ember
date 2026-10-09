@@ -402,3 +402,27 @@ describe('review fixes', () => {
     sync.stop()
   })
 })
+
+describe('delete data', () => {
+  it('everywhere: empties this device and starts a new, empty generation in Drive', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    await sync.eraseEverywhere()
+    expect(ember.tasks).toEqual([])
+    const f = fileOf(backend)
+    expect(f.generation).not.toBe('g1')
+    expect([f.data.goals, f.data.tasks, f.data.logs]).toEqual([[], [], []])
+    expect(sync.status).toBe('synced')
+  })
+
+  it("on this device only: empties it and disconnects, leaving Drive's data alone", async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    const before = backend.file
+    await sync.eraseHere()
+    expect(ember.tasks).toEqual([])
+    expect(sync).toMatchObject({ status: 'signed-out', connected: false })
+    expect(backend.file).toBe(before)
+    expect(backend.pushes).toHaveLength(0)
+  })
+})

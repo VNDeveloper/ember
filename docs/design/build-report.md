@@ -28,6 +28,7 @@ Built from the design handoff in this folder (`handoff.md`, `reference/Ember.dc.
   - Sign-in lasts an hour, then the Data menu offers **Reconnect**.
   - Hosted on GitHub Pages and installable as an offline app, with an update bar.
   - The storage interface (`pull`/`push`/`subscribe`) and run-based log IDs (`focus-<endsAt>`) leave room for live updates and a shared timer later.
+- **Delete data (added after the handoff):** Data → **Delete data…** asks first and offers a backup, then empties tasks, goals and focus history. Settings stay, and a safety copy is kept in the browser. When sync is connected it offers **Delete everywhere** (a new, empty generation in Drive, so other devices are cleared on their next sync) or **Delete on this device only** (also disconnects, or the next sync would merge everything back). Today, Working on and the activity log have plain empty-state messages.
 - **Back up / restore (added after the handoff):** a Data menu in the nav downloads all data as a dated JSON file and restores from one. It confirms first, keeps a safety copy of the current data in the browser, and resets the timer.
 - **Seed data:** the prototype's goals and tasks plus a believable year of history, generated relative to the real date.
 

@@ -419,6 +419,25 @@ describe('restore', () => {
   })
 })
 
+describe('erase', () => {
+  it('empties tasks, goals and history, keeps settings and a safety copy, and stays empty after a reload', async () => {
+    const store = storeWith({ selection: LINE, logs: [{ id: 'l', at: NOW, date: '2026-09-23', min: 25, target: LINE }] })
+    store.updateSettings({ wallWeeks: 20, muted: false })
+    store.startPause()
+    await nextTick()
+    store.eraseAll()
+    expect([store.goals, store.tasks, store.logs]).toEqual([[], [], []])
+    expect(store.selection).toBeNull()
+    expect(store.timer).toMatchObject({ running: false, leftSec: 1500 })
+    expect(store.settings).toMatchObject({ wallWeeks: 20, muted: false })
+    expect(localStorage.getItem(`${STORAGE_KEY}:before-restore`)).toContain('Review PR')
+    await nextTick()
+    const reloaded = freshStore()
+    expect([reloaded.goals, reloaded.tasks, reloaded.logs]).toEqual([[], [], []])
+    expect(reloaded.seeded).toBe(false)
+  })
+})
+
 describe('edit', () => {
   it('updates a task, trimming text, clearing the deadline for Someday, never un-ticking', () => {
     const store = storeWith()

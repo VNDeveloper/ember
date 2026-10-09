@@ -19,6 +19,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const last = ref(lastBackup())
 const error = ref('')
 const pending = ref<{ data: EmberData; from: string; summary: string } | null>(null)
+/** The "Delete data…" confirmation is showing. */
+const deleting = ref(false)
 
 function backUp() {
   const blob = new Blob([makeBackup(ember.snapshot(), Date.now())], { type: 'application/json' })
@@ -56,6 +58,15 @@ async function onFile() {
   }
 }
 
+/** Delete data: here only (and stop syncing), or everywhere (a new, empty generation in Drive). */
+function erase(where: 'local' | 'here' | 'everywhere') {
+  if (where === 'local') ember.eraseAll()
+  else if (where === 'here') void sync.eraseHere()
+  else void sync.eraseEverywhere()
+  deleting.value = false
+  ui.dataMenuOpen = false
+}
+
 function replace() {
   if (!pending.value) return
   ember.restore(pending.value.data)
@@ -78,6 +89,7 @@ watch(() => ui.dataMenuOpen, (open) => {
     document.removeEventListener('pointerdown', onPointerDown)
     if (sync.status === 'choose') void sync.cancelChoice()
     pending.value = null
+    deleting.value = false
     error.value = ''
   }
 })
@@ -99,14 +111,28 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
       <SyncBlock v-if="sync.configured" />
       <span class="section-label">Your data</span>
       <p class="dm-note">Everything is stored in this browser. Keep a backup file somewhere safe.</p>
-      <template v-if="!pending">
+      <template v-if="!pending && !deleting">
         <button class="btn btn-secondary dm-backup" @click="backUp"><Download :size="16" :stroke-width="2.25" />Back up</button>
         <button class="btn btn-secondary dm-restore" @click="fileInput?.click()"><Upload :size="16" :stroke-width="2.25" />Restore from file…</button>
         <input ref="fileInput" class="dm-file" type="file" accept="application/json,.json" hidden @change="onFile" />
         <p v-if="error" class="dm-error" role="alert">{{ error }}</p>
         <p class="dm-last">Last backup: {{ last ? dayLabel(last) : 'Never' }}</p>
+        <button class="btn btn-ghost dm-delete" @click="deleting = true">Delete data…</button>
       </template>
-      <div v-else class="dm-confirm">
+      <div v-else-if="deleting" class="dm-confirm dm-delete-confirm">
+        <p>Delete all tasks, goals and focus history? Your settings stay. Back up first if you might want them back.</p>
+        <button class="btn btn-secondary dm-backup" @click="backUp"><Download :size="16" :stroke-width="2.25" />Back up</button>
+        <div class="dm-actions">
+          <template v-if="sync.connected">
+            <button class="btn btn-primary dm-erase-all" @click="erase('everywhere')">Delete everywhere</button>
+            <button class="btn btn-secondary dm-erase-here" @click="erase('here')">Delete on this device only</button>
+          </template>
+          <button v-else class="btn btn-primary dm-erase" @click="erase('local')">Delete</button>
+          <button class="btn btn-ghost dm-cancel-delete" @click="deleting = false">Cancel</button>
+        </div>
+        <p v-if="sync.connected" class="dm-note">Everywhere clears your other devices on their next sync. This device only also stops syncing here.</p>
+      </div>
+      <div v-else-if="pending" class="dm-confirm">
         <p>Replace everything with the backup from {{ pending.from }}? ({{ pending.summary }}) This can't be undone.<template v-if="sync.connected"> This also replaces the data on your other devices.</template></p>
         <div class="dm-actions">
           <button class="btn btn-primary dm-replace" @click="replace">Replace</button>
@@ -137,7 +163,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 .dm-note, .dm-last { font-size: 12px; color: var(--color-neutral-700); }
 .dm-error { font-size: 13px; font-weight: 700; color: var(--color-accent-700); }
 .dm-confirm { display: flex; flex-direction: column; gap: var(--space-3); font-size: 14px; }
-.dm-actions { display: flex; gap: var(--space-2); }
+.dm-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.dm-delete { align-self: flex-start; }
+.dm-delete-confirm .dm-backup { align-self: flex-start; }
 /* On phones the toggle can wrap to the nav's second row: hang the panel from the nav, inside the gutters. */
 @media (max-width: 520px) {
   .data-menu { position: static; }

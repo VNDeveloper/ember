@@ -3,7 +3,8 @@ import { addDays, isWeekend } from './dates'
 import { findStep, nextOpenStep, stepTarget } from './goals'
 import type { StepTarget } from './model'
 import { targetKey } from './model'
-import { buildSeed } from './seed'
+import { DEFAULT_SETTINGS } from './model'
+import { buildSeed, emptyData } from './seed'
 import { tallyLogs } from './tally'
 
 const NOW = new Date(2026, 8, 23, 10, 0, 0).getTime()
@@ -99,5 +100,16 @@ describe('buildSeed', () => {
   it('starts with an idle timer and default settings', () => {
     expect(seed.timer).toMatchObject({ phase: 'focus', running: false, leftSec: 1500 })
     expect(seed.settings.session).toBe('25/5')
+  })
+})
+
+describe('emptyData', () => {
+  it('has no goals, tasks, history or selection, an idle timer, and the given settings', () => {
+    const settings = { ...DEFAULT_SETTINGS, session: '50/10' as const, wallWeeks: 20 }
+    expect(emptyData(settings)).toEqual({
+      goals: [], tasks: [], logs: [], selection: null,
+      timer: { phase: 'focus', running: false, endsAt: null, leftSec: 3000, speed: 1, lengthSec: 3000 },
+      settings,
+    })
   })
 })

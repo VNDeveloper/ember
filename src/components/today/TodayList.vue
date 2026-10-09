@@ -33,6 +33,7 @@ const streak = computed(() => streakLength(counts.value, ember.today))
     </div>
     <AddTask />
     <div class="tl-rows">
+      <p v-if="!list.open.length && !list.done.length" class="muted tl-empty">Nothing for today. Add a task above.</p>
       <TaskRow v-for="t in list.open" :key="t.id" :task="t" variant="today" />
       <template v-if="ui.doneOpen">
         <TaskRow v-for="t in list.done" :key="t.id" :task="t" variant="today" />
@@ -61,4 +62,5 @@ const streak = computed(() => streakLength(counts.value, ember.today))
 .tl-done-toggle:hover { background: var(--color-accent-100); }
 .tl-done-toggle svg { flex: none; transition: transform .15s; }
 .tl-done-toggle svg.is-open { transform: rotate(90deg); }
+.tl-empty { padding: var(--space-3) 0; font-size: 14px; }
 </style>

@@ -222,6 +222,18 @@ export const useSyncStore = defineStore('sync', () => {
     await syncNow()
   }
 
+  /** Delete data everywhere: empty this device, then make that the new generation so other devices adopt it. */
+  async function eraseEverywhere() {
+    ember.eraseAll()
+    await startNewGeneration()
+  }
+
+  /** Delete data on this device only: stop syncing first, or the next sync would merge Drive's data straight back. */
+  async function eraseHere() {
+    await disconnect()
+    ember.eraseAll()
+  }
+
   async function disconnect() {
     clearTimeout(retryTimer)
     await backend?.disconnect()
@@ -289,7 +301,7 @@ export const useSyncStore = defineStore('sync', () => {
   return {
     status, lastSyncedAt, choice, connected, configured, needsAttention,
     connect, reconnect: connect, syncNow, useDriveData, replaceDrive: startNewGeneration, cancelChoice: disconnect,
-    disconnect, afterRestore: startNewGeneration,
+    disconnect, afterRestore: startNewGeneration, eraseEverywhere, eraseHere,
     // Used by the triggers (Task 7).
     hasLocalChanges, start, stop,
   }
