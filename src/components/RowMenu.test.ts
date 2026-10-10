@@ -1,11 +1,12 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useUiStore } from '../stores/ui'
 import RowMenu from './RowMenu.vue'
 
 beforeEach(() => setActivePinia(createPinia()))
+afterEach(() => vi.restoreAllMocks())
 const mountMenu = () => mount(RowMenu, { props: { menuKey: 'task:a', label: 'Review PR' }, attachTo: document.body })
 
 describe('RowMenu', () => {
@@ -49,6 +50,24 @@ describe('RowMenu', () => {
     await nextTick()
     await nextTick()
     expect(document.activeElement).toBe(w.find('.rmn-trigger').element)
+    w.unmount()
+  })
+
+  it('fixes the menu to the window under the trigger, so a scrolling list never clips it', async () => {
+    const w = mountMenu()
+    let top = 100
+    vi.spyOn(w.find('.rmn-trigger').element, 'getBoundingClientRect').mockImplementation(() => ({ top, bottom: top + 28, right: 1000 }) as DOMRect)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(80)
+    vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(1280)
+    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(800)
+    await w.find('.rmn-trigger').trigger('click')
+    await nextTick()
+    const style = () => (w.find('.rmn-menu').element as HTMLElement).style
+    expect(style()).toMatchObject({ top: '132px', right: '280px', visibility: '' })
+    top = 740
+    window.dispatchEvent(new Event('scroll'))
+    await nextTick()
+    expect(style()).toMatchObject({ top: '', bottom: '64px' })
     w.unmount()
   })
 })

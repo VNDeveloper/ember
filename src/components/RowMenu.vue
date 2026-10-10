@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Ellipsis } from 'lucide-vue-next'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
+import { placeMenu } from '../core/menuPlacement'
 import { useUiStore } from '../stores/ui'
 
 const props = defineProps<{ menuKey: string; label: string }>()
@@ -10,7 +11,26 @@ const ui = useUiStore()
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
 const first = ref<HTMLButtonElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
 const open = computed(() => ui.menuFor === props.menuKey)
+
+/**
+ * The menu is fixed to the window, placed from the trigger, so a scrolling list (Upcoming) never
+ * clips it or grows a scrollbar for it. Hidden until placed; follows the trigger on scroll and resize.
+ */
+const placement = ref<CSSProperties>({ visibility: 'hidden' })
+function place() {
+  if (!trigger.value || !menu.value) return
+  // The window less its scrollbars: what position: fixed measures from.
+  const { clientWidth: width, clientHeight: height } = document.documentElement
+  const p = placeMenu(trigger.value.getBoundingClientRect(), menu.value.offsetHeight, { width, height })
+  placement.value = Object.fromEntries(Object.entries(p).map(([k, v]) => [k, `${v}px`]))
+}
+const follow = (on: boolean) => {
+  const fn = on ? window.addEventListener : window.removeEventListener
+  fn('scroll', place, true)
+  fn('resize', place)
+}
 
 const toggle = () => { ui.menuFor = open.value ? null : props.menuKey }
 function onDelete(e: Event) {
@@ -33,14 +53,23 @@ function refocus() {
 watch(open, (isOpen, wasOpen) => {
   if (isOpen) {
     document.addEventListener('pointerdown', onPointerDown)
-    void nextTick(() => first.value?.focus())
+    follow(true)
+    void nextTick(() => {
+      place()
+      first.value?.focus({ preventScroll: true })
+    })
   } else {
     document.removeEventListener('pointerdown', onPointerDown)
+    follow(false)
+    placement.value = { visibility: 'hidden' }
     if (wasOpen) refocus()
   }
 })
 watch(() => ui.editing === props.menuKey, (now, was) => { if (was && !now) refocus() })
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown)
+  follow(false)
+})
 </script>
 
 <template>
@@ -56,7 +85,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
     >
       <Ellipsis :size="16" :stroke-width="2.25" />
     </button>
-    <div v-if="open" class="rmn-menu" role="menu">
+    <div v-if="open" ref="menu" class="rmn-menu" role="menu" :style="placement">
       <button ref="first" role="menuitem" class="rmn-item rmn-edit" @click="ui.startEdit(menuKey)">Edit</button>
       <button role="menuitem" class="rmn-item rmn-delete" :aria-label="`Delete “${label}”`" @click="onDelete">Delete</button>
     </div>
@@ -66,7 +95,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 <style scoped>
 .row-menu { position: relative; }
 .rmn-menu {
-  position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 140px;
+  position: fixed; z-index: 40; min-width: 140px;
   display: flex; flex-direction: column; background: var(--color-surface); border: 2px solid var(--color-text);
 }
 .rmn-item { padding: var(--space-2) var(--space-3); border: 0; background: transparent; font-size: 14px; color: var(--color-text); text-align: left; }
