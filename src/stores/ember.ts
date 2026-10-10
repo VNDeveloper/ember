@@ -5,7 +5,7 @@ import { findStep, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } fro
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
 import type {
-  EmberData, FocusLog, Goal, Milestone, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
+  EmberData, FocusLog, Goal, Milestone, Phase, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
@@ -48,6 +48,8 @@ export const useEmberStore = defineStore('ember', () => {
   const now = ref(Date.now())
   /** Increments on every finished focus session (toast and pop animations). */
   const completions = ref(0)
+  /** The last phase to finish and its end time; n increments on every finish (end sounds). */
+  const phaseEnded = ref<{ phase: Phase; at: number; n: number } | null>(null)
   /** Last completed task or step (pop / drop animations); n increments on every completion. */
   const lastDone = ref<{ key: string; n: number } | null>(null)
   let doneSeq = 0
@@ -123,7 +125,7 @@ export const useEmberStore = defineStore('ember', () => {
     storageWritable.value = true
   }
 
-  /** Shared data from sync: this device keeps its timer, selection, sound and demo speed. */
+  /** Shared data from sync: this device keeps its timer, selection, sound, volume and demo speed. */
   function applyShared(shared: SharedData, opts: { safetyCopy?: boolean } = {}) {
     if (opts.safetyCopy) saveBeforeRestore(snapshot())
     replaceData(withDeviceState(shared, snapshot()))
@@ -311,6 +313,7 @@ export const useEmberStore = defineStore('ember', () => {
   // — timer —
   function finishPhase(at: number) {
     const session = settings.value.session
+    phaseEnded.value = { phase: timer.value.phase, at, n: (phaseEnded.value?.n ?? 0) + 1 }
     if (timer.value.phase === 'break') {
       timer.value = idleTimer(session)
       return
@@ -351,7 +354,7 @@ export const useEmberStore = defineStore('ember', () => {
   }
 
   return {
-    goals, tasks, logs, selection, timer, settings, now, completions, lastDone, storageWritable,
+    goals, tasks, logs, selection, timer, settings, now, completions, phaseEnded, lastDone, storageWritable,
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
     snapshot, replaceData, restore, applyShared, eraseAll, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,

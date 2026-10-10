@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Check, ChevronDown, Pause, Play, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
+import { Check, ChevronDown, CirclePause, CirclePlay, Pause, Play, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDialogFocus } from '../composables/useDialogFocus'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
-import { hideFocusUI } from '../core/focusMode'
+import { hideFocusUI, videoOnTimer } from '../core/focusMode'
+import { clampVolume } from '../core/settings'
 import { clock } from '../core/format'
 import { describeSelection, nextStepText } from '../core/selection'
 import { phaseLabel, progress, startLabel } from '../core/timer'
 import { ytId } from '../core/youtube'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
+import SoundSettings from './SoundSettings.vue'
+import TimerSettings from './TimerSettings.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -17,7 +20,7 @@ const ui = useUiStore()
 const root = ref<HTMLElement | null>(null)
 const startButton = ref<HTMLElement | null>(null)
 const settingsButton = ref<HTMLElement | null>(null)
-const linkInput = ref<HTMLInputElement | null>(null)
+const panel = ref<HTMLElement | null>(null)
 const host = ref<HTMLElement | null>(null)
 const { onKeydown } = useDialogFocus(root, startButton)
 
@@ -30,11 +33,36 @@ const startText = computed(() => startLabel(ember.timer))
 const currentId = computed(() => ytId(ember.settings.youtubeUrl))
 const videoId = computed(() => (ember.settings.focusBg === 'video' ? currentId.value : null))
 const muted = computed(() => ember.settings.muted)
-useYouTubePlayer(host, videoId, muted)
+const volume = computed(() => clampVolume(ember.settings.volume))
+const videoPaused = computed(() => ui.video.paused)
+const { failed: videoFailed } = useYouTubePlayer(host, videoId, { muted, volume, paused: videoPaused })
 
-/** Auto-hide: any pointer or key activity shows the controls for another 3 seconds. */
+function toggleVideo() {
+  ui.video = { paused: !ui.video.paused, auto: false }
+}
+
+/** Turning sound on at zero volume would stay silent: bring the volume back up too. */
+function toggleSound() {
+  if (muted.value && volume.value === 0) ember.updateSettings({ muted: false, volume: 50 })
+  else ember.updateSettings({ muted: !muted.value })
+}
+
+/** Dragging the volume turns sound on; dragging it to zero turns it off. */
+function setVolume(e: Event) {
+  const v = clampVolume(Number((e.target as HTMLInputElement).value))
+  ember.updateSettings({ volume: v, muted: v === 0 })
+}
+
+/** The video pauses when a focus session ends and plays again when the next one starts. */
+watch(
+  () => ({ phase: ember.timer.phase, running: ember.timer.running }),
+  (next, prev) => { ui.video = videoOnTimer(prev, next, ui.video) },
+)
+
+/** Auto-hide: any pointer or key activity shows the controls for another 3 seconds; the mouse leaving the window hides them at once. */
 const IDLE_MS = 3000
 const idle = ref(false)
+const pointerOut = ref(false)
 let idleTimer: ReturnType<typeof setTimeout> | undefined
 function wake(e?: Event) {
   // While hidden, the first Enter/Space on a focused control only reveals the controls; it never acts unseen.
@@ -42,12 +70,15 @@ function wake(e?: Event) {
     e.preventDefault()
   }
   idle.value = false
+  pointerOut.value = false
   clearTimeout(idleTimer)
   idleTimer = setTimeout(() => { idle.value = true }, IDLE_MS)
 }
 const ACTIVITY = ['mousemove', 'click', 'pointerdown', 'keydown'] as const
+const onPointerLeave = () => { pointerOut.value = true }
+const onPointerEnter = () => { pointerOut.value = false }
 const hideUI = computed(() =>
-  hideFocusUI({ running: ember.timer.running, idle: idle.value, settingsOpen: ui.fmSettingsOpen, pickerOpen: ui.pickerOpen }),
+  hideFocusUI({ running: ember.timer.running, idle: idle.value, settingsOpen: ui.fmSettingsOpen, pickerOpen: ui.pickerOpen, pointerOut: pointerOut.value }),
 )
 
 const draft = ref('')
@@ -69,10 +100,10 @@ function onLinkEnter(e: KeyboardEvent) {
   if (!e.isComposing) play()
 }
 
-/** Focus the link field on open; give focus back to the settings button when the panel closes. */
+/** Focus the panel's first control on open; give focus back to the settings button when the panel closes. */
 watch(() => ui.fmSettingsOpen, async (open) => {
   await nextTick()
-  if (open) linkInput.value?.focus()
+  if (open) panel.value?.querySelector<HTMLElement>('input, select, button')?.focus()
   else if (!document.activeElement || document.activeElement === document.body) settingsButton.value?.focus()
 })
 
@@ -87,11 +118,15 @@ onMounted(() => {
   previousOverflow = document.body.style.overflow
   document.body.style.overflow = 'hidden'
   for (const type of ACTIVITY) document.addEventListener(type, wake, true)
+  document.documentElement.addEventListener('mouseleave', onPointerLeave)
+  document.documentElement.addEventListener('mouseenter', onPointerEnter)
   wake()
 })
 onBeforeUnmount(() => {
   document.body.style.overflow = previousOverflow
   for (const type of ACTIVITY) document.removeEventListener(type, wake, true)
+  document.documentElement.removeEventListener('mouseleave', onPointerLeave)
+  document.documentElement.removeEventListener('mouseenter', onPointerEnter)
   clearTimeout(idleTimer)
 })
 </script>
@@ -118,55 +153,90 @@ onBeforeUnmount(() => {
     <div class="fm-tr fm-chrome">
       <div class="fm-panel fm-group">
         <button
-          ref="settingsButton"
-          class="fm-icon fm-settings-btn"
-          aria-label="Video settings"
-          title="Video settings"
-          aria-controls="fm-settings"
-          :aria-expanded="ui.fmSettingsOpen"
-          @click="ui.fmSettingsOpen = !ui.fmSettingsOpen"
+          v-if="videoId"
+          class="fm-icon fm-video-btn"
+          :aria-label="videoPaused ? 'Play video' : 'Pause video'"
+          :title="videoPaused ? 'Play video' : 'Pause video'"
+          @click="toggleVideo"
         >
-          <SlidersHorizontal :size="18" :stroke-width="2.25" />
+          <CirclePlay v-if="videoPaused" :size="18" :stroke-width="2.25" /><CirclePause v-else :size="18" :stroke-width="2.25" />
         </button>
         <button
           class="fm-icon fm-sound"
           aria-label="Sound"
           :title="muted ? 'Sound off' : 'Sound on'"
           :aria-pressed="!muted"
-          @click="ember.updateSettings({ muted: !muted })"
+          @click="toggleSound"
         >
           <VolumeX v-if="muted" :size="18" :stroke-width="2.25" /><Volume2 v-else :size="18" :stroke-width="2.25" />
+        </button>
+        <input
+          v-if="videoId"
+          class="fm-volume"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          aria-label="Volume"
+          :title="`Volume ${muted ? 0 : volume}%`"
+          :value="muted ? 0 : volume"
+          :style="{ '--fill': `${muted ? 0 : volume}%` }"
+          @input="setVolume"
+        />
+        <button
+          ref="settingsButton"
+          class="fm-icon fm-settings-btn"
+          aria-label="Settings"
+          title="Timer, sounds and video"
+          aria-controls="fm-settings"
+          :aria-expanded="ui.fmSettingsOpen"
+          @click="ui.fmSettingsOpen = !ui.fmSettingsOpen"
+        >
+          <SlidersHorizontal :size="18" :stroke-width="2.25" />
         </button>
         <button class="fm-icon fm-exit" aria-label="Exit Focus mode" title="Exit · Esc" @click="ui.closeFocusMode()">
           <X :size="18" :stroke-width="2.5" />
         </button>
       </div>
 
-      <div v-if="ui.fmSettingsOpen" id="fm-settings" class="fm-panel fm-settings">
-        <div class="fm-bg-row">
-          <span class="fm-bg-label">Background</span>
-          <div class="seg fm-bg" role="radiogroup" aria-label="Background">
-            <label class="seg-opt">
-              <input type="radio" name="ember-bg" value="video" :checked="ember.settings.focusBg === 'video'" @change="ember.updateSettings({ focusBg: 'video' })" />Video
-            </label>
-            <label class="seg-opt">
-              <input type="radio" name="ember-bg" value="off" :checked="ember.settings.focusBg === 'off'" @change="ember.updateSettings({ focusBg: 'off' })" />Off
-            </label>
+      <p v-if="videoId && videoFailed && !ui.fmSettingsOpen" class="fm-panel fm-video-error" role="status">
+        YouTube won't play this video here. Pick another in Settings.
+      </p>
+
+      <div v-if="ui.fmSettingsOpen" id="fm-settings" ref="panel" class="fm-panel fm-settings" role="region" aria-label="Focus mode settings">
+        <section class="fm-section" aria-labelledby="fm-timer">
+          <span id="fm-timer" class="fm-label">Timer</span>
+          <TimerSettings />
+        </section>
+        <section class="fm-section" aria-labelledby="fm-sounds">
+          <span id="fm-sounds" class="fm-label">Sounds</span>
+          <SoundSettings />
+        </section>
+        <section class="fm-section" aria-labelledby="fm-video-label">
+          <div class="fm-bg-row">
+            <span id="fm-video-label" class="fm-label">Video</span>
+            <div class="seg fm-bg" role="radiogroup" aria-label="Background">
+              <label class="seg-opt">
+                <input type="radio" name="ember-bg" value="video" :checked="ember.settings.focusBg === 'video'" @change="ember.updateSettings({ focusBg: 'video' })" />On
+              </label>
+              <label class="seg-opt">
+                <input type="radio" name="ember-bg" value="off" :checked="ember.settings.focusBg === 'off'" @change="ember.updateSettings({ focusBg: 'off' })" />Off
+              </label>
+            </div>
           </div>
-        </div>
-        <div class="fm-link">
-          <input
-            ref="linkInput"
-            v-model="draft"
-            class="input fm-input"
-            placeholder="Paste a YouTube link"
-            aria-label="YouTube link"
-            @input="linkError = false"
-            @keydown.enter="onLinkEnter"
-          />
-          <button class="btn btn-primary fm-play" @click="play">Play</button>
-        </div>
-        <span class="fm-now">Now: {{ currentId ? `youtu.be/${currentId}` : 'No video' }}<b v-if="linkError"> · That doesn't look like a YouTube link</b></span>
+          <div class="fm-link">
+            <input
+              v-model="draft"
+              class="input fm-input"
+              placeholder="Paste a YouTube link"
+              aria-label="YouTube link"
+              @input="linkError = false"
+              @keydown.enter="onLinkEnter"
+            />
+            <button class="btn btn-primary fm-play" @click="play">Play</button>
+          </div>
+          <span class="fm-now">Now: {{ currentId ? `youtu.be/${currentId}` : 'No video' }}<b v-if="videoId && videoFailed"> · YouTube won't play this one here</b><b v-if="linkError"> · That doesn't look like a YouTube link</b></span>
+        </section>
       </div>
     </div>
 
@@ -224,9 +294,11 @@ onBeforeUnmount(() => {
   text-shadow: 0 1px 12px color-mix(in oklch, var(--fm-ink) 60%, transparent);
 }
 
-/* Controls that fade out while a session runs and nobody is using them. */
-.fm-chrome { transition: opacity .4s; }
+/* Controls that slide off and fade while nobody is using them; the timer stays. */
+.fm-chrome { transition: opacity .4s ease, transform .4s ease; }
 .ui-hidden .fm-chrome { opacity: 0; pointer-events: none; }
+.ui-hidden .fm-tr { transform: translateY(-16px); }
+.ui-hidden .fm-bl { transform: translateY(16px); }
 
 .fm-panel {
   background: color-mix(in oklch, var(--fm-ink) 72%, transparent);
@@ -244,14 +316,39 @@ onBeforeUnmount(() => {
 .fm-start:hover { background: var(--color-accent-600); }
 .fm-outline { border-color: currentColor; }
 
-.fm-settings { width: min(360px, calc(100vw - 48px)); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.fm-settings {
+  width: min(360px, calc(100vw - 48px)); max-height: calc(100vh - 2 * var(--space-6) - 48px); overflow-y: auto;
+  padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4);
+}
+.fm-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.fm-section + .fm-section { padding-top: var(--space-4); border-top: 1px solid color-mix(in oklch, var(--fm-light) 25%, transparent); }
 .fm-bg-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.fm-bg-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-/* On ink, the checked segment is bg-coloured so it stays visible. */
-.fm-bg { border-color: color-mix(in oklch, var(--fm-light) 45%, transparent); }
-.fm-bg .seg-opt + .seg-opt { border-left-color: color-mix(in oklch, var(--fm-light) 45%, transparent); }
-.fm-bg .seg-opt:has(input:checked) { background: var(--fm-light); color: var(--fm-ink); }
-.fm-bg .seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
+.fm-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+/* Shared controls on ink: light rules, and the checked segment is bg-coloured so it stays visible. */
+.fm-settings :deep(.seg) { border-color: color-mix(in oklch, var(--fm-light) 45%, transparent); }
+.fm-settings :deep(.seg-opt + .seg-opt) { border-left-color: color-mix(in oklch, var(--fm-light) 45%, transparent); }
+.fm-settings :deep(.seg-opt:has(input:checked)) { background: var(--fm-light); color: var(--fm-ink); }
+.fm-settings :deep(.seg-opt:not(:has(input:checked)):hover) { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
+.fm-settings :deep(.btn-secondary) { color: inherit; border-color: color-mix(in oklch, var(--fm-light) 45%, transparent); }
+.fm-settings :deep(.btn-secondary:hover:not(:disabled)) { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
+.fm-settings :deep(.input) { background: var(--fm-light); color: var(--fm-ink); }
+.fm-video-error { max-width: min(320px, calc(100vw - 48px)); padding: var(--space-2) var(--space-3); font-size: 12px; }
+
+/* Round thumb on a thin track (the user's choice; an exception to zero radius). */
+.fm-volume {
+  appearance: none; -webkit-appearance: none; align-self: center; width: 88px; height: 40px; margin: 0 var(--space-2) 0 0;
+  background: transparent; cursor: pointer;
+}
+.fm-volume { --fill: 0%; --vol-rest: color-mix(in oklch, var(--fm-light) 35%, transparent); }
+/* The filled part is accent, the rest a faint light line: two flat colours split at --fill, not a fade. */
+.fm-volume::-webkit-slider-runnable-track {
+  height: 3px;
+  background: linear-gradient(to right, var(--color-accent) var(--fill), var(--vol-rest) var(--fill));
+}
+.fm-volume::-moz-range-track { height: 3px; background: var(--vol-rest); }
+.fm-volume::-moz-range-progress { height: 3px; background: var(--color-accent); }
+.fm-volume::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4.5px; border: 0; border-radius: 50%; background: var(--fm-light); }
+.fm-volume::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--fm-light); }
 .fm-link { display: flex; gap: var(--space-2); }
 .fm-input { flex: 1; min-width: 0; background: var(--fm-light); color: var(--fm-ink); }
 /* 16px stops iOS Safari zooming the fixed overlay when the field is focused. */
@@ -279,7 +376,10 @@ onBeforeUnmount(() => {
   .fm-settings { width: calc(100vw - 32px); }
 }
 
+@media (max-width: 560px) { .fm-volume { width: 64px; } }
+
 @media (prefers-reduced-motion: reduce) {
   .fm-chrome, .fm-bar-fill { transition: none; }
+  .ui-hidden .fm-tr, .ui-hidden .fm-bl { transform: none; }
 }
 </style>

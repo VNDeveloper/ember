@@ -3,14 +3,40 @@ import type { Phase, SessionLength, Timer } from './model'
 /** Demo speed: one real second ≈ one timer minute. */
 export const DEMO_SPEED = 60
 
-/** Phase lengths in timer-seconds. */
-export const LENGTHS: Record<SessionLength, { focus: number; brk: number }> = {
-  '25/5': { focus: 1500, brk: 300 },
-  '50/10': { focus: 3000, brk: 600 },
+/** Allowed minutes per phase; the steppers move focus by 5 and break by 1. */
+export const FOCUS_RANGE = { min: 5, max: 120, step: 5 }
+export const BREAK_RANGE = { min: 1, max: 60, step: 1 }
+export const PRESETS: SessionLength[] = ['25/5', '50/10']
+
+const inRange = (n: number, r: { min: number; max: number }) => Number.isInteger(n) && n >= r.min && n <= r.max
+const clamp = (n: number, r: { min: number; max: number }) => Math.max(r.min, Math.min(r.max, Math.round(n) || r.min))
+
+/** Focus and break minutes from "focus/break", or null when it isn't a valid session. */
+export function parseSession(s: unknown): { focus: number; brk: number } | null {
+  const m = typeof s === 'string' ? s.match(/^(\d+)\/(\d+)$/) : null
+  if (!m) return null
+  const focus = Number(m[1])
+  const brk = Number(m[2])
+  return inRange(focus, FOCUS_RANGE) && inRange(brk, BREAK_RANGE) ? { focus, brk } : null
 }
 
-export const phaseLength = (phase: Phase, session: SessionLength): number =>
-  phase === 'focus' ? LENGTHS[session].focus : LENGTHS[session].brk
+export const isSession = (s: unknown): s is SessionLength => parseSession(s) !== null
+
+export const makeSession = (focus: number, brk: number): SessionLength =>
+  `${clamp(focus, FOCUS_RANGE)}/${clamp(brk, BREAK_RANGE)}`
+
+export function stepSession(s: SessionLength, part: 'focus' | 'brk', dir: 1 | -1): SessionLength {
+  const { focus, brk } = parseSession(s) ?? { focus: 25, brk: 5 }
+  return part === 'focus'
+    ? makeSession(focus + dir * FOCUS_RANGE.step, brk)
+    : makeSession(focus, brk + dir * BREAK_RANGE.step)
+}
+
+/** Phase length in timer-seconds. */
+export function phaseLength(phase: Phase, session: SessionLength): number {
+  const { focus, brk } = parseSession(session) ?? { focus: 25, brk: 5 }
+  return (phase === 'focus' ? focus : brk) * 60
+}
 
 export const idleTimer = (session: SessionLength, phase: Phase = 'focus'): Timer => ({
   phase, running: false, endsAt: null, leftSec: phaseLength(phase, session), speed: 1, lengthSec: phaseLength(phase, session),

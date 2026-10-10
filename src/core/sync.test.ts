@@ -7,8 +7,8 @@ const T = 1_800_000_000_000
 const clone = <X>(x: X): X => JSON.parse(JSON.stringify(x))
 
 describe('shared and per-device parts', () => {
-  it('declares the timer, selection, sound and demo speed as per device', () => {
-    expect(DEVICE_ONLY).toEqual({ data: ['timer', 'selection', 'deviceUpdatedAt'], settings: ['muted', 'demo'] })
+  it('declares the timer, selection, sound, volume and demo speed as per device', () => {
+    expect(DEVICE_ONLY).toEqual({ data: ['timer', 'selection', 'deviceUpdatedAt'], settings: ['muted', 'demo', 'volume'] })
   })
 
   it('leaves per-device state out of the shared part', () => {
@@ -17,6 +17,7 @@ describe('shared and per-device parts', () => {
     expect(Object.keys(s).sort()).toEqual(['goals', 'logs', 'settings', 'tasks'])
     expect(s.settings).not.toHaveProperty('muted')
     expect(s.settings).not.toHaveProperty('demo')
+    expect(s.settings).not.toHaveProperty('volume')
     expect(s.settings.session).toBe('25/5')
     expect(s.tasks.map((t) => t.id)).toEqual(['A'])
   })
@@ -245,7 +246,7 @@ describe('sync file', () => {
   })
 
   it('fills settings added since the file was written, and repairs a bad session length', () => {
-    const text = JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [], tasks: [], logs: [], settings: { session: '90/5' } } })
+    const text = JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [], tasks: [], logs: [], settings: { session: '200/5' } } })
     const r = readSyncFile(text)
     expect(r.ok && r.data.settings).toMatchObject({ session: '25/5', showFuture: true, wallWeeks: 12 })
     expect(r.ok && r.data.settings).not.toHaveProperty('muted')

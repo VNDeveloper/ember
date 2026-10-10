@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { embedUrl, ytId } from './youtube'
+import { DEFAULT_VIDEO_URL, embedUrl, ytId } from './youtube'
 
 describe('ytId', () => {
   it.each([
@@ -29,5 +29,11 @@ describe('embedUrl', () => {
       'https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&mute=1&loop=1&playlist=jfKfPfyJRdk&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1',
     )
     expect(embedUrl('jfKfPfyJRdk', false)).toContain('mute=0')
+  })
+})
+
+describe('DEFAULT_VIDEO_URL', () => {
+  it('is a regular video, not the retired lo-fi live stream', () => {
+    expect(ytId(DEFAULT_VIDEO_URL)).toBe('lTRiuFIWV54')
   })
 })

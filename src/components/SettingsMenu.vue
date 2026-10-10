@@ -2,17 +2,16 @@
 import { ChevronDown, Minus, Plus } from 'lucide-vue-next'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { plural } from '../core/format'
-import type { SessionLength } from '../core/model'
 import { clampWallWeeks, stepWallWeeks, WALL_WEEKS_MAX, WALL_WEEKS_MIN } from '../core/settings'
-import { hasProgress } from '../core/timer'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
+import SoundSettings from './SoundSettings.vue'
+import TimerSettings from './TimerSettings.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
 
 const root = ref<HTMLElement | null>(null)
-const SESSIONS: [SessionLength, string][] = [['25/5', '25 / 5'], ['50/10', '50 / 10']]
 
 const weeks = () => clampWallWeeks(ember.settings.wallWeeks)
 const stepWeeks = (delta: number) => ember.updateSettings({ wallWeeks: stepWallWeeks(ember.settings.wallWeeks, delta) })
@@ -36,15 +35,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
     <div v-if="ui.settingsMenuOpen" id="ember-settings-panel" class="sm-panel" role="region" aria-label="Settings">
       <section class="sm-group" aria-labelledby="sm-timer">
         <span id="sm-timer" class="section-label">Timer</span>
-        <div class="sm-row">
-          <span id="sm-session-label">Session</span>
-          <div class="seg sm-session" role="radiogroup" aria-labelledby="sm-session-label">
-            <label v-for="[value, label] in SESSIONS" :key="value" class="seg-opt">
-              <input type="radio" name="ember-session" :value="value" :checked="ember.settings.session === value" @change="ember.setSession(value)" />{{ label }}
-            </label>
-          </div>
-        </div>
-        <p v-if="ember.timer.running || hasProgress(ember.timer)" class="sm-note sm-session-note">Applies from the next session</p>
+        <TimerSettings />
         <div class="sm-row">
           <span>Demo speed</span>
           <button
@@ -60,6 +51,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
         </div>
         <p v-if="ember.demoFromUrl" class="sm-note sm-demo-note">On from the link (?demo=1)</p>
         <p v-else class="sm-note">25 minutes run in about 25 seconds.</p>
+      </section>
+
+      <section class="sm-group" aria-labelledby="sm-sounds">
+        <span id="sm-sounds" class="section-label">Sounds</span>
+        <SoundSettings />
       </section>
 
       <section class="sm-group" aria-labelledby="sm-charts">

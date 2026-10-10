@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 import type { HeatMode } from '../core/activityView'
+import type { VideoPause } from '../core/focusMode'
 import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
 import type { PickerTab } from '../core/picker'
@@ -16,8 +17,10 @@ export const useUiStore = defineStore('ui', () => {
   const pickerTab = ref<PickerTab>('tasks')
   const pickerQuery = ref('')
   const focusModeOpen = ref(false)
-  /** Focus mode's video settings panel. */
+  /** Focus mode's settings panel (timer, sounds, video). */
   const fmSettingsOpen = ref(false)
+  /** Focus mode's background video: paused by the user, or by a focus session ending (see core/focusMode videoOnTimer). */
+  const video = ref<VideoPause>({ paused: false, auto: false })
   /** Nav: the Data (back up / restore) panel is open. */
   const dataMenuOpen = ref(false)
   const settingsMenuOpen = ref(false)
@@ -102,7 +105,7 @@ export const useUiStore = defineStore('ui', () => {
     undo.value = null
   }
 
-  /** Esc closes the data or settings menu, row menu, edit panel, picker, Focus mode's video settings, then Focus mode. Returns whether it closed anything. */
+  /** Esc closes the data or settings menu, row menu, edit panel, picker, Focus mode's settings, then Focus mode. Returns whether it closed anything. */
   function escape(): boolean {
     if (dataMenuOpen.value || settingsMenuOpen.value) {
       dataMenuOpen.value = false
@@ -133,7 +136,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
-    view, activeGoalId, dataMenuOpen, settingsMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, taskDraft, doneOpen, openGroups,
+    view, activeGoalId, dataMenuOpen, settingsMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, video, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }

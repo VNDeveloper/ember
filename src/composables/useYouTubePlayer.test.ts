@@ -3,15 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref, type Ref } from 'vue'
 import { useYouTubePlayer } from './useYouTubePlayer'
 
-interface FakePlayer { mute: ReturnType<typeof vi.fn>; unMute: ReturnType<typeof vi.fn>; playVideo: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn>; getIframe: () => HTMLIFrameElement }
+type Fn = ReturnType<typeof vi.fn>
+interface FakePlayer { mute: Fn; unMute: Fn; playVideo: Fn; pauseVideo: Fn; setVolume: Fn; destroy: Fn; getIframe: () => HTMLIFrameElement }
 let players: FakePlayer[]
 let Player: ReturnType<typeof vi.fn>
 
-function host(videoId: Ref<string | null>, muted: Ref<boolean>) {
+let failed: Ref<boolean>
+function host(videoId: Ref<string | null>, muted: Ref<boolean>, volume = ref(80), paused = ref(false)) {
   return defineComponent({
     setup() {
       const el = ref<HTMLElement | null>(null)
-      useYouTubePlayer(el, videoId, muted)
+      ;({ failed } = useYouTubePlayer(el, videoId, { muted, volume, paused }))
       return () => h('div', { ref: el, class: 'host' })
     },
   })
@@ -21,7 +23,7 @@ beforeEach(() => {
   players = []
   Player = vi.fn(function () {
     const frame = document.createElement('iframe')
-    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => frame) }
+    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), pauseVideo: vi.fn(), setVolume: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => frame) }
     players.push(p)
     return p
   })
@@ -94,6 +96,48 @@ describe('useYouTubePlayer', () => {
     await flushPromises()
     expect(players[1].destroy).toHaveBeenCalled()
     expect(Player).toHaveBeenCalledTimes(2)
+  })
+
+  it('applies the volume when ready and on change', async () => {
+    const volume = ref(35)
+    mount(host(ref('jfKfPfyJRdk'), ref(false), volume))
+    await flushPromises()
+    volume.value = 50
+    await flushPromises()
+    expect(players[0].setVolume).not.toHaveBeenCalled()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    expect(players[0].setVolume).toHaveBeenCalledWith(50)
+    volume.value = 10
+    await flushPromises()
+    expect(players[0].setVolume).toHaveBeenLastCalledWith(10)
+  })
+
+  it('pauses and plays the video without recreating it, and starts paused if asked', async () => {
+    const paused = ref(true)
+    mount(host(ref('jfKfPfyJRdk'), ref(true), ref(80), paused))
+    await flushPromises()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    expect(players[0].pauseVideo).toHaveBeenCalledTimes(1)
+    expect(players[0].playVideo).not.toHaveBeenCalled()
+    paused.value = false
+    await flushPromises()
+    expect(players[0].playVideo).toHaveBeenCalledTimes(1)
+    paused.value = true
+    await flushPromises()
+    expect(players[0].pauseVideo).toHaveBeenCalledTimes(2)
+    expect(Player).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports a video YouTube refuses to play, until the video changes', async () => {
+    const id = ref<string | null>('jfKfPfyJRdk')
+    mount(host(id, ref(true)))
+    await flushPromises()
+    expect(failed.value).toBe(false)
+    Player.mock.calls[0][1].events.onError({ data: 150 })
+    expect(failed.value).toBe(true)
+    id.value = 'dQw4w9WgXcQ'
+    await flushPromises()
+    expect(failed.value).toBe(false)
   })
 
   it('makes no player without a video, and destroys it on unmount', async () => {

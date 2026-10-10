@@ -1,12 +1,13 @@
 import { dayLabel, todayISO } from './dates'
 import { pad2, plural } from './format'
-import { DEFAULT_SETTINGS, type EmberData, type FocusLog, type Goal, type SessionLength, type Settings, type Task } from './model'
+import type { EmberData, FocusLog, Goal, Settings, Task } from './model'
 import { DATA_VERSION } from './persist'
+import { repairSettings } from './settings'
 
 /** What never leaves this device. Moving timer/selection to shared later = removing them here (+ a merge rule). */
 export const DEVICE_ONLY = {
   data: ['timer', 'selection', 'deviceUpdatedAt'],
-  settings: ['muted', 'demo'],
+  settings: ['muted', 'demo', 'volume'],
 } as const
 
 type DeviceSettingKey = (typeof DEVICE_ONLY.settings)[number]
@@ -24,7 +25,7 @@ export function sharedPart(d: EmberData): SharedData {
   return { goals: d.goals, tasks: d.tasks, logs: d.logs, settings: sharedSettings(d.settings) }
 }
 
-/** Shared data plus this device's own timer, selection, sound and demo speed. */
+/** Shared data plus this device's own timer, selection, sound, volume and demo speed. */
 export function withDeviceState(shared: SharedData, local: EmberData): EmberData {
   const settings = { ...shared.settings } as Settings
   for (const k of DEVICE_ONLY.settings) (settings as unknown as Record<string, unknown>)[k] = local.settings[k]
@@ -134,16 +135,13 @@ export function makeSyncFile(shared: SharedData, generation: string, now: number
 
 export type SyncFileResult = { ok: true; generation: string; exportedAt: string | null; data: SharedData } | { ok: false }
 
-const SESSIONS: SessionLength[] = ['25/5', '50/10']
-
 export function readSyncFile(text: string): SyncFileResult {
   try {
     const f = JSON.parse(text) as { app?: unknown; version?: unknown; generation?: unknown; exportedAt?: unknown; data?: Partial<SharedData> }
     const d = f?.data
     if (f?.app !== 'ember' || f.version !== DATA_VERSION || typeof f.generation !== 'string' || !f.generation) return { ok: false }
     if (!d || !Array.isArray(d.goals) || !Array.isArray(d.tasks) || !Array.isArray(d.logs)) return { ok: false }
-    const settings = sharedSettings({ ...DEFAULT_SETTINGS, ...(d.settings ?? {}) } as Settings)
-    if (!SESSIONS.includes(settings.session)) settings.session = DEFAULT_SETTINGS.session
+    const settings = sharedSettings(repairSettings(d.settings ?? {}))
     return {
       ok: true,
       generation: f.generation,

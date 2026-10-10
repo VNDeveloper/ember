@@ -8,7 +8,8 @@ import { useUiStore } from '../stores/ui'
 import FocusMode from './FocusMode.vue'
 
 const LINE: StepTarget = { kind: 'step', goalId: 'D3', msId: 'D3/First charts', stepId: 'D3/First charts/Line' }
-let players: { mute: ReturnType<typeof vi.fn>; unMute: ReturnType<typeof vi.fn>; playVideo: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }[]
+type Fn = ReturnType<typeof vi.fn>
+let players: { mute: Fn; unMute: Fn; playVideo: Fn; pauseVideo: Fn; setVolume: Fn; destroy: Fn }[]
 let Player: ReturnType<typeof vi.fn>
 
 async function setup(patch: Partial<EmberData> = {}) {
@@ -32,7 +33,7 @@ beforeEach(() => {
   localStorage.clear()
   players = []
   Player = vi.fn(function () {
-    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => document.createElement('iframe')) }
+    const p = { mute: vi.fn(), unMute: vi.fn(), playVideo: vi.fn(), pauseVideo: vi.fn(), setVolume: vi.fn(), destroy: vi.fn(), getIframe: vi.fn(() => document.createElement('iframe')) }
     players.push(p)
     return p
   })
@@ -118,7 +119,7 @@ describe('FocusMode', () => {
     expect(w.find('.fm-scrim').exists()).toBe(false)
     expect(w.find('.fm-gradient').exists()).toBe(true)
     expect(Player).toHaveBeenCalledTimes(1)
-    expect(Player.mock.calls[0][1].videoId).toBe('jfKfPfyJRdk')
+    expect(Player.mock.calls[0][1].videoId).toBe('lTRiuFIWV54')
     w.unmount()
   })
 
@@ -129,7 +130,7 @@ describe('FocusMode', () => {
     await openSettings(w)
     expect(ui.fmSettingsOpen).toBe(true)
     expect(w.find('.fm-settings-btn').attributes('aria-expanded')).toBe('true')
-    expect(w.find('.fm-now').text()).toBe('Now: youtu.be/jfKfPfyJRdk')
+    expect(w.find('.fm-now').text()).toBe('Now: youtu.be/lTRiuFIWV54')
     await w.findAll('.fm-bg input')[1].setValue(true)
     expect(ember.settings.focusBg).toBe('off')
     expect(w.find('.fm-video').exists()).toBe(false)
@@ -153,15 +154,95 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
+  it('turns sound on with the volume slider and off at zero', async () => {
+    const { w, ember } = await setup()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    const slider = w.find('.fm-volume')
+    expect(slider.attributes('aria-label')).toBe('Volume')
+    expect((slider.element as HTMLInputElement).value).toBe('0')
+    await slider.setValue('40')
+    await flushPromises()
+    expect(ember.settings).toMatchObject({ volume: 40, muted: false })
+    expect(players[0].setVolume).toHaveBeenLastCalledWith(40)
+    expect(players[0].unMute).toHaveBeenCalled()
+    await slider.setValue('0')
+    expect(ember.settings).toMatchObject({ volume: 0, muted: true })
+    await w.find('.fm-sound').trigger('click')
+    expect(ember.settings).toMatchObject({ volume: 50, muted: false })
+    w.unmount()
+  })
+
+  it('pauses and plays the video from its button', async () => {
+    const { w, ui } = await setup()
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    const btn = () => w.find('.fm-video-btn')
+    expect(btn().attributes('aria-label')).toBe('Pause video')
+    await btn().trigger('click')
+    await flushPromises()
+    expect(ui.video).toEqual({ paused: true, auto: false })
+    expect(players[0].pauseVideo).toHaveBeenCalledTimes(1)
+    expect(btn().attributes('aria-label')).toBe('Play video')
+    await btn().trigger('click')
+    await flushPromises()
+    expect(players[0].playVideo).toHaveBeenCalledTimes(2)
+    w.unmount()
+  })
+
+  it('pauses the video when the focus session ends and plays it when the next one starts', async () => {
+    const { w, ember } = await setup({ timer: RUNNING })
+    Player.mock.calls[0][1].events.onReady({ target: players[0] })
+    ember.tick(new Date(2026, 8, 23, 10, 25).getTime())
+    await flushPromises()
+    expect(ember.timer.phase).toBe('break')
+    expect(players[0].pauseVideo).toHaveBeenCalledTimes(1)
+    await w.find('.fm-skip').trigger('click')
+    await flushPromises()
+    expect(players[0].playVideo).toHaveBeenCalledTimes(1)
+    await w.find('.fm-start').trigger('click')
+    await flushPromises()
+    expect(players[0].playVideo).toHaveBeenCalledTimes(2)
+    w.unmount()
+  })
+
+  it('has no video controls when the video is off', async () => {
+    const { w } = await setup({ settings: { ...dataFixture().settings, focusBg: 'off' } })
+    expect(w.find('.fm-video-btn').exists()).toBe(false)
+    expect(w.find('.fm-volume').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('says when YouTube refuses the video', async () => {
+    const { w } = await setup()
+    expect(w.find('.fm-video-error').exists()).toBe(false)
+    Player.mock.calls[0][1].events.onError({ data: 150 })
+    await flushPromises()
+    expect(w.find('.fm-video-error').text()).toBe("YouTube won't play this video here. Pick another in Settings.")
+    await openSettings(w)
+    expect(w.find('.fm-video-error').exists()).toBe(false)
+    expect(w.find('.fm-now').text()).toBe("Now: youtu.be/lTRiuFIWV54 · YouTube won't play this one here")
+    w.unmount()
+  })
+
+  it('changes the timer length and end sounds from the settings panel', async () => {
+    const { w, ember } = await setup()
+    await openSettings(w)
+    await w.find('.ts-focus-more').trigger('click')
+    expect(ember.settings.session).toBe('30/5')
+    expect(w.find('.fm-time').text()).toBe('30:00')
+    await w.find('.ss-focus select').setValue('soft')
+    expect(ember.settings.focusEndSound).toBe('soft')
+    w.unmount()
+  })
+
   it('plays a pasted link and rejects junk', async () => {
     const { w, ember } = await setup({ settings: { ...dataFixture().settings, focusBg: 'off' } })
     await openSettings(w)
     await w.find('.fm-input').setValue('hello')
     await w.find('.fm-play').trigger('click')
-    expect(w.find('.fm-now').text()).toBe("Now: youtu.be/jfKfPfyJRdk · That doesn't look like a YouTube link")
-    expect(ember.settings.youtubeUrl).toBe('https://www.youtube.com/watch?v=jfKfPfyJRdk')
+    expect(w.find('.fm-now').text()).toBe("Now: youtu.be/lTRiuFIWV54 · That doesn't look like a YouTube link")
+    expect(ember.settings.youtubeUrl).toBe('https://www.youtube.com/watch?v=lTRiuFIWV54')
     await w.find('.fm-input').setValue('https://youtu.be/dQw4w9WgXcQ')
-    expect(w.find('.fm-now').text()).toBe('Now: youtu.be/jfKfPfyJRdk')
+    expect(w.find('.fm-now').text()).toBe('Now: youtu.be/lTRiuFIWV54')
     await w.find('.fm-input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
     expect(ember.settings).toMatchObject({ youtubeUrl: 'https://youtu.be/dQw4w9WgXcQ', focusBg: 'video' })
@@ -222,6 +303,24 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
+  it('hides every control, even while paused, when the mouse leaves the window, keeping the timer', async () => {
+    const { w } = await setup()
+    await openSettings(w)
+    document.documentElement.dispatchEvent(new MouseEvent('mouseleave'))
+    await flushPromises()
+    expect(hidden(w)).toBe(true)
+    expect(w.find('.fm-time').classes()).not.toContain('fm-chrome')
+    document.documentElement.dispatchEvent(new MouseEvent('mouseenter'))
+    await flushPromises()
+    expect(hidden(w)).toBe(false)
+    document.documentElement.dispatchEvent(new MouseEvent('mouseleave'))
+    await flushPromises()
+    document.dispatchEvent(new Event('keydown', { bubbles: true }))
+    await flushPromises()
+    expect(hidden(w)).toBe(false)
+    w.unmount()
+  })
+
   it('stops the idle timer and activity listeners on close', async () => {
     const { w } = await setup({ timer: RUNNING })
     const open = vi.getTimerCount()
@@ -244,10 +343,10 @@ describe('FocusMode', () => {
     opener.remove()
   })
 
-  it('moves focus into the settings panel and back to its button on close', async () => {
+  it('moves focus to the panel\'s first control and back to its button on close', async () => {
     const { w, ui } = await setup()
     await openSettings(w)
-    expect(document.activeElement).toBe(w.find('.fm-input').element)
+    expect(document.activeElement).toBe(w.find('.ts-presets input').element)
     ui.escape()
     await flushPromises()
     expect(w.find('.fm-settings').exists()).toBe(false)

@@ -1,4 +1,5 @@
 import type { ISODate } from './dates'
+import type { EndSound } from './sounds'
 import { DEFAULT_VIDEO_URL } from './youtube'
 
 export type { ISODate }
@@ -45,7 +46,8 @@ export interface Timer {
   lengthSec: number
 }
 
-export type SessionLength = '25/5' | '50/10'
+/** Focus and break minutes, e.g. '25/5' or a custom '40/8' (see core/timer parseSession). */
+export type SessionLength = `${number}/${number}`
 export type FocusBg = 'video' | 'off'
 export interface Settings {
   session: SessionLength
@@ -55,7 +57,11 @@ export interface Settings {
   focusBg: FocusBg
   youtubeUrl: string
   muted: boolean
-  /** Last change to the shared settings (not muted/demo), epoch ms. */
+  /** Video volume, 0–100 (per device, like muted). */
+  volume: number
+  focusEndSound: EndSound
+  breakEndSound: EndSound
+  /** Last change to the shared settings (not muted/volume/demo), epoch ms. */
   updatedAt?: number
 }
 
@@ -78,6 +84,9 @@ export const DEFAULT_SETTINGS: Settings = {
   focusBg: 'video',
   youtubeUrl: DEFAULT_VIDEO_URL,
   muted: true,
+  volume: 80,
+  focusEndSound: 'chime',
+  breakEndSound: 'bell',
 }
 
 export const targetKey = (t: Target): string => (t.kind === 'task' ? `task:${t.taskId}` : `step:${t.stepId}`)

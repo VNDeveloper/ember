@@ -1,9 +1,11 @@
-import { onBeforeUnmount, onMounted, watch, type Ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 
 interface YTPlayer {
   mute(): void
   unMute(): void
+  setVolume(v: number): void
   playVideo(): void
+  pauseVideo(): void
   destroy(): void
   getIframe?(): HTMLIFrameElement
 }
@@ -12,7 +14,7 @@ interface YTPlayerOptions {
   videoId: string
   host: string
   playerVars: Record<string, string | number>
-  events: { onReady: (e: { target: YTPlayer }) => void }
+  events: { onReady: (e: { target: YTPlayer }) => void; onError: (e: { data: number }) => void }
 }
 
 interface YTNamespace {
@@ -66,13 +68,23 @@ export const playerVars = (id: string) => ({
   playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1,
 })
 
+export interface PlayerControls {
+  muted: Ref<boolean>
+  /** 0–100. */
+  volume: Ref<number>
+  paused: Ref<boolean>
+}
+
 /**
- * One background player inside `host`. Changing the video recreates it; changing `muted`
- * calls mute()/unMute() so the video keeps playing.
+ * One background player inside `host`. Changing the video recreates it; sound, volume and
+ * pause are applied to the running player. `failed` is true while YouTube refuses the video
+ * (removed, private, or not allowed in embeds).
  */
-export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<string | null>, muted: Ref<boolean>): void {
+export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<string | null>, controls: PlayerControls): { failed: Ref<boolean> } {
+  const { muted, volume, paused } = controls
+  const failed = ref(false)
   let player: YTPlayer | null = null
-  /** mute()/unMute() exist only once the player reports ready. */
+  /** The player's methods exist only once it reports ready. */
   let ready = false
   let alive = true
 
@@ -84,6 +96,7 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
 
   async function create(id: string | null) {
     destroy()
+    failed.value = false
     if (!id) return
     const YT = await loadYouTubeApi().catch(() => null)
     if (!YT || !alive || !host.value || videoId.value !== id) return
@@ -100,23 +113,28 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
           const frame = target.getIframe?.()
           frame?.setAttribute('tabindex', '-1')
           frame?.setAttribute('title', 'Background video')
+          target.setVolume(volume.value)
           if (muted.value) target.mute()
           else target.unMute()
-          target.playVideo()
+          if (paused.value) target.pauseVideo()
+          else target.playVideo()
         },
+        onError: () => { failed.value = true },
       },
     })
   }
 
+  /** Runs `fn` on the player once it is ready; changes before then are picked up by onReady. */
+  const whenReady = (fn: (p: YTPlayer) => void) => { if (player && ready) fn(player) }
+
   onMounted(() => { void create(videoId.value) })
   watch(videoId, (id) => { void create(id) })
-  watch(muted, (m) => {
-    if (!player || !ready) return
-    if (m) player.mute()
-    else player.unMute()
-  })
+  watch(muted, (m) => whenReady((p) => (m ? p.mute() : p.unMute())))
+  watch(volume, (v) => whenReady((p) => p.setVolume(v)))
+  watch(paused, (pause) => whenReady((p) => (pause ? p.pauseVideo() : p.playVideo())))
   onBeforeUnmount(() => {
     alive = false
     destroy()
   })
+  return { failed }
 }

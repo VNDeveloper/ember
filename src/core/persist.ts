@@ -1,5 +1,5 @@
-import type { EmberData, SessionLength } from './model'
-import { DEFAULT_SETTINGS } from './model'
+import type { EmberData } from './model'
+import { repairSettings } from './settings'
 import { idleTimer } from './timer'
 
 export const STORAGE_KEY = 'ember:v1'
@@ -21,13 +21,11 @@ function isData(d: unknown): d is EmberData {
   return Array.isArray(x.goals) && Array.isArray(x.tasks) && Array.isArray(x.logs) && !!x.timer && typeof x.timer === 'object'
 }
 
-const SESSIONS: SessionLength[] = ['25/5', '50/10']
 const positive = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
 /** Fill fields added since the data was saved, and repair hand-edited values that would break the timer. */
 function normalize(d: EmberData): EmberData {
-  const settings = { ...DEFAULT_SETTINGS, ...d.settings }
-  if (!SESSIONS.includes(settings.session)) settings.session = DEFAULT_SETTINGS.session
+  const settings = repairSettings(d.settings ?? {})
   const base = idleTimer(settings.session, d.timer.phase === 'break' ? 'break' : 'focus')
   const t = { ...base, ...d.timer }
   const valid = positive(t.lengthSec) && positive(t.speed) && typeof t.leftSec === 'number' && Number.isFinite(t.leftSec)

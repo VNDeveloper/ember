@@ -119,6 +119,27 @@ describe('timer', () => {
     expect(store.timer.leftSec).toBe(600)
   })
 
+  it('times a custom session length', () => {
+    const store = storeWith()
+    store.setSession('40/8')
+    store.startPause()
+    store.tick(NOW + 40 * MIN)
+    expect(store.logs[0].min).toBe(40)
+    expect(store.timer.leftSec).toBe(480)
+  })
+
+  it('signals which phase ended and when, for the end sound', () => {
+    const store = storeWith()
+    expect(store.phaseEnded).toBeNull()
+    store.startPause()
+    store.tick(NOW + 25 * MIN)
+    expect(store.phaseEnded).toEqual({ phase: 'focus', at: NOW + 25 * MIN, n: 1 })
+    vi.setSystemTime(NOW + 25 * MIN)
+    store.startPause()
+    store.tick(NOW + 30 * MIN)
+    expect(store.phaseEnded).toEqual({ phase: 'break', at: NOW + 30 * MIN, n: 2 })
+  })
+
   it('counts from the wall clock, so missed ticks lose nothing', () => {
     const store = storeWith()
     store.startPause()

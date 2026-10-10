@@ -57,7 +57,7 @@ describe('persistence', () => {
   it('normalises old or hand-edited timer and settings', () => {
     const data = dataFixture()
     const { lengthSec: _l, ...oldTimer } = data.timer
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...data, timer: oldTimer, settings: { ...data.settings, session: '30/5' } } }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...data, timer: oldTimer, settings: { ...data.settings, session: '30/0' } } }))
     const loaded = loadData()!
     expect(loaded.timer.lengthSec).toBe(1500)
     expect(loaded.settings.session).toBe('25/5')

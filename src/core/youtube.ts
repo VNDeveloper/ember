@@ -1,4 +1,7 @@
-export const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=jfKfPfyJRdk'
+/** Lofi Girl's "1 A.M Study Session": a regular video, which outlives live streams. */
+export const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=lTRiuFIWV54'
+/** Former defaults that no longer play; saved settings still pointing at them move to DEFAULT_VIDEO_URL. */
+export const RETIRED_VIDEO_IDS = ['jfKfPfyJRdk']
 
 /** Video id from watch?v=, youtu.be/, embed/, shorts/ or live/ links, or a bare 11-character id. */
 export function ytId(input: string): string | null {

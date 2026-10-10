@@ -9,6 +9,7 @@ import NavBar from './components/NavBar.vue'
 import TodayView from './components/today/TodayView.vue'
 import UndoBar from './components/UndoBar.vue'
 import UpdateBar from './components/UpdateBar.vue'
+import { useEndSounds } from './composables/useEndSounds'
 import { useTicker } from './composables/useTicker'
 import { useEmberStore } from './stores/ember'
 import { useSyncStore } from './stores/sync'
@@ -19,6 +20,7 @@ const ui = useUiStore()
 const sync = useSyncStore()
 
 useTicker(() => ember.tick())
+useEndSounds()
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && ui.escape()) e.preventDefault()
