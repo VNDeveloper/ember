@@ -68,7 +68,7 @@ describe('deleted goals', () => {
 
   it('drop out of lists, Working-on and the picker, keeping other colours', () => {
     const gs = goals()
-    expect(goalList(gs, new Map()).map((g) => [g.title, g.swatch])).toEqual([
+    expect(goalList(gs, new Map()).flatMap((grp) => grp.items).map((g) => [g.title, g.swatch])).toEqual([
       ['Spanish', 'var(--color-text)'], ['Art', 'var(--color-accent-300)'],
     ])
     expect(workingOn(gs, null).map((c) => [c.title, c.swatch])).toEqual([

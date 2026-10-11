@@ -1,7 +1,7 @@
 import { dayLabel, type ISODate } from './dates'
 import { fmtM, pad2 } from './format'
-import { goalColor, goalStats, isLive, isMilestoneDone, liveMilestones, liveSteps, stepTarget } from './goals'
-import type { Goal, Selection, Step, StepTarget, Task } from './model'
+import { goalColor, goalStats, goalStatus, isLive, isMilestoneDone, liveMilestones, liveSteps, stepTarget } from './goals'
+import type { Goal, GoalStatus, Selection, Step, StepTarget, Task } from './model'
 import { sameTarget } from './model'
 
 const SESSION = 25
@@ -16,20 +16,24 @@ export const goalFocused = (g: Goal, spent: Map<string, number>): number => sumM
 
 export interface GoalListItem { id: string; title: string; swatch: string; pct: number; complete: boolean; meta: string }
 
-export function goalList(goals: Goal[], spent: Map<string, number>): GoalListItem[] {
-  // Map over all goals so colours keep their original positions, then drop deleted ones.
-  return goals.flatMap((g, gi) => {
-    if (!isLive(g)) return []
+export interface GoalListGroup { status: GoalStatus; label: string; items: GoalListItem[] }
+const GROUP_LABEL: Record<GoalStatus, string> = { active: 'Active', paused: 'Paused', achieved: 'Achieved' }
+
+/** Goals grouped active, paused, achieved (empty groups left out). */
+export function goalList(goals: Goal[], spent: Map<string, number>): GoalListGroup[] {
+  const by: Record<GoalStatus, GoalListItem[]> = { active: [], paused: [], achieved: [] }
+  // Index over all goals so colours keep their positions; deleted goals are dropped.
+  goals.forEach((g, gi) => {
+    if (!isLive(g)) return
     const st = goalStats(g)
-    return [{
-      id: g.id,
-      title: g.title,
-      swatch: goalColor(gi),
-      pct: st.pct,
-      complete: st.total > 0 && st.pct === 100,
-      meta: `${fmtM(goalFocused(g, spent))} focused · ${st.done}/${st.total} steps`,
-    }]
+    const status = goalStatus(g)
+    const focused = `${fmtM(goalFocused(g, spent))} focused`
+    const meta = status === 'active' ? `${focused} · ${st.done}/${st.total} steps`
+      : status === 'paused' ? `Paused · ${focused}`
+      : `Achieved ${dayLabel(g.achievedOn ?? g.createdAt)} · ${focused}`
+    by[status].push({ id: g.id, title: g.title, swatch: goalColor(gi), pct: st.pct, complete: st.total > 0 && st.pct === 100, meta })
   })
+  return (['active', 'paused', 'achieved'] as const).filter((s) => by[s].length).map((s) => ({ status: s, label: GROUP_LABEL[s], items: by[s] }))
 }
 
 export function goalKicker(g: Goal, spent: Map<string, number>): string {

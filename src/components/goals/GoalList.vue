@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { ChevronRight, Plus } from 'lucide-vue-next'
 import { computed } from 'vue'
-import { goalList } from '../../core/goalView'
+import { goalList, type GoalListGroup } from '../../core/goalView'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 
-defineProps<{ activeId: string | null }>()
+const props = defineProps<{ activeId: string | null }>()
 const ember = useEmberStore()
 const ui = useUiStore()
-const items = computed(() => goalList(ember.goals, ember.tally.spent))
+const groups = computed(() => goalList(ember.goals, ember.tally.spent))
+
+/** Achieved starts collapsed, but opens to show the goal you're looking at unless you closed it yourself. */
+const ACHIEVED_KEY = 'goals:achieved'
+const isOpen = (g: GoalListGroup) =>
+  g.status !== 'achieved' || (ui.openGroups[ACHIEVED_KEY] ?? g.items.some((i) => i.id === props.activeId))
+const toggle = (g: GoalListGroup) => { ui.openGroups[ACHIEVED_KEY] = !isOpen(g) }
 
 function add() {
   const goal = ember.addGoal(ui.goalDraft)
@@ -27,21 +33,34 @@ function onEnter(e: KeyboardEvent) {
   <aside class="goal-list">
     <span class="kicker">Goals</span>
     <div class="gl-items">
-      <button
-        v-for="g in items"
-        :key="g.id"
-        class="gl-item"
-        :class="{ 'is-active': g.id === activeId }"
-        :aria-current="g.id === activeId ? 'true' : undefined"
-        @click="ui.selectGoal(g.id)"
-      >
-        <span class="gl-top">
-          <span class="gl-name"><span class="swatch" :style="{ background: g.swatch }"></span>{{ g.title }}</span>
-          <span class="gl-pct">{{ g.pct }}%</span>
-        </span>
-        <span class="gl-bar"><span :class="{ 'is-complete': g.complete }" :style="{ width: `${g.pct}%` }"></span></span>
-        <span class="gl-meta">{{ g.meta }}</span>
-      </button>
+      <div v-for="grp in groups" :key="grp.status" class="gl-group" :data-status="grp.status">
+        <span v-if="grp.status === 'paused'" class="gl-head section-label">{{ grp.label }}</span>
+        <button
+          v-else-if="grp.status === 'achieved'"
+          class="gl-head gl-toggle section-label"
+          :aria-expanded="isOpen(grp)"
+          @click="toggle(grp)"
+        >
+          <ChevronRight :size="12" :stroke-width="3" :class="{ 'is-open': isOpen(grp) }" />{{ grp.label }} · {{ grp.items.length }}
+        </button>
+        <template v-if="isOpen(grp)">
+          <button
+            v-for="g in grp.items"
+            :key="g.id"
+            class="gl-item"
+            :class="{ 'is-active': g.id === activeId, 'is-quiet': grp.status !== 'active' }"
+            :aria-current="g.id === activeId ? 'true' : undefined"
+            @click="ui.selectGoal(g.id)"
+          >
+            <span class="gl-top">
+              <span class="gl-name"><span class="swatch" :style="{ background: g.swatch }"></span>{{ g.title }}</span>
+              <span class="gl-pct">{{ g.pct }}%</span>
+            </span>
+            <span class="gl-bar"><span :class="{ 'is-complete': g.complete }" :style="{ width: `${g.pct}%` }"></span></span>
+            <span class="gl-meta">{{ g.meta }}</span>
+          </button>
+        </template>
+      </div>
     </div>
     <div class="gl-new">
       <label class="gl-new-label" for="ember-new-goal">New goal</label>
@@ -71,6 +90,17 @@ function onEnter(e: KeyboardEvent) {
 .gl-bar span { display: block; height: 100%; background: var(--color-text); }
 .gl-bar span.is-complete { background: var(--color-accent); }
 .gl-meta { font-size: 12px; color: var(--color-neutral-700); }
+.gl-group { display: flex; flex-direction: column; }
+.gl-head {
+  display: flex; align-items: center; gap: 6px; padding: var(--space-3) var(--space-3) var(--space-1);
+  border-bottom: 1px solid var(--color-divider); color: var(--color-neutral-700);
+}
+.gl-toggle { width: 100%; border: 0; border-bottom: 1px solid var(--color-divider); background: transparent; text-align: left; }
+.gl-toggle:hover { background: var(--color-accent-100); color: var(--color-text); }
+.gl-toggle svg { flex: none; transition: transform .15s; }
+.gl-toggle svg.is-open { transform: rotate(90deg); }
+/* Paused and achieved goals sit back a step: grey bars, the accent kept for active progress. */
+.gl-item.is-quiet .gl-bar span, .gl-item.is-quiet .gl-bar span.is-complete { background: var(--color-neutral-500); }
 .gl-new { display: flex; flex-direction: column; gap: var(--space-2); margin-top: auto; }
 .gl-new-label { font-size: 12px; font-weight: 700; }
 .gl-new-row { display: flex; gap: var(--space-2); }

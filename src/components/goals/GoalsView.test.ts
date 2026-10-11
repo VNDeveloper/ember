@@ -45,4 +45,9 @@ describe('GoalsView', () => {
     expect(setup(goals, 'D3').find('.gs-title').text()).toBe('Spanish')
     expect(setup(goals).findAll('.gl-item')).toHaveLength(1)
   })
+
+  it('opens on the first active goal when none is chosen', () => {
+    const run = { ...goalFixture('Run', [['M', [['A', '2026-09-01']]]]), status: 'achieved' as const, achievedOn: '2026-09-20' }
+    expect(setup([run, ...two()]).find('.gs-title').text()).toBe('D3')
+  })
 })

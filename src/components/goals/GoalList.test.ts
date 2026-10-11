@@ -55,4 +55,45 @@ describe('GoalList', () => {
     await w.find('.gl-add').trigger('click')
     expect(ember.goals).toHaveLength(2)
   })
+
+  describe('paused and achieved groups', () => {
+    function grouped(activeId: string | null = 'D3') {
+      setActivePinia(createPinia())
+      const ember = useEmberStore()
+      ember.replaceData(dataFixture({ goals: [
+        goalFixture('D3', []),
+        { ...goalFixture('Art', []), status: 'paused' },
+        { ...goalFixture('Run', []), status: 'achieved', achievedOn: '2026-09-20' },
+      ] }))
+      return { w: mount(GoalList, { props: { activeId } }), ui: useUiStore() }
+    }
+    const names = (w: ReturnType<typeof mount>) => w.findAll('.gl-item .gl-name').map((n) => n.text())
+
+    it('lists paused goals under their own heading', () => {
+      const { w } = grouped()
+      expect(w.find('.gl-group[data-status="paused"] .gl-head').text()).toBe('Paused')
+      expect(w.find('.gl-group[data-status="paused"] .gl-meta').text()).toBe('Paused · 0m focused')
+      expect(w.find('.gl-group[data-status="active"] .gl-head').exists()).toBe(false)
+    })
+
+    it('keeps achieved goals collapsed behind a count, and toggles them', async () => {
+      const { w, ui } = grouped()
+      const toggle = w.find('.gl-group[data-status="achieved"] .gl-toggle')
+      expect(toggle.text()).toBe('Achieved · 1')
+      expect(toggle.attributes('aria-expanded')).toBe('false')
+      expect(names(w)).toEqual(['D3', 'Art'])
+      await toggle.trigger('click')
+      expect(toggle.attributes('aria-expanded')).toBe('true')
+      expect(names(w)).toEqual(['D3', 'Art', 'Run'])
+      expect(ui.openGroups['goals:achieved']).toBe(true)
+    })
+
+    it('opens the achieved group when it holds the open goal, unless closed on purpose', async () => {
+      const { w, ui } = grouped('Run')
+      expect(names(w)).toEqual(['D3', 'Art', 'Run'])
+      await w.find('.gl-toggle').trigger('click')
+      expect(ui.openGroups['goals:achieved']).toBe(false)
+      expect(names(w)).toEqual(['D3', 'Art'])
+    })
+  })
 })

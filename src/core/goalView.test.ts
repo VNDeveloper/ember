@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { finishLine, goalKicker, goalLedger, goalList, goalTasks, roadmap, sessionBlocks } from './goalView'
+import { goalColor } from './goals'
 import { tallyLogs } from './tally'
 import { d3Fixture, goalFixture, stepRef, taskFixture } from './test-fixtures'
 
@@ -8,12 +9,26 @@ const { goal, logs } = d3Fixture()
 const { spent, spentToday } = tallyLogs(logs, TODAY)
 
 describe('goal list, kicker and ledger', () => {
-  it('summarises each goal for the list', () => {
+  it('groups goals into active, paused and achieved with their own meta lines', () => {
     const spanish = goalFixture('Spanish', [['All', [['A', '2026-09-01'], ['B', '2026-09-02']]]])
-    expect(goalList([goal, spanish], spent)).toEqual([
-      { id: 'D3', title: 'D3', swatch: 'var(--color-accent)', pct: 40, complete: false, meta: '2h 5m focused · 2/5 steps' },
-      { id: 'Spanish', title: 'Spanish', swatch: 'var(--color-text)', pct: 100, complete: true, meta: '0m focused · 2/2 steps' },
+    const art = { ...goalFixture('Art', []), status: 'paused' as const }
+    const run = { ...goalFixture('Run', []), status: 'achieved' as const, achievedOn: '2026-10-12' }
+    const groups = goalList([goal, art, spanish, run], spent)
+    expect(groups.map((g) => [g.status, g.label, g.items.map((i) => i.id)])).toEqual([
+      ['active', 'Active', ['D3', 'Spanish']], ['paused', 'Paused', ['Art']], ['achieved', 'Achieved', ['Run']],
     ])
+    expect(groups[0].items).toEqual([
+      { id: 'D3', title: 'D3', swatch: 'var(--color-accent)', pct: 40, complete: false, meta: '2h 5m focused · 2/5 steps' },
+      { id: 'Spanish', title: 'Spanish', swatch: goalColor(2), pct: 100, complete: true, meta: '0m focused · 2/2 steps' },
+    ])
+    expect(groups[1].items[0].meta).toBe('Paused · 0m focused')
+    expect(groups[2].items[0].meta).toBe('Achieved Oct 12 · 0m focused')
+    expect(groups[1].items[0].swatch).toBe(goalColor(1))
+  })
+
+  it('leaves out empty groups and deleted goals', () => {
+    const gone = { ...goalFixture('Gone', []), deletedOn: '2026-09-01', status: 'paused' as const }
+    expect(goalList([goal, gone], spent).map((g) => g.status)).toEqual(['active'])
   })
 
   it('builds the header kicker', () => {
