@@ -2,6 +2,7 @@
 import { Check, ChevronDown, Flag, Plus, Timer } from 'lucide-vue-next'
 import { computed, nextTick, ref, type Directive } from 'vue'
 import { finishLine, roadmap, type MilestoneRow, type StepRow } from '../../core/goalView'
+import { goalStatus } from '../../core/goals'
 import type { Goal } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
@@ -17,6 +18,8 @@ const ui = useUiStore()
 
 const rows = computed(() => roadmap(props.goal, ember.tally.spent, ember.tally.spentToday, ember.selection))
 const finish = computed(() => finishLine(props.goal))
+/** Finishing the plan isn't proof the goal is done: ask, and offer more milestones instead. */
+const askAchieved = computed(() => finish.value.reached && goalStatus(props.goal) !== 'achieved')
 const justDone = (stepId: string) => ember.lastDone?.key === `step:${stepId}`
 /** The selected step's newest filled block pops when a focus session has just finished. */
 const sessionJustEnded = computed(() => ember.completions > 0 && ember.timer.phase === 'break')
@@ -203,6 +206,13 @@ function commit(e: KeyboardEvent) {
         <div class="rm-finish-text">
           <span class="rm-finish-title">{{ finish.title }}</span>
           <span class="rm-finish-outcome">{{ finish.text }}</span>
+          <div v-if="askAchieved" class="rm-finish-ask">
+            <span>Every step is done. Is the goal achieved?</span>
+            <div class="rm-finish-actions">
+              <button class="btn btn-primary rm-achieve" @click="ember.setGoalStatus(goal.id, 'achieved')">Mark achieved</button>
+              <button class="btn btn-secondary rm-more" @click="startMilestone">Add a milestone</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -275,6 +285,8 @@ function commit(e: KeyboardEvent) {
 }
 .rm-flag.is-reached { background: var(--color-accent); color: var(--color-bg); box-shadow: inset 0 0 0 2px var(--color-accent); }
 .rm-finish-text { display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
+.rm-finish-ask { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); font-size: 14px; }
+.rm-finish-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .rm-finish-title { font: 800 20px/1.2 var(--font-heading); }
 .rm-finish-outcome { font-size: 14px; color: var(--color-neutral-800); text-wrap: pretty; }
 

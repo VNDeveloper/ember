@@ -236,4 +236,39 @@ describe('Roadmap', () => {
     expect(ember.goals[0].milestones[0].title).toBe('Basics')
     w.unmount()
   })
+
+  describe('finish line', () => {
+    const finished = (status?: 'achieved') => ({
+      ...goalFixture('Run', [['Base', [['5k', '2026-09-01']]], ['Race', [['10k', '2026-09-20']]]]),
+      ...(status ? { status, achievedOn: '2026-09-21' } : {}),
+    })
+
+    it('asks whether the goal is achieved once every step is done', async () => {
+      const { w, ember } = setup(finished())
+      expect(w.find('.rm-finish-ask span').text()).toBe('Every step is done. Is the goal achieved?')
+      expect(w.find('.rm-achieve').text()).toBe('Mark achieved')
+      expect(w.find('.rm-more').text()).toBe('Add a milestone')
+      await w.find('.rm-achieve').trigger('click')
+      expect(ember.goals[0]).toMatchObject({ status: 'achieved', achievedOn: '2026-09-23' })
+      expect(w.find('.rm-finish-ask').exists()).toBe(false)
+      w.unmount()
+    })
+
+    it('opens the milestone input from Add a milestone', async () => {
+      const { w, ui } = setup(finished())
+      await w.find('.rm-more').trigger('click')
+      expect(ui.adding).toEqual({ kind: 'milestone' })
+      expect(w.find('.rm-ms-input').exists()).toBe(true)
+      w.unmount()
+    })
+
+    it('does not ask while steps are open or once achieved', () => {
+      const open = setup()
+      expect(open.w.find('.rm-finish-ask').exists()).toBe(false)
+      open.w.unmount()
+      const done = setup(finished('achieved'))
+      expect(done.w.find('.rm-finish-ask').exists()).toBe(false)
+      done.w.unmount()
+    })
+  })
 })
