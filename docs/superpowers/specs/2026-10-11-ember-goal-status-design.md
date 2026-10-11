@@ -41,7 +41,7 @@ Status comes first because the pace check and nudges must skip goals the user ha
 
 - `goalList` returns groups: active (current order), **Paused**, **Achieved**. Empty groups are omitted.
 - Achieved is collapsed by default with a count; open state lives in the UI store (not persisted), like Upcoming's groups.
-- Paused and achieved items keep swatch and bar; meta line reads `Paused · <focused> focused` or `Achieved 12 Oct · <focused> focused`.
+- Paused and achieved items keep swatch and bar; meta line reads `Paused · <focused> focused` or `Achieved Oct 12 · <focused> focused` (the app's `dayLabel` format).
 - `GoalsView` opens on the requested goal if live, else the first active goal, else the first live goal.
 
 ## Status actions (goal ⋯ menu)
