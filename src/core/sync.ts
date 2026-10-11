@@ -1,6 +1,7 @@
 import { dayLabel, todayISO } from './dates'
 import { pad2, plural } from './format'
 import type { EmberData, FocusLog, Goal, Settings, Task } from './model'
+import { repairGoal } from './goals'
 import { DATA_VERSION } from './persist'
 import { repairSettings } from './settings'
 
@@ -146,7 +147,7 @@ export function readSyncFile(text: string): SyncFileResult {
       ok: true,
       generation: f.generation,
       exportedAt: typeof f.exportedAt === 'string' ? f.exportedAt : null,
-      data: { goals: d.goals, tasks: d.tasks, logs: d.logs, settings },
+      data: { goals: d.goals.map(repairGoal), tasks: d.tasks, logs: d.logs, settings },
     }
   } catch {
     return { ok: false }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { STORAGE_KEY, loadData, readData, saveData } from './persist'
-import { dataFixture, taskFixture } from './test-fixtures'
+import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
 
 describe('persistence', () => {
   beforeEach(() => localStorage.clear())
@@ -63,6 +63,14 @@ describe('persistence', () => {
     expect(loaded.settings.session).toBe('25/5')
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...data, timer: { ...data.timer, speed: 'fast' } } }))
     expect(loadData()!.timer).toEqual(data.timer)
+  })
+
+  it('repairs goal statuses on load', () => {
+    const goal = { ...goalFixture('G', []), status: 'done', achievedOn: '2026-10-01' }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...dataFixture(), goals: [goal] } }))
+    const loaded = loadData()!.goals[0]
+    expect(loaded).not.toHaveProperty('status')
+    expect(loaded).not.toHaveProperty('achievedOn')
   })
 
   it('survives storage that throws', () => {

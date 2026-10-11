@@ -1,3 +1,4 @@
+import { repairGoal } from './goals'
 import type { EmberData } from './model'
 import { repairSettings } from './settings'
 import { idleTimer } from './timer'
@@ -29,7 +30,7 @@ function normalize(d: EmberData): EmberData {
   const base = idleTimer(settings.session, d.timer.phase === 'break' ? 'break' : 'focus')
   const t = { ...base, ...d.timer }
   const valid = positive(t.lengthSec) && positive(t.speed) && typeof t.leftSec === 'number' && Number.isFinite(t.leftSec)
-  return { ...d, settings, timer: valid ? t : base }
+  return { ...d, goals: d.goals.map(repairGoal), settings, timer: valid ? t : base }
 }
 
 /** Parse a stored JSON string; null when it isn't readable data of this version. */

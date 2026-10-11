@@ -252,6 +252,13 @@ describe('sync file', () => {
     expect(r.ok && r.data.settings).not.toHaveProperty('muted')
   })
 
+  it('repairs goal statuses from the file', () => {
+    const goals = [{ ...goalFixture('G', []), status: 'paused', achievedOn: '2026-10-01' }]
+    const r = readSyncFile(JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals, tasks: [], logs: [] } }))
+    expect(r.ok && r.data.goals[0]).toMatchObject({ status: 'paused' })
+    expect(r.ok && r.data.goals[0]).not.toHaveProperty('achievedOn')
+  })
+
   it('summarises live goals and tasks, and all focus sessions', () => {
     const s = shared({
       goals: [goalFixture('D3', []), { ...goalFixture('Old', []), deletedOn: '2026-09-01' }],

@@ -7,7 +7,15 @@ export type { ISODate }
 /** deletedOn (soft delete): hidden from live views, kept for history. updatedAt: last edit (sync merge). */
 export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null; updatedAt?: number }
 export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null; updatedAt?: number }
-export interface Goal { id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate; deletedOn?: ISODate | null; updatedAt?: number }
+export type GoalStatus = 'active' | 'paused' | 'achieved'
+export interface Goal {
+  id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate
+  /** Missing = active (active is never stored). */
+  status?: GoalStatus
+  /** Set only while achieved: the day the user confirmed it. */
+  achievedOn?: ISODate | null
+  deletedOn?: ISODate | null; updatedAt?: number
+}
 
 export interface Task {
   id: string

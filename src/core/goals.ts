@@ -1,8 +1,27 @@
 import type { ISODate } from './dates'
-import type { Goal, Milestone, Step, StepTarget } from './model'
+import type { Goal, GoalStatus, Milestone, Step, StepTarget } from './model'
 
 /** Soft-deleted items keep their data for history but drop out of every live view. */
 export const isLive = (x: { deletedOn?: ISODate | null }): boolean => !x.deletedOn
+
+const STATUSES: GoalStatus[] = ['active', 'paused', 'achieved']
+export const goalStatus = (g: Goal): GoalStatus => (STATUSES.includes(g.status as GoalStatus) ? (g.status as GoalStatus) : 'active')
+/** Live and active: the goals offered for focus (Working on, the picker). */
+export const isActiveGoal = (g: Goal): boolean => isLive(g) && goalStatus(g) === 'active'
+
+/** Saved or synced goals: an unknown status becomes active; achievedOn stays only on achieved goals. Valid goals come back as is. */
+export function repairGoal(g: Goal): Goal {
+  const status = goalStatus(g)
+  const badStatus = g.status !== undefined && (g.status !== status || status === 'active')
+  const strayDate = 'achievedOn' in g && status !== 'achieved'
+  if (!badStatus && !strayDate) return g
+  const { status: _s, achievedOn: _a, ...rest } = g
+  return status === 'active' ? rest : status === 'paused' ? { ...rest, status } : { ...rest, status, achievedOn: g.achievedOn ?? null }
+}
+
+/** Goals a task can link to: active and paused, plus its current goal if achieved (so editing never unlinks it). */
+export const goalOptions = (goals: Goal[], currentId: string | null = null): Goal[] =>
+  goals.filter((g) => isLive(g) && (goalStatus(g) !== 'achieved' || g.id === currentId))
 export const liveMilestones = (g: Goal): Milestone[] => g.milestones.filter(isLive)
 export const liveSteps = (m: Milestone): Step[] => m.steps.filter(isLive)
 

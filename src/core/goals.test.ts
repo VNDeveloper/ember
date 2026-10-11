@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findStep, goalColor, goalStats, isMilestoneDone, nextOpenStep, stepAfter, stepTarget } from './goals'
+import { findStep, goalColor, goalOptions, goalStats, goalStatus, isActiveGoal, isMilestoneDone, nextOpenStep, repairGoal, stepAfter, stepTarget } from './goals'
 import { goalFixture } from './test-fixtures'
 
 const d3 = () => goalFixture('D3', [
@@ -60,5 +60,34 @@ describe('goal derivations', () => {
     expect(goalColor(2)).toBe('var(--color-accent-300)')
     expect(goalColor(3)).toBe('var(--color-neutral-500)')
     expect(goalColor(4)).toBe('var(--color-accent)')
+  })
+})
+
+describe('goal status', () => {
+  const g = goalFixture('G', [['M', [['A', null]]]])
+  it('reads a missing or unknown status as active', () => {
+    expect(goalStatus(g)).toBe('active')
+    expect(goalStatus({ ...g, status: 'done' as never })).toBe('active')
+    expect(goalStatus({ ...g, status: 'paused' })).toBe('paused')
+  })
+  it('offers only live, active goals for focus', () => {
+    expect(isActiveGoal(g)).toBe(true)
+    expect(isActiveGoal({ ...g, status: 'paused' })).toBe(false)
+    expect(isActiveGoal({ ...g, status: 'achieved' })).toBe(false)
+    expect(isActiveGoal({ ...g, deletedOn: '2026-09-01' })).toBe(false)
+  })
+  it('repairs an unknown status and a stray achievedOn, leaving valid goals untouched', () => {
+    expect(repairGoal(g)).toBe(g)
+    const ok = { ...g, status: 'achieved' as const, achievedOn: '2026-10-11' }
+    expect(repairGoal(ok)).toBe(ok)
+    expect(repairGoal({ ...g, status: 'done' as never })).not.toHaveProperty('status')
+    expect(repairGoal({ ...g, status: 'paused', achievedOn: '2026-10-11' })).not.toHaveProperty('achievedOn')
+  })
+  it('lets tasks link to active and paused goals, and keeps an achieved one already linked', () => {
+    const p = { ...goalFixture('P', []), status: 'paused' as const }
+    const a = { ...goalFixture('A', []), status: 'achieved' as const, achievedOn: '2026-10-01' }
+    const d = { ...goalFixture('D', []), deletedOn: '2026-09-01' }
+    expect(goalOptions([g, p, a, d]).map((x) => x.id)).toEqual(['G', 'P'])
+    expect(goalOptions([g, p, a, d], 'A').map((x) => x.id)).toEqual(['G', 'P', 'A'])
   })
 })
