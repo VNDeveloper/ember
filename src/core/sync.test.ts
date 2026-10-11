@@ -132,6 +132,13 @@ const shared = (patch: Partial<EmberData> = {}) => sharedPart(dataFixture(patch)
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id)
 
 describe('mergeData', () => {
+  it('merges a status change by the newer edit', () => {
+    const base = goalFixture('G', [])
+    const local = sharedPart(dataFixture({ goals: [{ ...base, status: 'paused', updatedAt: 5 }] }))
+    const remote = sharedPart(dataFixture({ goals: [{ ...base, status: 'achieved', achievedOn: '2026-10-11', updatedAt: 9 }] }))
+    expect(mergeData(local, remote).goals[0]).toMatchObject({ status: 'achieved', achievedOn: '2026-10-11' })
+  })
+
   it('keeps items that exist on one side only, Drive order first', () => {
     const m = mergeData(shared({ tasks: [taskFixture('A')] }), shared({ tasks: [taskFixture('B')] }))
     expect(ids(m.tasks)).toEqual(['B', 'A'])

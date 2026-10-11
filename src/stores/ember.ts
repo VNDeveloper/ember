@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { addDays, todayISO, type ISODate } from '../core/dates'
-import { findStep, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
+import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
 import type {
-  EmberData, FocusLog, Goal, Milestone, Phase, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
+  EmberData, FocusLog, Goal, GoalStatus, Milestone, Phase, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
@@ -197,16 +197,37 @@ export const useEmberStore = defineStore('ember', () => {
     if (!g || !name) return null
     const m: Milestone = { id: uid(), title: name, steps: [] }
     g.milestones.push(m)
+    reopenIfAchieved(g)
     return m
   }
 
   function addStep(goalId: string, msId: string, title: string): Step | null {
-    const m = goalById(goalId)?.milestones.find((x) => x.id === msId)
+    const g = goalById(goalId)
+    const m = g?.milestones.find((x) => x.id === msId)
     const name = title.trim()
-    if (!m || !name) return null
+    if (!g || !m || !name) return null
     const s: Step = { id: uid(), title: name, doneOn: null, estMin: 50 }
     m.steps.push(s)
+    reopenIfAchieved(g)
     return s
+  }
+
+  /** Active is stored as no status; achievedOn is kept only while achieved (first date wins). */
+  function setGoalStatus(goalId: string, status: GoalStatus) {
+    const g = goalById(goalId)
+    if (!g || !isLive(g) || goalStatus(g) === status) return
+    if (status === 'achieved') {
+      g.status = 'achieved'
+      g.achievedOn = today.value
+      return
+    }
+    delete g.achievedOn
+    if (status === 'paused') g.status = 'paused'
+    else delete g.status
+  }
+  /** Adding work to an achieved goal reopens it: there is more to do. */
+  function reopenIfAchieved(g: Goal) {
+    if (goalStatus(g) === 'achieved') setGoalStatus(g.id, 'active')
   }
 
   function setOutcome(goalId: string, text: string) {
@@ -358,7 +379,7 @@ export const useEmberStore = defineStore('ember', () => {
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
     snapshot, replaceData, restore, applyShared, eraseAll, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
-    addGoal, addMilestone, addStep, setOutcome, toggleStep, completeSelected,
+    addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected,
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,

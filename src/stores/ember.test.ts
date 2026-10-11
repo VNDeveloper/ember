@@ -591,3 +591,48 @@ describe('sync support', () => {
     expect(localStorage.getItem(`${STORAGE_KEY}:before-restore`)).toContain('Review PR')
   })
 })
+
+describe('goal status', () => {
+  it('pauses, resumes, achieves and reopens, dating only the achievement', () => {
+    const store = storeWith()
+    store.setGoalStatus('D3', 'paused')
+    expect(store.goals[0]).toMatchObject({ status: 'paused' })
+    store.setGoalStatus('D3', 'achieved')
+    expect(store.goals[0]).toMatchObject({ status: 'achieved', achievedOn: '2026-09-23' })
+    store.setGoalStatus('D3', 'active')
+    expect(store.goals[0]).not.toHaveProperty('status')
+    expect(store.goals[0]).not.toHaveProperty('achievedOn')
+  })
+
+  it('keeps the first achieved date when marked again', () => {
+    const store = storeWith()
+    store.setGoalStatus('D3', 'achieved')
+    vi.setSystemTime(NOW + 3 * 864e5)
+    store.tick()
+    store.setGoalStatus('D3', 'achieved')
+    expect(store.goals[0].achievedOn).toBe('2026-09-23')
+  })
+
+  it('reopens an achieved goal when a step or milestone is added, not when a step is unticked', () => {
+    const store = storeWith()
+    store.setGoalStatus('D3', 'achieved')
+    store.toggleStep(LINE)
+    store.toggleStep(LINE)
+    expect(store.goals[0].status).toBe('achieved')
+    store.addStep('D3', 'D3/Motion', 'Springs')
+    expect(store.goals[0]).not.toHaveProperty('status')
+    store.setGoalStatus('D3', 'achieved')
+    store.addMilestone('D3', 'Polish')
+    expect(store.goals[0]).not.toHaveProperty('status')
+  })
+
+  it('ignores missing or deleted goals and keeps the timer selection on pause', () => {
+    const store = storeWith({ selection: LINE })
+    store.setGoalStatus('nope', 'paused')
+    store.setGoalStatus('D3', 'paused')
+    expect(store.selection).toEqual(LINE)
+    store.deleteGoal('D3')
+    store.setGoalStatus('D3', 'achieved')
+    expect(store.goals[0].status).toBe('paused')
+  })
+})
