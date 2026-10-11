@@ -1,7 +1,7 @@
-import { dayLabel, type ISODate } from './dates'
-import { fmtM, pad2 } from './format'
+import { dayLabel, diffDays, type ISODate } from './dates'
+import { fmtM, pad2, plural } from './format'
 import { goalColor, goalStats, goalStatus, isLive, isMilestoneDone, liveMilestones, liveSteps, stepTarget } from './goals'
-import type { Goal, GoalStatus, Selection, Step, StepTarget, Task } from './model'
+import type { FocusLog, Goal, GoalStatus, Selection, Step, StepTarget, Task } from './model'
 import { sameTarget } from './model'
 
 const SESSION = 25
@@ -152,5 +152,24 @@ export function finishLine(g: Goal): { reached: boolean; title: string; text: st
     reached,
     title: reached ? 'Finish line — reached' : 'Finish line',
     text: g.outcome || 'Describe what done looks like above.',
+  }
+}
+
+export interface AchievedSummary { outcome: string; span: string; focused: string; sessions: number; steps: number; milestones: number }
+
+/** What it took: start to achieved day, and the focus sessions on the goal's live steps. */
+export function achievedSummary(g: Goal, logs: FocusLog[]): AchievedSummary {
+  const ids = new Set(allSteps(g).map((s) => s.id))
+  const mine = logs.filter((l) => l.target?.kind === 'step' && ids.has(l.target.stepId))
+  const on = g.achievedOn ?? g.createdAt
+  const days = diffDays(on, g.createdAt)
+  const st = goalStats(g)
+  return {
+    outcome: g.outcome,
+    span: `${dayLabel(g.createdAt)} → ${dayLabel(on)} · ${days === 0 ? 'same day' : plural(days, 'day')}`,
+    focused: fmtM(mine.reduce((a, l) => a + l.min, 0)),
+    sessions: mine.length,
+    steps: st.done,
+    milestones: st.milestonesDone,
   }
 }

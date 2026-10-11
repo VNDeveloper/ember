@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { finishLine, goalKicker, goalLedger, goalList, goalTasks, roadmap, sessionBlocks } from './goalView'
+import { achievedSummary, finishLine, goalKicker, goalLedger, goalList, goalTasks, roadmap, sessionBlocks } from './goalView'
 import { goalColor } from './goals'
 import { tallyLogs } from './tally'
 import { d3Fixture, goalFixture, stepRef, taskFixture } from './test-fixtures'
@@ -98,5 +98,23 @@ describe('finishLine', () => {
     const done = { ...goalFixture('Done', [['M', [['A', '2026-09-01']]]]), outcome: 'Ship it' }
     expect(finishLine(done)).toEqual({ reached: true, title: 'Finish line — reached', text: 'Ship it' })
     expect(finishLine(goalFixture('Empty', [])).reached).toBe(false)
+  })
+})
+
+describe('achievedSummary', () => {
+  it('sums the effort from start to the achieved day', () => {
+    const done = { ...goal, outcome: 'Ship a chart', status: 'achieved' as const, achievedOn: '2026-10-12' }
+    expect(achievedSummary(done, logs)).toEqual({
+      outcome: 'Ship a chart', span: 'Jan 1 → Oct 12 · 284 days', focused: '2h 5m', sessions: 5, steps: 2, milestones: 1,
+    })
+  })
+  it('says same day when started and achieved together', () => {
+    const quick = { ...goalFixture('Q', []), status: 'achieved' as const, achievedOn: '2026-01-01' }
+    expect(achievedSummary(quick, []).span).toBe('Jan 1 → Jan 1 · same day')
+  })
+  it('counts only sessions on the goal\'s live steps', () => {
+    const done = { ...goal, status: 'achieved' as const, achievedOn: '2026-10-12' }
+    const other = { ...logs[0], id: 'x', target: { kind: 'task' as const, taskId: 'T' } }
+    expect(achievedSummary(done, [...logs, other]).sessions).toBe(5)
   })
 })

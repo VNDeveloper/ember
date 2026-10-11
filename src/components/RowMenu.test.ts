@@ -70,4 +70,14 @@ describe('RowMenu', () => {
     expect(style()).toMatchObject({ top: '', bottom: '64px' })
     w.unmount()
   })
+
+  it('shows extra items between Edit and Delete and reports the one picked', async () => {
+    const w = mount(RowMenu, { props: { menuKey: 'goal:g', label: 'G', extra: [{ key: 'pause', label: 'Pause' }] }, attachTo: document.body })
+    await w.find('.rmn-trigger').trigger('click')
+    expect(w.findAll('[role="menuitem"]').map((b) => b.text())).toEqual(['Edit', 'Pause', 'Delete'])
+    await w.find('.rmn-pause').trigger('click')
+    expect(w.emitted('select')).toEqual([['pause']])
+    expect(useUiStore().menuFor).toBeNull()
+    w.unmount()
+  })
 })

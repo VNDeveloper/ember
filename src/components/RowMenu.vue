@@ -4,8 +4,9 @@ import { computed, nextTick, onBeforeUnmount, ref, watch, type CSSProperties } f
 import { placeMenu } from '../core/menuPlacement'
 import { useUiStore } from '../stores/ui'
 
-const props = defineProps<{ menuKey: string; label: string }>()
-const emit = defineEmits<{ delete: [e: Event] }>()
+/** extra: items between Edit and Delete (e.g. a goal's Pause); picking one emits select with its key. */
+const props = defineProps<{ menuKey: string; label: string; extra?: { key: string; label: string }[] }>()
+const emit = defineEmits<{ delete: [e: Event]; select: [key: string] }>()
 const ui = useUiStore()
 
 const root = ref<HTMLElement | null>(null)
@@ -33,6 +34,10 @@ const follow = (on: boolean) => {
 }
 
 const toggle = () => { ui.menuFor = open.value ? null : props.menuKey }
+function pick(key: string) {
+  ui.menuFor = null
+  emit('select', key)
+}
 function onDelete(e: Event) {
   ui.menuFor = null
   emit('delete', e)
@@ -87,6 +92,7 @@ onBeforeUnmount(() => {
     </button>
     <div v-if="open" ref="menu" class="rmn-menu" role="menu" :style="placement">
       <button ref="first" role="menuitem" class="rmn-item rmn-edit" @click="ui.startEdit(menuKey)">Edit</button>
+      <button v-for="x in extra ?? []" :key="x.key" role="menuitem" class="rmn-item" :class="`rmn-${x.key}`" @click="pick(x.key)">{{ x.label }}</button>
       <button role="menuitem" class="rmn-item rmn-delete" :aria-label="`Delete “${label}”`" @click="onDelete">Delete</button>
     </div>
   </div>

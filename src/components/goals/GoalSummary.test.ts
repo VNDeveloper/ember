@@ -56,4 +56,49 @@ describe('GoalSummary', () => {
     expect(ember.goals[0].deletedOn).toBe('2026-09-23')
     expect(useUiStore().undo?.record.label).toBe('Deleted goal “D3 charts”')
   })
+
+  describe('status', () => {
+    const menu = async (w: ReturnType<typeof mount>) => {
+      await w.find('.rmn-trigger').trigger('click')
+      return w.findAll('[role="menuitem"]').map((b) => b.text())
+    }
+
+    it('offers Pause and Mark achieved while active, Resume once paused, Reopen once achieved', async () => {
+      const { w, ember } = setup()
+      expect(await menu(w)).toEqual(['Edit', 'Pause', 'Mark achieved', 'Delete'])
+      await w.find('.rmn-pause').trigger('click')
+      expect(ember.goals[0].status).toBe('paused')
+      expect(await menu(w)).toEqual(['Edit', 'Resume', 'Mark achieved', 'Delete'])
+      await w.find('.rmn-resume').trigger('click')
+      expect(ember.goals[0]).not.toHaveProperty('status')
+      await menu(w)
+      await w.find('.rmn-achieve').trigger('click')
+      expect(ember.goals[0]).toMatchObject({ status: 'achieved', achievedOn: '2026-09-23' })
+      expect(await menu(w)).toEqual(['Edit', 'Reopen', 'Delete'])
+      await w.find('.rmn-reopen').trigger('click')
+      expect(ember.goals[0]).not.toHaveProperty('status')
+    })
+
+    it('shows the achieved summary and pops its flag when achieved here', async () => {
+      const { w, ember } = setup()
+      expect(w.find('.gs-achieved').exists()).toBe(false)
+      ember.setOutcome('D3', 'Ship a chart')
+      ember.setGoalStatus('D3', 'achieved')
+      await nextTick()
+      expect(w.find('.gs-ach-outcome').text()).toBe('Ship a chart')
+      expect(w.find('.gs-ach-span').text()).toBe('Jan 1 → Sep 23 · 265 days')
+      expect(w.findAll('.gs-ach-stats > span').map((s) => s.text())).toEqual(['2h 5m focused', '5 sessions', '2 steps', '1 milestone'])
+      expect(w.find('.gs-ach-flag').classes().some((c) => c.startsWith('anim-pop'))).toBe(true)
+    })
+
+    it('does not pop for a goal that was already achieved', () => {
+      setActivePinia(createPinia())
+      const ember = useEmberStore()
+      const { goal, logs } = d3Fixture()
+      ember.replaceData(dataFixture({ goals: [{ ...goal, status: 'achieved', achievedOn: '2026-09-20' }], logs }))
+      const w = mount(GoalSummary, { props: { goal: ember.goals[0] } })
+      expect(w.find('.gs-ach-outcome').text()).toBe('Goal achieved.')
+      expect(w.find('.gs-ach-flag').classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
+    })
+  })
 })
