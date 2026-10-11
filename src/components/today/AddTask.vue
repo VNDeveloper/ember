@@ -2,7 +2,7 @@
 import { Flag, Plus } from 'lucide-vue-next'
 import { onMounted, watch } from 'vue'
 import { addDays } from '../../core/dates'
-import { isLive } from '../../core/goals'
+import { goalOptions } from '../../core/goals'
 import { useEmberStore, type When } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 
@@ -69,7 +69,7 @@ function onEnter(e: KeyboardEvent) {
       </button>
       <select v-model="draft.goalId" class="input input-sm at-goal" aria-label="Link to a goal">
         <option value="">No goal</option>
-        <option v-for="g in ember.goals.filter(isLive)" :key="g.id" :value="g.id">{{ g.title }}</option>
+        <option v-for="g in goalOptions(ember.goals)" :key="g.id" :value="g.id">{{ g.title }}</option>
       </select>
     </div>
   </div>

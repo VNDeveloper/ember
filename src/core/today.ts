@@ -1,6 +1,6 @@
 import { addDays, dayLabel, weekdayLong, type ISODate } from './dates'
 import { pad2, plural } from './format'
-import { goalColor, goalStats, isLive, liveMilestones, liveSteps, nextOpenStep, stepTarget } from './goals'
+import { goalColor, goalStats, isActiveGoal, isLive, liveMilestones, liveSteps, nextOpenStep, stepTarget } from './goals'
 import type { Goal, Selection, StepTarget, Task } from './model'
 import { sameTarget } from './model'
 
@@ -99,7 +99,7 @@ export interface WorkingOnCard {
 
 export function workingOn(goals: Goal[], selection: Selection): WorkingOnCard[] {
   return goals.flatMap((g, gi) => {
-    if (!isLive(g)) return []
+    if (!isActiveGoal(g)) return []
     const next = nextOpenStep(g)
     if (!next) return []
     const target = stepTarget(g, next.milestone, next.step)

@@ -1,6 +1,6 @@
 import { addDays, dayLabel, type ISODate } from './dates'
 import { pad2 } from './format'
-import { goalColor, isLive, liveSteps, nextOpenStep, stepTarget } from './goals'
+import { goalColor, isActiveGoal, isLive, liveSteps, nextOpenStep, stepTarget } from './goals'
 import type { Goal, Selection, Target, Task } from './model'
 import { sameTarget, targetKey } from './model'
 
@@ -37,7 +37,7 @@ export function pickerSections(
   let sections: PickerSection[]
   if (tab === 'goals') {
     sections = goals.map((g, gi) => {
-      if (!isLive(g)) return { label: g.title, items: [] }
+      if (!isActiveGoal(g)) return { label: g.title, items: [] }
       const next = nextOpenStep(g)
       if (!next) return { label: g.title, items: [] }
       const m = next.milestone

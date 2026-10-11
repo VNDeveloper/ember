@@ -65,3 +65,12 @@ describe('pickerSections — goals', () => {
     expect(pickerSections(goals, tasks, null, 'goals', 'zzz', TODAY)).toEqual([])
   })
 })
+
+describe('pickerSections — paused and achieved goals', () => {
+  it('offers steps only from active goals', () => {
+    const a = goalFixture('A', [['M', [['A1', null]]]])
+    const b = { ...goalFixture('B', [['M', [['B1', null]]]]), status: 'achieved' as const, achievedOn: '2026-09-01' }
+    const p = { ...goalFixture('P', [['M', [['P1', null]]]]), status: 'paused' as const }
+    expect(pickerSections([a, b, p], [], null, 'goals', '', TODAY).map((x) => x.label)).toEqual(['A'])
+  })
+})

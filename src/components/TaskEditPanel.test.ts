@@ -88,3 +88,25 @@ describe('TaskEditPanel', () => {
     w.unmount()
   })
 })
+
+describe('TaskEditPanel goal links', () => {
+  function mountWith(goalId: string | null) {
+    setActivePinia(createPinia())
+    const ember = useEmberStore()
+    const done = { ...goalFixture('Done', []), status: 'achieved' as const, achievedOn: '2026-09-01' }
+    const rest = { ...goalFixture('Rest', []), status: 'paused' as const }
+    ember.replaceData(dataFixture({ goals: [goalFixture('D3', []), done, rest], tasks: [taskFixture('T', { goalId })] }))
+    useUiStore().startEdit('task:T')
+    return mount(TaskEditPanel, { props: { task: ember.tasks[0] }, attachTo: document.body })
+  }
+
+  it('offers active and paused goals, plus an achieved goal the task is already linked to', () => {
+    const free = mountWith(null)
+    expect(free.findAll('.ep-goal option').map((o) => o.text())).toEqual(['No goal', 'D3', 'Rest'])
+    free.unmount()
+    const linked = mountWith('Done')
+    expect(linked.findAll('.ep-goal option').map((o) => o.text())).toEqual(['No goal', 'D3', 'Done', 'Rest'])
+    expect((linked.find('.ep-goal').element as HTMLSelectElement).value).toBe('Done')
+    linked.unmount()
+  })
+})

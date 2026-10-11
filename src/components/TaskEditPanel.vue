@@ -2,7 +2,7 @@
 import { Flag } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { addDays, type ISODate } from '../core/dates'
-import { isLive } from '../core/goals'
+import { goalOptions } from '../core/goals'
 import type { Task } from '../core/model'
 import { useEmberStore, type When } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
@@ -22,7 +22,7 @@ const title = ref(props.task.title)
 const when = ref<When>(startWhen)
 const date = ref<ISODate>(original ?? addDays(today, 2))
 const deadline = ref(props.task.deadline)
-const liveGoals = computed(() => ember.goals.filter(isLive))
+const liveGoals = computed(() => goalOptions(ember.goals, props.task.goalId))
 const startGoal = props.task.goalId && liveGoals.value.some((g) => g.id === props.task.goalId) ? props.task.goalId : ''
 const goalId = ref(startGoal)
 const tag = ref(props.task.tag)

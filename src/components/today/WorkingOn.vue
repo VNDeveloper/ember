@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isLive } from '../../core/goals'
+import { isActiveGoal, isLive } from '../../core/goals'
 import { ArrowRight, Timer } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { workingOn } from '../../core/today'
@@ -9,6 +9,11 @@ import { useUiStore } from '../../stores/ui'
 const ember = useEmberStore()
 const ui = useUiStore()
 const cards = computed(() => workingOn(ember.goals, ember.selection))
+const emptyText = computed(() => {
+  if (!ember.goals.some(isLive)) return 'No goals yet. Add one on the Goals tab.'
+  if (!ember.goals.some(isActiveGoal)) return 'No active goals. Resume one on the Goals tab.'
+  return 'No goal has an open step. Add steps on the Goals tab.'
+})
 </script>
 
 <template>
@@ -46,7 +51,7 @@ const cards = computed(() => workingOn(ember.goals, ember.selection))
         </div>
       </div>
     </div>
-    <p v-else class="muted wo-empty">{{ ember.goals.some(isLive) ? 'No goal has an open step. Add steps on the Goals tab.' : 'No goals yet. Add one on the Goals tab.' }}</p>
+    <p v-else class="muted wo-empty">{{ emptyText }}</p>
   </section>
 </template>
 

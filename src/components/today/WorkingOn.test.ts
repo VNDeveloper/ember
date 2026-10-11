@@ -73,4 +73,10 @@ describe('WorkingOn', () => {
     const { w } = setup([])
     expect(w.find('.wo-empty').text()).toBe('No goals yet. Add one on the Goals tab.')
   })
+
+  it('says when every goal is paused or achieved', () => {
+    const { w } = setup([{ ...goalFixture('D3', [['M', [['A', null]]]]), status: 'paused' }])
+    expect(w.findAll('.wo-card')).toHaveLength(0)
+    expect(w.find('.wo-empty').text()).toBe('No active goals. Resume one on the Goals tab.')
+  })
 })

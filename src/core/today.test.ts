@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StepTarget, Task } from './model'
+import { goalColor } from './goals'
 import { goalFixture, taskFixture } from './test-fixtures'
 import { isLate, taskNote, todayList, upcomingGroups, upcomingSummary, workingOn } from './today'
 
@@ -103,6 +104,15 @@ describe('upcomingGroups', () => {
 })
 
 describe('workingOn', () => {
+  it('leaves out paused and achieved goals, keeping colours by position', () => {
+    const a = goalFixture('A', [['M', [['A1', null]]]])
+    const b = { ...goalFixture('B', [['M', [['B1', null]]]]), status: 'paused' as const }
+    const c = goalFixture('C', [['M', [['C1', null]]]])
+    const cards = workingOn([a, b, c], null)
+    expect(cards.map((x) => x.goalId)).toEqual(['A', 'C'])
+    expect(cards[1].swatch).toBe(goalColor(2))
+  })
+
   const goals = [
     goalFixture('D3', [['First charts', [['Bar', '2026-09-01'], ['Line', null], ['Scatter', null]]], ['Motion', [['Easing', null]]]]),
     goalFixture('Finished', [['Only', [['A', '2026-09-01']]]]),

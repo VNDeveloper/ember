@@ -89,4 +89,16 @@ describe('AddTask', () => {
     await nextTick()
     expect(useUiStore().taskDraft.date).toBe('2026-09-28')
   })
+
+  it('links new tasks to active and paused goals only', () => {
+    setActivePinia(createPinia())
+    const ember = useEmberStore()
+    ember.replaceData(dataFixture({ goals: [
+      goalFixture('D3', []),
+      { ...goalFixture('Rest', []), status: 'paused' },
+      { ...goalFixture('Done', []), status: 'achieved', achievedOn: '2026-09-01' },
+    ] }))
+    const w = mount(AddTask)
+    expect(w.findAll('.at-goal option').map((o) => o.text())).toEqual(['No goal', 'D3', 'Rest'])
+  })
 })
