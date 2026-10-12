@@ -9,6 +9,7 @@ import { useUiStore } from '../../stores/ui'
 import { popClass } from '../anim'
 import RowMenu from '../RowMenu.vue'
 import TitleEditPanel from '../TitleEditPanel.vue'
+import GoalResources from './GoalResources.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -93,6 +94,7 @@ watch(() => [props.goal.id, status.value] as const, ([id, s], [pid, ps]) => {
         @input="onOutcome"
       ></textarea>
     </div>
+    <GoalResources :goal="goal" />
     <div class="gs-stats">
       <div v-for="s in stats" :key="s.label" class="gs-stat">
         <div class="label">{{ s.label }}</div>

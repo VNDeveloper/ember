@@ -23,6 +23,11 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('GoalsView', () => {
+  it('shows the resources strip under the readme', () => {
+    const w = setup(two())
+    expect(w.find('.gs-readme + .goal-resources').exists()).toBe(true)
+  })
+
   it('shows the selected goal', () => {
     const w = setup(two(), 'Spanish')
     expect(w.find('.gs-title').text()).toBe('Spanish')
