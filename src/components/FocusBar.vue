@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ChevronDown, Pause, Play, Scan } from 'lucide-vue-next'
+import { ChevronDown, Link2, Pause, Play, Scan } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { clock, fmtM, plural } from '../core/format'
-import { describeSelection, targetTitle } from '../core/selection'
+import { goalResources } from '../core/resources'
+import { describeSelection, selectionGoalId, targetTitle } from '../core/selection'
 import { canReset, phaseLabel, progress, startLabel } from '../core/timer'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
@@ -11,6 +12,9 @@ const ember = useEmberStore()
 const ui = useUiStore()
 
 const info = computed(() => describeSelection(ember.goals, ember.tasks, ember.selection, ember.tally.spent))
+/** The selected goal's in-use resources, one click away while focusing. */
+const goalId = computed(() => selectionGoalId(ember.goals, ember.tasks, ember.selection))
+const res = computed(() => (goalId.value ? goalResources(ember.resources, goalId.value) : []))
 const state = computed(() => {
   if (ember.timer.phase === 'break') return 'break'
   return ember.timer.running ? 'focusing' : 'idle'
@@ -35,6 +39,12 @@ const toastText = computed(() => {
           <ChevronDown :size="16" :stroke-width="2.5" />
         </button>
         <span class="fb-sub">{{ info.sub }}</span>
+        <span v-if="res.length" class="fb-res">
+          <Link2 :size="12" :stroke-width="2.5" aria-hidden="true" />
+          <span class="fb-res-count">{{ plural(res.length, 'resource') }} ·</span>
+          <a v-for="r in res.slice(0, 3)" :key="r.id" class="fb-res-link" :href="r.url" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>
+          <button v-if="res.length > 3" class="fb-res-more" :aria-label="`All ${res.length} resources`" @click="ui.openResources(goalId ?? 'all', 'using')">+{{ res.length - 3 }}</button>
+        </span>
       </div>
       <div class="fb-meta">
         <span v-if="ember.demo" class="tag tag-accent fb-demo" title="25 minutes run in about 25 seconds.">Demo speed</span>
@@ -89,6 +99,12 @@ const toastText = computed(() => {
 .fb-title span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fb-title svg { flex: none; }
 .fb-sub { font-size: 12px; color: var(--fb-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-res { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-3); min-width: 0; font-size: 12px; color: var(--fb-sub); }
+.fb-res svg { flex: none; }
+.fb-res-count { display: none; }
+.fb-res-link { font-weight: 700; color: inherit; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
+.fb-res-link:hover { color: var(--color-accent); text-decoration: underline; }
+.fb-res-more { padding: 0; border: 0; background: none; font-size: 12px; font-weight: 700; color: inherit; }
 .fb-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .fb-today { font-size: 13px; color: var(--fb-sub); white-space: nowrap; }
 .fb-actions { display: flex; gap: var(--space-2); }
@@ -108,6 +124,9 @@ const toastText = computed(() => {
 @media (max-width: 760px) {
   .fb-row { grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); }
   .fb-time { font-size: 32px; }
+  .fb-res { flex-wrap: nowrap; }
+  .fb-res-count { display: inline; white-space: nowrap; }
+  .fb-res-link ~ .fb-res-link, .fb-res-more { display: none; }
   .fb-meta { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: var(--space-2); }
   .fb-actions { grid-column: 1 / -1; flex-wrap: wrap; }
   .fb-toast { left: var(--space-4); max-width: calc(100% - 2 * var(--space-4)); }

@@ -2,8 +2,8 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { StepTarget } from '../core/model'
-import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
+import type { Resource, Selection, StepTarget } from '../core/model'
+import { dataFixture, goalFixture, resourceFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
 import FocusBar from './FocusBar.vue'
@@ -110,5 +110,41 @@ describe('FocusBar', () => {
     ember.tick(NOW + 25 * 60_000)
     await nextTick()
     expect(w.find('.fb-live').text()).toBe('Session done: +25m · Line')
+  })
+})
+
+describe('FocusBar — resources', () => {
+  function withResources(resources: Resource[], selection: Selection) {
+    setActivePinia(createPinia())
+    const ember = useEmberStore()
+    ember.replaceData(dataFixture({
+      goals: [goalFixture('D3', [['M', [['S', null]]]])],
+      tasks: [taskFixture('Loose')],
+      resources,
+      selection,
+    }))
+    return { w: mount(FocusBar), ember, ui: useUiStore() }
+  }
+  const step = { kind: 'step' as const, goalId: 'D3', msId: 'D3/M', stepId: 'D3/M/S' }
+  const rs = ['A', 'B', 'C', 'D'].map((t, i) => resourceFixture(t, { goalId: 'D3', createdAt: `2026-09-0${i + 1}` }))
+
+  it("links the selected goal's first three resources, then +N", async () => {
+    const { w, ui } = withResources(rs, step)
+    expect(w.findAll('.fb-res-link').map((a) => a.text())).toEqual(['A', 'B', 'C'])
+    expect(w.find('.fb-res-link').attributes()).toMatchObject({ target: '_blank', rel: 'noopener noreferrer' })
+    expect(w.find('.fb-res-count').text()).toBe('4 resources ·')
+    await w.find('.fb-res-more').trigger('click')
+    expect(ui).toMatchObject({ view: 'resources', resourceGoal: 'D3', resourceStatus: 'using' })
+  })
+
+  it('shows nothing without a goal, or when the goal is deleted', async () => {
+    expect(withResources(rs, { kind: 'task', taskId: 'Loose' }).w.find('.fb-res').exists()).toBe(false)
+    const { w, ember } = withResources(rs, step)
+    const rec = ember.deleteGoal('D3')!
+    await nextTick()
+    expect(w.find('.fb-res').exists()).toBe(false)
+    ember.undoDelete(rec)
+    await nextTick()
+    expect(w.findAll('.fb-res-link')).toHaveLength(3)
   })
 })
