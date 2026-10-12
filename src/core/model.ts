@@ -108,6 +108,7 @@ export interface EmberData {
   goals: Goal[]
   tasks: Task[]
   logs: FocusLog[]
+  resources: Resource[]
   selection: Selection
   timer: Timer
   settings: Settings

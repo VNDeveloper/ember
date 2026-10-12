@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { STORAGE_KEY, loadData, readData, saveData } from './persist'
-import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
+import { dataFixture, goalFixture, resourceFixture, taskFixture } from './test-fixtures'
 
 describe('persistence', () => {
   beforeEach(() => localStorage.clear())
@@ -9,6 +9,16 @@ describe('persistence', () => {
     const data = dataFixture({ tasks: [taskFixture('Water the plants')] })
     saveData(data)
     expect(loadData()).toEqual(data)
+  })
+
+  it('loads data saved before resources existed with an empty list, and repairs saved resources', () => {
+    const old: Record<string, unknown> = { ...dataFixture() }
+    delete old.resources
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: old }))
+    expect(loadData()!.resources).toEqual([])
+    const bad = { ...resourceFixture('X'), url: 'javascript:alert(1)' }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, data: { ...dataFixture(), resources: [resourceFixture('A'), bad] } }))
+    expect(loadData()!.resources.map((r) => r.id)).toEqual(['A'])
   })
 
   it('returns null when nothing is saved', () => {

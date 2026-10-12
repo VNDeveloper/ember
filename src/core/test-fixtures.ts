@@ -39,6 +39,7 @@ export function dataFixture(patch: Partial<EmberData> = {}): EmberData {
     goals: [],
     tasks: [],
     logs: [],
+    resources: [],
     selection: null,
     timer: idleTimer('25/5'),
     settings: { ...DEFAULT_SETTINGS },

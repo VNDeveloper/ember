@@ -178,6 +178,7 @@ export function buildSeed(now: number = Date.now()): EmberData {
     goals,
     tasks: [...history, ...tasks],
     logs: logs.sort((a, b) => a.at - b.at),
+    resources: [],
     selection,
     timer: idleTimer('25/5'),
     settings: { ...DEFAULT_SETTINGS },
@@ -186,5 +187,5 @@ export function buildSeed(now: number = Date.now()): EmberData {
 
 /** Nothing tracked yet: what "Delete data" leaves behind. Settings are preferences, so they stay. */
 export const emptyData = (settings: Settings): EmberData => ({
-  goals: [], tasks: [], logs: [], selection: null, timer: idleTimer(settings.session), settings,
+  goals: [], tasks: [], logs: [], resources: [], selection: null, timer: idleTimer(settings.session), settings,
 })

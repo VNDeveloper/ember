@@ -107,7 +107,7 @@ describe('emptyData', () => {
   it('has no goals, tasks, history or selection, an idle timer, and the given settings', () => {
     const settings = { ...DEFAULT_SETTINGS, session: '50/10' as const, wallWeeks: 20 }
     expect(emptyData(settings)).toEqual({
-      goals: [], tasks: [], logs: [], selection: null,
+      goals: [], tasks: [], logs: [], resources: [], selection: null,
       timer: { phase: 'focus', running: false, endsAt: null, leftSec: 3000, speed: 1, lengthSec: 3000 },
       settings,
     })

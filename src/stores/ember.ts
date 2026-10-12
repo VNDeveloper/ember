@@ -5,7 +5,7 @@ import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, step
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
 import type {
-  EmberData, FocusLog, Goal, GoalStatus, Milestone, Phase, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
+  EmberData, FocusLog, Goal, GoalStatus, Milestone, Phase, Resource, Selection, SessionLength, Settings, Step, StepTarget, Target, Task, Timer,
 } from '../core/model'
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
@@ -39,6 +39,7 @@ export const useEmberStore = defineStore('ember', () => {
   const goals = ref<Goal[]>(initial.goals)
   const tasks = ref<Task[]>(initial.tasks)
   const logs = ref<FocusLog[]>(initial.logs)
+  const resources = ref<Resource[]>(initial.resources)
   const selection = ref<Selection>(initial.selection)
   const timer = ref<Timer>(initial.timer)
   const settings = ref<Settings>(initial.settings)
@@ -68,6 +69,7 @@ export const useEmberStore = defineStore('ember', () => {
       goals: goals.value,
       tasks: tasks.value,
       logs: logs.value,
+      resources: resources.value,
       selection: selection.value,
       timer: timer.value,
       settings: settings.value,
@@ -86,6 +88,7 @@ export const useEmberStore = defineStore('ember', () => {
     goals.value = d.goals
     tasks.value = d.tasks
     logs.value = d.logs
+    resources.value = d.resources
     selection.value = d.selection
     timer.value = d.timer
     settings.value = d.settings
@@ -100,7 +103,7 @@ export const useEmberStore = defineStore('ember', () => {
     if (storageWritable.value) saveData(current)
   }
   if (read.status !== 'ok') persist()
-  watch([goals, tasks, logs, selection, timer, settings], persist, { deep: true })
+  watch([goals, tasks, logs, resources, selection, timer, settings], persist, { deep: true })
 
   // Another tab saved: adopt its data so our next save doesn't overwrite it.
   if (typeof window !== 'undefined') {
@@ -375,7 +378,7 @@ export const useEmberStore = defineStore('ember', () => {
   }
 
   return {
-    goals, tasks, logs, selection, timer, settings, now, completions, phaseEnded, lastDone, storageWritable,
+    goals, tasks, logs, resources, selection, timer, settings, now, completions, phaseEnded, lastDone, storageWritable,
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
     snapshot, replaceData, restore, applyShared, eraseAll, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
