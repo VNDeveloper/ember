@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, isWeekend } from './dates'
+import { addDays, diffDays, isWeekend } from './dates'
 import { findStep, nextOpenStep, stepTarget } from './goals'
 import type { StepTarget } from './model'
 import { targetKey } from './model'
@@ -95,6 +95,16 @@ describe('buildSeed', () => {
     const again = buildSeed(NOW)
     expect(again.tasks.length).toBe(seed.tasks.length)
     expect(again.logs.length).toBe(seed.logs.length)
+  })
+
+  it('includes sample resources linked to the sample goals, with one renewal due in 3 days', () => {
+    expect(seed.resources.length).toBe(12)
+    expect(new Set(seed.resources.map((r) => r.company)).size).toBe(8)
+    const plus = seed.resources.find((r) => r.title === 'Coursera Plus')!
+    expect(plus).toMatchObject({ type: 'membership', billing: 'month', price: 49 })
+    expect(diffDays(plus.renewsOn!, TODAY)).toBe(3)
+    const goalIds = new Set(seed.goals.map((g) => g.id))
+    for (const r of seed.resources) if (r.goalId) expect(goalIds.has(r.goalId)).toBe(true)
   })
 
   it('starts with an idle timer and default settings', () => {

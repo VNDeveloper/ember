@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { addDays, todayISO, type ISODate } from '../core/dates'
+import { detect, findDuplicate, normaliseUrl, shortLink } from '../core/companies'
 import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
@@ -9,6 +10,7 @@ import type {
 } from '../core/model'
 import { sameTarget } from '../core/model'
 import { STORAGE_KEY, parseStored, readData, saveBeforeRestore, saveData } from '../core/persist'
+import { nextRenewal } from '../core/resources'
 import { buildSeed, emptyData } from '../core/seed'
 import { stampChanges, withDeviceState, type SharedData } from '../core/sync'
 import { tallyLogs } from '../core/tally'
@@ -22,11 +24,14 @@ const demoInUrl = (): boolean =>
 
 export type DeleteKey =
   | { kind: 'task'; id: string }
+  | { kind: 'resource'; id: string }
   | { kind: 'step'; goalId: string; msId: string; stepId: string }
   | { kind: 'milestone'; goalId: string; msId: string }
   | { kind: 'goal'; goalId: string }
 export interface UndoRecord { label: string; key: DeleteKey; selection: Selection }
 export type TaskPatch = Partial<Pick<Task, 'title' | 'date' | 'deadline' | 'goalId' | 'tag'>>
+export type AddResult = { ok: true; id: string } | { ok: false; reason: 'invalid' } | { ok: false; reason: 'duplicate'; id: string }
+export type ResourcePatch = Partial<Pick<Resource, 'title' | 'url' | 'company' | 'type' | 'status' | 'goalId' | 'billing' | 'price' | 'renewsOn' | 'notes'>>
 
 export const useEmberStore = defineStore('ember', () => {
   const read = readData()
@@ -292,9 +297,68 @@ export const useEmberStore = defineStore('ember', () => {
     if (g && title.trim()) g.title = title.trim()
   }
 
+  // — resources —
+  const resourceById = (id: string): Resource | null => resources.value.find((r) => r.id === id) ?? null
+
+  function addResource(text: string, opts: { goalId?: string | null } = {}): AddResult {
+    const url = normaliseUrl(text)
+    if (!url) return { ok: false, reason: 'invalid' }
+    const dup = findDuplicate(url, resources.value)
+    if (dup) return { ok: false, reason: 'duplicate', id: dup.id }
+    const d = detect(url, resources.value)
+    const goal = opts.goalId ? goalById(opts.goalId) : null
+    const r: Resource = {
+      id: uid(), title: d.title || shortLink(url), url, company: d.company, type: d.type, status: 'using',
+      goalId: goal && isLive(goal) ? goal.id : null, billing: 'free', price: null, renewsOn: null, notes: '', createdAt: today.value,
+    }
+    resources.value.push(r)
+    return { ok: true, id: r.id }
+  }
+
+  function updateResource(id: string, patch: ResourcePatch) {
+    const r = resourceById(id)
+    if (!r) return
+    if (patch.url !== undefined) {
+      const url = normaliseUrl(patch.url)
+      if (url) r.url = url
+    }
+    if (patch.title !== undefined) r.title = patch.title.trim() || shortLink(r.url)
+    if (patch.company !== undefined && patch.company.trim()) r.company = patch.company.trim()
+    if (patch.type !== undefined) r.type = patch.type
+    if (patch.status !== undefined) r.status = patch.status
+    if (patch.goalId !== undefined) r.goalId = patch.goalId
+    if (patch.notes !== undefined) r.notes = patch.notes
+    if (patch.billing !== undefined) r.billing = patch.billing
+    if (patch.price !== undefined) r.price = patch.price
+    const renewsBefore = r.renewsOn
+    if (patch.renewsOn !== undefined) r.renewsOn = patch.renewsOn
+    // A paid cost needs a positive price; renewal dates belong to monthly and yearly costs only.
+    if (r.billing === 'free' || typeof r.price !== 'number' || !Number.isFinite(r.price) || r.price <= 0) {
+      r.billing = 'free'
+      r.price = null
+      r.renewsOn = null
+    } else if (r.billing === 'once') {
+      r.renewsOn = null
+    }
+    if (r.renewsOn !== renewsBefore) delete r.keptFor
+  }
+
+  /** Today's "Keep it": dismiss the reminder for the current renewal date only. */
+  function keepRenewal(id: string) {
+    const r = resourceById(id)
+    const next = r && isLive(r) ? nextRenewal(r, today.value) : null
+    if (r && next) r.keptFor = next
+  }
+
+  function markCancelled(id: string) {
+    const r = resourceById(id)
+    if (r && isLive(r)) r.status = 'dropped'
+  }
+
   // — delete (soft) and undo —
   function itemFor(key: DeleteKey): { deletedOn?: ISODate | null } | null {
     if (key.kind === 'task') return taskById(key.id)
+    if (key.kind === 'resource') return resourceById(key.id)
     const g = goalById(key.goalId)
     if (!g || key.kind === 'goal') return g
     const m = g.milestones.find((x) => x.id === key.msId) ?? null
@@ -323,6 +387,8 @@ export const useEmberStore = defineStore('ember', () => {
     const label = `Deleted milestone “${m?.title ?? ''}”${n ? ` and ${plural(n, 'step')}` : ''}`
     return softDelete({ kind: 'milestone', goalId, msId }, label)
   }
+
+  const deleteResource = (id: string) => softDelete({ kind: 'resource', id }, `Deleted “${resourceById(id)?.title ?? ''}”`)
 
   const deleteGoal = (goalId: string) =>
     softDelete({ kind: 'goal', goalId }, `Deleted goal “${goalById(goalId)?.title ?? ''}”`)
@@ -385,6 +451,7 @@ export const useEmberStore = defineStore('ember', () => {
     addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected,
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
+    resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,
   }
 })

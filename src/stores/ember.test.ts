@@ -4,7 +4,7 @@ import { nextTick } from 'vue'
 import type { StepTarget } from '../core/model'
 import { STORAGE_KEY, loadData, saveData } from '../core/persist'
 import { sharedPart } from '../core/sync'
-import { dataFixture, goalFixture, taskFixture } from '../core/test-fixtures'
+import { dataFixture, goalFixture, resourceFixture, taskFixture } from '../core/test-fixtures'
 import { useEmberStore, type NewTask } from './ember'
 
 const NOW = new Date(2026, 8, 23, 10, 0, 0).getTime()
@@ -634,5 +634,86 @@ describe('goal status', () => {
     store.deleteGoal('D3')
     store.setGoalStatus('D3', 'achieved')
     expect(store.goals[0].status).toBe('paused')
+  })
+})
+
+describe('resources', () => {
+  it('adds a pasted link with detected fields, the given goal, and today', () => {
+    const store = storeWith()
+    const r = store.addResource('  https://www.huggingface.co/learn/llm-course/?utm_source=x ', { goalId: 'D3' })
+    expect(r.ok).toBe(true)
+    expect(store.resources[0]).toMatchObject({
+      url: 'https://huggingface.co/learn/llm-course', title: 'Llm course', company: 'Hugging Face', type: 'course',
+      status: 'using', goalId: 'D3', billing: 'free', price: null, renewsOn: null, notes: '', createdAt: '2026-09-23',
+    })
+  })
+
+  it('titles a link with no usable slug by its short link, and ignores a goal that is not live', () => {
+    const store = storeWith()
+    store.addResource('youtu.be/dQw4w9WgXcQ', { goalId: 'missing' })
+    expect(store.resources[0]).toMatchObject({ title: 'youtu.be/dQw4w9WgXcQ', company: 'YouTube', goalId: null })
+  })
+
+  it('refuses invalid links and duplicates', () => {
+    const store = storeWith({ resources: [resourceFixture('Joins', { url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' })] })
+    expect(store.addResource('not a link')).toEqual({ ok: false, reason: 'invalid' })
+    expect(store.addResource('javascript:alert(1)')).toEqual({ ok: false, reason: 'invalid' })
+    expect(store.addResource('https://youtu.be/dQw4w9WgXcQ')).toEqual({ ok: false, reason: 'duplicate', id: 'Joins' })
+    expect(store.resources).toHaveLength(1)
+  })
+
+  it('edits fields and keeps the cost consistent', () => {
+    const store = storeWith({ resources: [resourceFixture('A')] })
+    store.updateResource('A', { billing: 'month', price: 49, renewsOn: '2026-10-15', type: 'membership', company: ' Coursera ' })
+    expect(store.resources[0]).toMatchObject({ billing: 'month', price: 49, renewsOn: '2026-10-15', type: 'membership', company: 'Coursera' })
+    store.updateResource('A', { billing: 'once' })
+    expect(store.resources[0]).toMatchObject({ billing: 'once', price: 49, renewsOn: null })
+    store.updateResource('A', { billing: 'free' })
+    expect(store.resources[0]).toMatchObject({ billing: 'free', price: null, renewsOn: null })
+    for (const price of [0, -5, Number.NaN, null]) {
+      store.updateResource('A', { billing: 'month', price, renewsOn: '2026-10-15' })
+      expect(store.resources[0]).toMatchObject({ billing: 'free', price: null, renewsOn: null })
+    }
+  })
+
+  it('falls back to the short link for a blank title, ignores a blank company and an invalid link', () => {
+    const store = storeWith({ resources: [resourceFixture('A', { url: 'https://example.com/a' })] })
+    store.updateResource('A', { title: '   ', company: '  ', url: 'javascript:alert(1)' })
+    expect(store.resources[0]).toMatchObject({ title: 'example.com/a', company: 'Example', url: 'https://example.com/a' })
+    store.updateResource('A', { url: 'www.example.com/b/' })
+    expect(store.resources[0].url).toBe('https://example.com/b')
+  })
+
+  it('soft-deletes with undo', () => {
+    const store = storeWith({ resources: [resourceFixture('A')] })
+    const rec = store.deleteResource('A')!
+    expect(rec.label).toBe('Deleted “A”')
+    expect(store.resources[0].deletedOn).toBe('2026-09-23')
+    store.undoDelete(rec)
+    expect(store.resources[0].deletedOn).toBeNull()
+    expect(store.deleteResource('missing')).toBeNull()
+  })
+
+  it('keeps a renewal for its current date, and marks a cancelled one dropped', () => {
+    const store = storeWith({ resources: [resourceFixture('Plus', { billing: 'month', price: 49, renewsOn: '2026-08-25' })] })
+    store.keepRenewal('Plus')
+    expect(store.resources[0].keptFor).toBe('2026-09-25')
+    store.markCancelled('Plus')
+    expect(store.resources[0].status).toBe('dropped')
+  })
+
+  it('clears a kept reminder when the renewal date is edited', () => {
+    const store = storeWith({ resources: [resourceFixture('Plus', { billing: 'month', price: 49, renewsOn: '2026-09-25', keptFor: '2026-09-25' })] })
+    store.updateResource('Plus', { renewsOn: '2026-09-26' })
+    expect(store.resources[0]).not.toHaveProperty('keptFor')
+  })
+
+  it('saves resources and stamps edits', async () => {
+    const store = storeWith({ resources: [resourceFixture('A')] })
+    store.updateResource('A', { notes: 'Week 3' })
+    await nextTick()
+    const saved = loadData()!
+    expect(saved.resources[0]).toMatchObject({ notes: 'Week 3' })
+    expect(typeof saved.resources[0].updatedAt).toBe('number')
   })
 })

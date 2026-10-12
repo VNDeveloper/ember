@@ -4,7 +4,7 @@ import {
 import { hashStr } from './format'
 import { nextOpenStep, stepTarget } from './goals'
 import { uid } from './ids'
-import type { EmberData, FocusLog, Goal, Settings, Target, Task } from './model'
+import type { Billing, EmberData, FocusLog, Goal, Resource, ResourceStatus, ResourceType, Settings, Target, Task } from './model'
 import { DEFAULT_SETTINGS } from './model'
 import { idleTimer } from './timer'
 
@@ -57,6 +57,23 @@ const GOALS: GoalSeed[] = [
     ['Studies', [['Ten skies'], ['Trees & foliage'], ['Water reflections']]],
     ['Final piece', [['Pick the photo'], ['Value sketch'], ['Paint it']]],
   ]],
+]
+
+// [title, url, company, type, status, goal index, billing, price, renews in days, notes]
+type ResourceSeed = [string, string, string, ResourceType, ResourceStatus, number | null, Billing, number | null, number | null, string]
+const RESOURCES: ResourceSeed[] = [
+  ['Coursera Plus', 'https://coursera.org/courseraplus', 'Coursera', 'membership', 'using', null, 'month', 49, 3, ''],
+  ['Information Visualization', 'https://coursera.org/search?query=information%20visualization', 'Coursera', 'course', 'using', 0, 'free', null, null, 'Week 3 of 5'],
+  ['LLM Course', 'https://huggingface.co/learn/llm-course', 'Hugging Face', 'course', 'using', null, 'free', null, null, 'Chapter 3: fine-tuning'],
+  ['all-MiniLM-L6-v2', 'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2', 'Hugging Face', 'model', 'using', null, 'free', null, null, ''],
+  ['D3 data joins, explained', 'https://youtube.com/results?search_query=d3+data+joins', 'YouTube', 'video', 'using', 0, 'free', null, null, ''],
+  ['Dreaming Spanish superbeginner playlist', 'https://youtube.com/@DreamingSpanish', 'YouTube', 'video', 'using', 1, 'free', null, null, ''],
+  ['Loose watercolour skies', 'https://youtube.com/results?search_query=loose+watercolour+skies', 'YouTube', 'video', 'later', 2, 'free', null, null, ''],
+  ['Premium', 'https://dreamingspanish.com', 'Dreaming Spanish', 'membership', 'using', 1, 'month', 8, 21, ''],
+  ['D3 gallery', 'https://observablehq.com/@d3/gallery', 'Observable', 'docs', 'using', 0, 'free', null, null, ''],
+  ['Annual membership', 'https://skillshare.com', 'Skillshare', 'membership', 'using', 2, 'year', 99, 100, ''],
+  ['Watercolour landscapes', 'https://domestika.org/en/search?query=watercolour+landscapes', 'Domestika', 'course', 'finished', 2, 'once', 9.99, null, ''],
+  ['D3.js masterclass', 'https://udemy.com/courses/search?q=d3.js', 'Udemy', 'course', 'dropped', 0, 'once', 12.99, null, 'Too slow, switched to Observable'],
 ]
 
 const HISTORY_TITLES = [
@@ -174,11 +191,18 @@ export function buildSeed(now: number = Date.now()): EmberData {
     }
   }
 
+  const resources: Resource[] = RESOURCES.map(([title, url, company, type, status, goal, billing, price, renewIn, notes], i) => ({
+    id: uid(), title, url, company, type, status,
+    goalId: goal == null ? null : goals[goal].id,
+    billing, price, renewsOn: renewIn == null ? null : addDays(today, renewIn), notes,
+    createdAt: addDays(today, -60 + i),
+  }))
+
   return {
     goals,
     tasks: [...history, ...tasks],
     logs: logs.sort((a, b) => a.at - b.at),
-    resources: [],
+    resources,
     selection,
     timer: idleTimer('25/5'),
     settings: { ...DEFAULT_SETTINGS },
