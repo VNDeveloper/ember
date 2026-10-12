@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EmberData, StepTarget } from '../core/model'
-import { dataFixture, goalFixture } from '../core/test-fixtures'
+import { dataFixture, goalFixture, resourceFixture } from '../core/test-fixtures'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
 import FocusMode from './FocusMode.vue'
@@ -405,6 +405,29 @@ describe('FocusMode', () => {
     const { w } = await setup()
     expect(w.find('.focus-mode').attributes()).toMatchObject({ role: 'dialog', 'aria-label': 'Focus mode' })
     for (const b of w.findAll('button')) expect(b.attributes('aria-label') || b.text()).toBeTruthy()
+    w.unmount()
+  })
+})
+
+describe('FocusMode — resources', () => {
+  it('toggles a panel of the goal’s resources; Esc closes it before Focus mode', async () => {
+    const { w, ui } = await setup({ resources: [resourceFixture('InfoVis', { goalId: 'D3', company: 'Coursera', notes: 'Week 3 of 5' })] })
+    expect(w.find('#fm-resources').exists()).toBe(false)
+    await w.find('.fm-res-btn').trigger('click')
+    expect(w.find('.fm-res-btn').attributes('aria-expanded')).toBe('true')
+    expect(w.find('.fm-res-head').text()).toBe('D3 · resources')
+    expect(w.find('.fm-res-link').attributes()).toMatchObject({ href: 'https://example.com/InfoVis', target: '_blank' })
+    expect(w.find('.fm-res-sub').text()).toBe('Coursera · Course · Week 3 of 5')
+    expect(ui.escape()).toBe(true)
+    await flushPromises()
+    expect(w.find('#fm-resources').exists()).toBe(false)
+    expect(ui.focusModeOpen).toBe(true)
+    w.unmount()
+  })
+
+  it('has no resources button when the goal has none', async () => {
+    const { w } = await setup()
+    expect(w.find('.fm-res-btn').exists()).toBe(false)
     w.unmount()
   })
 })

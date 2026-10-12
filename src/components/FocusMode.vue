@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Check, ChevronDown, CirclePause, CirclePlay, Pause, Play, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
+import { BookOpen, Check, ChevronDown, CirclePause, CirclePlay, ExternalLink, Pause, Play, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDialogFocus } from '../composables/useDialogFocus'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
 import { hideFocusUI, videoOnTimer } from '../core/focusMode'
 import { clampVolume } from '../core/settings'
 import { clock } from '../core/format'
-import { describeSelection, nextStepText } from '../core/selection'
+import type { Resource } from '../core/model'
+import { TYPE_LABEL, goalResources } from '../core/resources'
+import { describeSelection, nextStepText, selectionGoalId } from '../core/selection'
 import { phaseLabel, progress, startLabel } from '../core/timer'
 import { ytId } from '../core/youtube'
 import { useEmberStore } from '../stores/ember'
@@ -29,6 +31,15 @@ const itemSub = computed(() => nextStepText(ember.goals, ember.selection) || inf
 const canMarkDone = computed(() => !info.value.empty && ember.timer.phase === 'focus')
 const pct = computed(() => `${Math.round(Math.min(1, Math.max(0, progress(ember.timer, ember.now))) * 100_000) / 1000}%`)
 const startText = computed(() => startLabel(ember.timer))
+
+/** The selected goal's in-use resources, a click away without leaving the timer. */
+const resGoal = computed(() => {
+  const id = selectionGoalId(ember.goals, ember.tasks, ember.selection)
+  return id ? ember.goals.find((g) => g.id === id) ?? null : null
+})
+const res = computed(() => (resGoal.value ? goalResources(ember.resources, resGoal.value.id) : []))
+const resSub = (r: Resource) => [r.company, TYPE_LABEL[r.type], r.notes].filter(Boolean).join(' · ')
+watch(() => res.value.length, (n) => { if (!n) ui.fmResourcesOpen = false })
 
 const currentId = computed(() => ytId(ember.settings.youtubeUrl))
 const videoId = computed(() => (ember.settings.focusBg === 'video' ? currentId.value : null))
@@ -241,6 +252,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="fm-panel fm-bl fm-chrome">
+      <div v-if="ui.fmResourcesOpen && res.length" id="fm-resources" class="fm-panel fm-res" role="region" :aria-label="`${resGoal?.title} resources`">
+        <span class="fm-res-head">{{ resGoal?.title }} · resources</span>
+        <a v-for="r in res" :key="r.id" class="fm-res-link" :href="r.url" target="_blank" rel="noopener noreferrer">
+          <span class="fm-res-text"><span class="fm-res-title">{{ r.title }}</span><span class="fm-res-sub">{{ resSub(r) }}</span></span>
+          <ExternalLink :size="14" :stroke-width="2.5" aria-hidden="true" />
+        </a>
+      </div>
       <button ref="startButton" class="fm-icon fm-start" :aria-label="startText" :title="startText" @click="ember.startPause()">
         <Pause v-if="ember.timer.running" :size="18" :stroke-width="2.5" /><Play v-else :size="18" :stroke-width="2.5" />
       </button>
@@ -253,6 +271,18 @@ onBeforeUnmount(() => {
       <button class="fm-item" title="Change what you're focusing on" @click="ui.openPicker(ember.selection)">
         <span class="fm-item-line"><span class="fm-item-title">{{ info.title }}</span><ChevronDown :size="16" :stroke-width="2.5" /></span>
         <span class="fm-item-sub">{{ itemSub }}</span>
+      </button>
+      <button
+        v-if="res.length"
+        class="fm-icon fm-res-btn"
+        :class="{ 'is-on': ui.fmResourcesOpen }"
+        aria-label="Resources"
+        title="Resources for this goal"
+        aria-controls="fm-resources"
+        :aria-expanded="ui.fmResourcesOpen"
+        @click="ui.fmResourcesOpen = !ui.fmResourcesOpen"
+      >
+        <BookOpen :size="18" :stroke-width="2.25" />
       </button>
     </div>
   </div>
@@ -360,6 +390,21 @@ onBeforeUnmount(() => {
   width: min(380px, calc(100vw - 48px)); padding: var(--space-2);
   display: flex; align-items: center; gap: 8px;
 }
+.fm-res {
+  position: absolute; left: 0; bottom: calc(100% + var(--space-2)); width: 100%;
+  display: flex; flex-direction: column; padding: var(--space-2);
+}
+.fm-res-head { padding: 2px var(--space-2) 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.fm-res-link {
+  display: grid; grid-template-columns: minmax(0, 1fr) 14px; gap: var(--space-2); align-items: center;
+  padding: 6px var(--space-2); color: inherit; text-decoration: none;
+}
+.fm-res-link + .fm-res-link { border-top: 1px solid color-mix(in srgb, var(--fm-light) 20%, transparent); }
+.fm-res-link:hover { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
+.fm-res-text { display: flex; flex-direction: column; min-width: 0; }
+.fm-res-title { font: 700 14px/1.3 var(--font-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-res-sub { font-size: 12px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-res-btn.is-on { background: color-mix(in srgb, var(--fm-light) 16%, transparent); }
 .fm-item {
   flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; align-self: stretch; justify-content: center;
   padding: 0 var(--space-2); border: 0; background: none; color: inherit; text-align: left; cursor: pointer;
