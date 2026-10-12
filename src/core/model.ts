@@ -33,6 +33,37 @@ export interface Task {
   updatedAt?: number
 }
 
+export type ResourceType = 'course' | 'video' | 'docs' | 'model' | 'article' | 'tool' | 'membership' | 'other'
+export const RESOURCE_TYPES: ResourceType[] = ['course', 'video', 'docs', 'model', 'article', 'tool', 'membership', 'other']
+export type ResourceStatus = 'using' | 'later' | 'finished' | 'dropped'
+export const RESOURCE_STATUSES: ResourceStatus[] = ['using', 'later', 'finished', 'dropped']
+export type Billing = 'free' | 'once' | 'month' | 'year'
+export const BILLINGS: Billing[] = ['free', 'once', 'month', 'year']
+
+export interface Resource {
+  id: string
+  title: string
+  /** Always http(s), normalised (see core/companies normaliseUrl). */
+  url: string
+  company: string
+  type: ResourceType
+  status: ResourceStatus
+  goalId: string | null
+  billing: Billing
+  /** Pounds; null exactly when billing is 'free'. */
+  price: number | null
+  /** month/year only: a renewal date the user entered (later ones are derived from it). */
+  renewsOn: ISODate | null
+  /** The renewal date the user answered "Keep it" for, so that reminder stays dismissed. */
+  keptFor?: ISODate | null
+  notes: string
+  createdAt: ISODate
+  /** Soft delete: hidden from live views, kept for history. */
+  deletedOn?: ISODate | null
+  /** Last edit, epoch ms (sync merge: newer wins). Missing = oldest. */
+  updatedAt?: number
+}
+
 export interface TaskTarget { kind: 'task'; taskId: string }
 export interface StepTarget { kind: 'step'; goalId: string; msId: string; stepId: string }
 export type Target = TaskTarget | StepTarget

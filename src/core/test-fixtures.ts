@@ -1,5 +1,5 @@
 import { fromISO, type ISODate } from './dates'
-import type { EmberData, FocusLog, Goal, StepTarget, Target, Task } from './model'
+import type { EmberData, FocusLog, Goal, Resource, StepTarget, Target, Task } from './model'
 import { DEFAULT_SETTINGS } from './model'
 import { idleTimer } from './timer'
 
@@ -23,6 +23,15 @@ export function goalFixture(title: string, milestones: MilestoneSpec[]): Goal {
 
 export function taskFixture(title: string, patch: Partial<Task> = {}): Task {
   return { id: title, title, tag: 'Work', goalId: null, date: '2026-09-23', deadline: false, doneOn: null, ...patch }
+}
+
+/** id = title; a free, in-use course at example.com with no goal. */
+export function resourceFixture(title: string, patch: Partial<Resource> = {}): Resource {
+  return {
+    id: title, title, url: `https://example.com/${encodeURIComponent(title)}`, company: 'Example', type: 'course',
+    status: 'using', goalId: null, billing: 'free', price: null, renewsOn: null, notes: '', createdAt: '2026-09-01',
+    ...patch,
+  }
 }
 
 export function dataFixture(patch: Partial<EmberData> = {}): EmberData {
