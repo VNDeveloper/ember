@@ -73,7 +73,7 @@ export interface Resource {
   - **Group fields:** name, resource count, and the monthly cost of its in-use memberships and subscriptions.
   - **Row fields:** price text, renewal text, and whether the renewal is within 7 days.
 - **Money line.** `moneyLine(rs, today)` builds the one line under the title: *£65.25 a month on 3 subscriptions · Coursera Plus renews in 3 days*.
-  - The renewal part is red when it is within 7 days. Otherwise it is grey: *next: Premium on 2 Nov*.
+  - The renewal part is red when it is within 7 days. Otherwise it is grey: *next: Premium on Nov 2* (dates use the app's `dayLabel` format, "Oct 15", throughout).
   - The line is hidden when nothing has a recurring cost.
   - Wording: "subscriptions", because any type can recur. The mockup says "memberships"; the canvas will be updated to match.
 - **A goal's resources.** `goalResources(rs, goalId)`: the in-use resources linked to a goal, oldest first.
@@ -129,7 +129,7 @@ export interface Resource {
 - UI store (not persisted):
   - `resourceStatus`: default `'using'`; also `'later' | 'finished' | 'dropped' | 'all'`.
   - `resourceGoal`: `'all' | 'none' | goalId`.
-  - `justAdded`: an id or null.
+  - `highlight`: the row "Show it" points at. (The just-added card keeps its own state inside the add box.)
   - `fmResourcesOpen`.
 - `ui.editing` accepts `resource:<id>`.
 - `ui.escape()` closes the Focus mode resources panel before Focus mode itself.
@@ -145,7 +145,7 @@ export interface Resource {
     - a focused Title input;
     - buttons showing company, type, status, goal and cost, each of which opens the full edit panel for that resource;
     - **Done**, which closes the card, and **Undo**, which deletes the resource with the usual undo record.
-  - **Company field:** on an unknown site it offers `companySuggestions`, plus "Use ‹typed› as typed".
+  - **Company suggestions:** the edit panel's Company field offers `companySuggestions` through a native datalist (simpler and accessible; replaces the custom list in the mockup).
 - **Filters.** A status segmented control (Using, Later, Finished, Dropped, All) with counts that respect the goal filter. Next to it, a goal dropdown with All goals, each live goal that has resources, and No goal.
 - **`ResourceList.vue` (ledger).** One section per company, with a 2px rule between companies:
   - **Left column** (180–220px): the company name, plus "N resources · £X a month" when it has recurring costs.
@@ -154,7 +154,7 @@ export interface Resource {
 - **`ResourceRow.vue`:**
   - the title links to the resource in a new tab (`rel="noopener"`), with no link icon;
   - the second line shows the type tag, the goal swatch and name, the status (only in All) and the notes;
-  - the price column shows the price text, with a renewal line for recurring costs: red "Renews 15 Oct · in 3 days" within 7 days, grey "Renews 2 Nov" otherwise, adding the year when it differs from this year;
+  - the price column shows the price text, with a renewal line for recurring costs: red "Renews Oct 15 · in 3 days" within 7 days, grey "Renews Nov 2" otherwise, adding the year when it differs from this year;
   - the ⋯ menu (`RowMenu`) offers Edit and Delete.
 - **`ResourceEditPanel.vue`** (inline, like `TaskEditPanel`):
   - **Fields:** title, link, company with suggestions, type as a select, goal as a select, status (segmented), cost as Free / One-off / Monthly / Yearly (segmented), price in £ (only when paid), Renews on (only for month and year), notes.
