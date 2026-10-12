@@ -4,6 +4,8 @@ import { libraryKicker, liveResources, moneyLine } from '../../core/resources'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import ResourceAdd from './ResourceAdd.vue'
+import ResourceFilters from './ResourceFilters.vue'
+import ResourceList from './ResourceList.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -29,6 +31,10 @@ onBeforeUnmount(() => { ui.highlight = null })
       <p v-if="!any" class="rv-pitch">Keep the courses, videos, docs and models you learn from in one place, next to the goals they’re for.</p>
       <!-- One add box for both states, so the just-added card survives the first resource leaving the empty state. -->
       <ResourceAdd :goal-id="filterGoal" :large="!any" />
+      <template v-if="any">
+        <ResourceFilters />
+        <ResourceList />
+      </template>
       <template v-if="!any">
         <ol class="rv-how">
           <li>Ember fills in the company and the type from the link: Hugging Face, YouTube, Coursera, Udemy, GitHub, Kaggle and more.</li>
