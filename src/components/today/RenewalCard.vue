@@ -40,7 +40,7 @@ const covers = computed(() => {
   margin: var(--space-2) 0; padding: var(--space-3) var(--space-2);
   background: var(--color-surface); border: 2px solid var(--color-text);
 }
-.rc-icon { color: var(--color-accent-700); margin-top: 2px; }
+.rc-icon { color: var(--color-neutral-700); margin-top: 2px; }
 .rc-body { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .rc-text { display: flex; flex-direction: column; gap: 2px; }
 .rc-title { font-size: 14px; font-weight: 700; }

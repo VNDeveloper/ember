@@ -28,7 +28,7 @@ const SITES: Site[] = [
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i
 const DOMAINISH = /^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#:]|$)/i
 
-/** An http(s) link in one canonical form (lower-case host, no www, hash, utm_* or trailing slash), or null. */
+/** An http(s) link in one canonical form (lower-case host, no www, utm_* or trailing slash; the #part is kept), or null. */
 export function normaliseUrl(text: string): string | null {
   let s = text.trim()
   if (!s) return null
@@ -43,11 +43,13 @@ export function normaliseUrl(text: string): string | null {
     return null
   }
   if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname.includes('.')) return null
-  for (const k of [...u.searchParams.keys()]) if (k.toLowerCase().startsWith('utm_')) u.searchParams.delete(k)
   const host = u.hostname.toLowerCase().replace(/^www\./, '')
   const path = u.pathname.replace(/\/+$/, '')
-  const query = u.searchParams.toString()
-  return `${u.protocol}//${host}${u.port ? `:${u.port}` : ''}${path}${query ? `?${query}` : ''}`
+  // The query as written (so "?flag" stays "?flag"), minus tracking parameters.
+  const query = u.search.slice(1).split('&').filter((p) => p && !p.split('=')[0].toLowerCase().startsWith('utm_')).join('&')
+  // Kept: apps that route by #/page need it to open the right page.
+  const hash = u.hash.length > 1 ? u.hash : ''
+  return `${u.protocol}//${host}${u.port ? `:${u.port}` : ''}${path}${query ? `?${query}` : ''}${hash}`
 }
 
 export function hostOf(url: string): string {
@@ -120,11 +122,11 @@ export function detect(url: string, existing: Resource[]): Detected {
   return { company, type, title: titleFromPath(segs) }
 }
 
-/** What makes two links "the same": the video id for YouTube, else the normalised link. */
+/** What makes two links "the same": the video id for YouTube, else the normalised link without its #part. */
 export function linkKey(url: string): string {
   const site = siteFor(hostOf(url))
   const id = site?.company === 'YouTube' ? ytId(url) : null
-  return id ? `yt:${id}` : (normaliseUrl(url) ?? url)
+  return id ? `yt:${id}` : (normaliseUrl(url) ?? url).replace(/#.*$/, '')
 }
 
 export function findDuplicate(url: string, rs: Resource[]): Resource | null {

@@ -42,6 +42,10 @@ describe('repairResource', () => {
     expect(r).not.toHaveProperty('deletedOn')
   })
 
+  it('stores the normalised link, so a link saved without a scheme still opens the site', () => {
+    expect(repairResource({ ...resourceFixture('A'), url: 'www.example.com/x/' })!.url).toBe('https://example.com/x')
+  })
+
   it('repairs a list, and treats anything else as empty', () => {
     expect(repairResources([resourceFixture('A'), { id: 'bad' }]).map((r) => r.id)).toEqual(['A'])
     expect(repairResources(undefined)).toEqual([])

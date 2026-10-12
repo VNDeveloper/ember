@@ -81,6 +81,23 @@ describe('ResourceEditPanel', () => {
     expect(w.find('.re-save').attributes('disabled')).toBeUndefined()
   })
 
+  it('will not save a link that another resource already has', async () => {
+    const { w } = setup(resourceFixture('A'), [resourceFixture('B', { url: 'https://example.com/b' })])
+    await w.find('.re-url').setValue('https://www.example.com/b/')
+    expect(w.find('.re-url-error').text()).toBe('Already saved: B.')
+    expect(w.find('.re-save').attributes('disabled')).toBeDefined()
+    await w.find('.re-url').setValue('https://example.com/A')
+    expect(w.find('.re-url-error').exists()).toBe(false)
+  })
+
+  it('says why Save is off when a paid cost has no price', async () => {
+    const { w } = setup(resourceFixture('A'))
+    await w.find('.re-billing input[value="month"]').setValue()
+    expect(w.find('.re-price-hint').text()).toBe('Enter a price, or choose Free.')
+    await w.find('.re-price').setValue('8')
+    expect(w.find('.re-price-hint').exists()).toBe(false)
+  })
+
   it('explains what a membership does', async () => {
     const { w } = setup(resourceFixture('Coursera Plus', { company: 'Coursera' }))
     expect(w.find('.re-hint').exists()).toBe(false)

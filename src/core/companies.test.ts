@@ -6,7 +6,9 @@ describe('normaliseUrl', () => {
   it.each([
     ['https://www.HuggingFace.co/learn/llm-course/', 'https://huggingface.co/learn/llm-course'],
     ['  coursera.org/learn/machine-learning ', 'https://coursera.org/learn/machine-learning'],
-    ['https://example.com/a?utm_source=x&id=3#top', 'https://example.com/a?id=3'],
+    ['https://example.com/a?utm_source=x&id=3#top', 'https://example.com/a?id=3#top'],
+    ['https://example.com/a?flag&utm_medium=x', 'https://example.com/a?flag'],
+    ['https://app.example.com/#/course/42', 'https://app.example.com#/course/42'],
     ['http://example.com', 'http://example.com'],
     ['https://example.com:8080/x', 'https://example.com:8080/x'],
   ])('%s → %s', (input, out) => {
@@ -64,6 +66,7 @@ describe('duplicates', () => {
     const site = resourceFixture('Site', { url: 'https://example.com/a' })
     expect(findDuplicate('https://youtu.be/dQw4w9WgXcQ', [saved, site])?.id).toBe('Joins')
     expect(findDuplicate('https://www.example.com/a/?utm_source=x', [saved, site])?.id).toBe('Site')
+    expect(findDuplicate('https://example.com/a#section-2', [saved, site])?.id).toBe('Site')
     expect(findDuplicate('https://example.com/b', [saved, site])).toBeNull()
     expect(findDuplicate('https://example.com/a', [{ ...site, deletedOn: '2026-09-01' }])).toBeNull()
   })

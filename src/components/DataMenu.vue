@@ -37,7 +37,7 @@ function backUp() {
 }
 
 const summarize = (d: EmberData) =>
-  `${plural(d.goals.length, 'goal')} · ${plural(d.tasks.length, 'task')} · ${plural(d.logs.length, 'focus session')}`
+  `${plural(d.goals.length, 'goal')} · ${plural(d.tasks.length, 'task')} · ${plural(d.logs.length, 'focus session')} · ${plural(d.resources.length, 'resource')}`
 
 async function onFile() {
   const input = fileInput.value
@@ -120,7 +120,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
         <button class="btn btn-ghost dm-delete" @click="deleting = true">Delete data…</button>
       </template>
       <div v-else-if="deleting" class="dm-confirm dm-delete-confirm">
-        <p>Delete all tasks, goals and focus history? Your settings stay. Back up first if you might want them back.</p>
+        <p>Delete all tasks, goals, resources and focus history? Your settings stay. Back up first if you might want them back.</p>
         <button class="btn btn-secondary dm-backup" @click="backUp"><Download :size="16" :stroke-width="2.25" />Back up</button>
         <div class="dm-actions">
           <template v-if="sync.connected">

@@ -10,7 +10,7 @@ const text = (x: unknown): string => (typeof x === 'string' ? x.trim() : '')
 
 /**
  * A resource as saved, synced or restored, made safe to use: null when it has no id or no http(s) link;
- * unknown type/status/billing and a bad price are repaired; a valid resource comes back equal.
+ * the link is stored normalised; unknown type/status/billing and a bad price are repaired; a valid resource comes back equal.
  */
 export function repairResource(x: unknown, today: ISODate = todayISO()): Resource | null {
   if (!x || typeof x !== 'object') return null
@@ -24,7 +24,7 @@ export function repairResource(x: unknown, today: ISODate = todayISO()): Resourc
   const out: Resource = {
     id: r.id,
     title: text(r.title) || r.url,
-    url: r.url,
+    url,
     company: text(r.company) || detect(url, []).company || 'Other',
     type: RESOURCE_TYPES.includes(r.type as ResourceType) ? (r.type as ResourceType) : 'other',
     status: RESOURCE_STATUSES.includes(r.status as ResourceStatus) ? (r.status as ResourceStatus) : 'using',

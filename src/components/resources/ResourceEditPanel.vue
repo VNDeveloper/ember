@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { companySuggestions, normaliseUrl } from '../../core/companies'
+import { companySuggestions, findDuplicate, normaliseUrl } from '../../core/companies'
 import { goalOptions } from '../../core/goals'
 import { RESOURCE_STATUSES, RESOURCE_TYPES, type Billing, type Resource } from '../../core/model'
 import { STATUS_LABEL, TYPE_LABEL } from '../../core/resources'
@@ -32,8 +32,13 @@ const suggestions = computed(() => companySuggestions(ember.resources, ''))
 const priceValue = computed(() => Number(price.value))
 const paid = computed(() => billing.value !== 'free')
 const recurring = computed(() => billing.value === 'month' || billing.value === 'year')
-const urlOk = computed(() => normaliseUrl(url.value) !== null)
-const canSave = computed(() => urlOk.value && (!paid.value || (Number.isFinite(priceValue.value) && priceValue.value > 0)))
+const normalised = computed(() => normaliseUrl(url.value))
+/** Another live resource with the same link (this one aside). */
+const dup = computed(() => (normalised.value ? findDuplicate(normalised.value, ember.resources.filter((r) => r.id !== props.resource.id)) : null))
+const urlError = computed(() => (!normalised.value ? 'That doesn’t look like a link.' : dup.value ? `Already saved: ${dup.value.title}.` : ''))
+const urlOk = computed(() => !urlError.value)
+const priceOk = computed(() => !paid.value || (Number.isFinite(priceValue.value) && priceValue.value > 0))
+const canSave = computed(() => urlOk.value && priceOk.value)
 
 onMounted(() => titleInput.value?.focus())
 
@@ -75,7 +80,7 @@ function onEnter(e: KeyboardEvent) {
           :aria-describedby="urlOk ? undefined : `re-url-error-${resource.id}`"
           @keydown.enter="onEnter"
         />
-        <span v-if="!urlOk" :id="`re-url-error-${resource.id}`" class="re-url-error" role="alert">That doesn’t look like a link.</span>
+        <span v-if="!urlOk" :id="`re-url-error-${resource.id}`" class="re-url-error" role="alert">{{ urlError }}</span>
       </label>
       <label class="re-field"><span class="label">Company</span>
         <input v-model="company" class="input re-company" list="re-companies" @keydown.enter="onEnter" />
@@ -112,7 +117,17 @@ function onEnter(e: KeyboardEvent) {
     </div>
     <div v-if="paid" class="re-row">
       <label class="re-field"><span class="label">Price, £</span>
-        <input v-model="price" class="input re-price tabular" type="number" min="0.01" step="0.01" inputmode="decimal" @keydown.enter="onEnter" />
+        <input
+          v-model="price"
+          class="input re-price tabular"
+          type="number"
+          min="0.01"
+          step="0.01"
+          inputmode="decimal"
+          :aria-describedby="priceOk ? undefined : `re-price-hint-${resource.id}`"
+          @keydown.enter="onEnter"
+        />
+        <span v-if="!priceOk" :id="`re-price-hint-${resource.id}`" class="re-price-hint">Enter a price, or choose Free.</span>
       </label>
       <label v-if="recurring" class="re-field"><span class="label">Renews on</span>
         <input v-model="renewsOn" class="input re-renews" type="date" />
@@ -137,5 +152,6 @@ function onEnter(e: KeyboardEvent) {
 .re-field .input { background: var(--color-bg); }
 .re-notes { resize: vertical; }
 .re-url-error { font-size: 12px; font-weight: 700; color: var(--color-accent-700); }
+.re-price-hint { font-size: 12px; color: var(--color-neutral-700); }
 .re-hint { margin-top: calc(-1 * var(--space-2)); font-size: 12px; color: var(--color-neutral-700); }
 </style>

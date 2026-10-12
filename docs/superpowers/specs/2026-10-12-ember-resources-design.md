@@ -84,7 +84,7 @@ export interface Resource {
 - `normaliseUrl(text)`:
   - adds `https://` when the text looks like a domain without a scheme;
   - rejects anything that isn't http(s);
-  - lowercases the host and strips `www.`, the hash, `utm_*` parameters and a trailing slash.
+  - lowercases the host and strips `www.`, `utm_*` parameters and a trailing slash. The `#part` is kept (sites that route by `#/page` need it), and the query is kept as written; duplicate checks ignore the `#part`.
 - `detect(url, existing)` returns `{ company, type, title }`:
   1. **Your own spelling first.** If a live resource has the same host, its `company` is used, so a rename sticks.
   2. **Known sites.** A table matched by host suffix: Hugging Face, YouTube (`youtube.com`, `youtu.be`), Coursera, Udemy, edX, GitHub, Kaggle, fast.ai, Observable, arXiv, Medium, Substack, Skillshare, Domestika, Frontend Masters, MDN, dev.to.
