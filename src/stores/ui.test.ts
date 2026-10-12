@@ -77,6 +77,23 @@ describe('ui store', () => {
     expect(ui).toMatchObject({ settingsMenuOpen: false, pickerOpen: true })
   })
 
+  it('opens Resources with filters, and Esc closes the Focus mode resources panel first', () => {
+    const ui = useUiStore()
+    expect(ui).toMatchObject({ resourceStatus: 'using', resourceGoal: 'all', highlight: null, fmResourcesOpen: false })
+    ui.openResources('D3', 'all')
+    expect(ui).toMatchObject({ view: 'resources', resourceGoal: 'D3', resourceStatus: 'all' })
+    ui.openResources()
+    expect(ui).toMatchObject({ resourceGoal: 'all', resourceStatus: 'using' })
+    ui.openFocusMode()
+    ui.fmResourcesOpen = true
+    expect(ui.escape()).toBe(true)
+    expect(ui.fmResourcesOpen).toBe(false)
+    expect(ui.focusModeOpen).toBe(true)
+    ui.fmResourcesOpen = true
+    ui.closeFocusMode()
+    expect(ui.fmResourcesOpen).toBe(false)
+  })
+
   it('opens a goal on the Goals tab', () => {
     const ui = useUiStore()
     ui.openGoal('D3')

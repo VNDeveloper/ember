@@ -5,9 +5,10 @@ import type { VideoPause } from '../core/focusMode'
 import type { ISODate } from '../core/dates'
 import type { Selection } from '../core/model'
 import type { PickerTab } from '../core/picker'
+import type { GoalFilter, StatusFilter } from '../core/resources'
 import type { UndoRecord, When } from './ember'
 
-export type View = 'today' | 'goals' | 'activity'
+export type View = 'today' | 'goals' | 'activity' | 'resources'
 
 /** View state that is not persisted. */
 export const useUiStore = defineStore('ui', () => {
@@ -56,6 +57,17 @@ export const useUiStore = defineStore('ui', () => {
   const heatMode = ref<HeatMode>('focus')
   /** Activity: how many log entries are shown ("Show earlier" adds 10). */
   const feedSize = ref(10)
+  /** Resources tab filters, the row to point at after "Show it", and Focus mode's resources panel. */
+  const resourceStatus = ref<StatusFilter>('using')
+  const resourceGoal = ref<GoalFilter>('all')
+  const highlight = ref<string | null>(null)
+  const fmResourcesOpen = ref(false)
+
+  function openResources(goal: GoalFilter = 'all', status: StatusFilter = 'using') {
+    resourceGoal.value = goal
+    resourceStatus.value = status
+    view.value = 'resources'
+  }
 
   function selectGoal(id: string) {
     activeGoalId.value = id
@@ -76,10 +88,12 @@ export const useUiStore = defineStore('ui', () => {
 
   const openFocusMode = () => {
     fmSettingsOpen.value = false
+    fmResourcesOpen.value = false
     focusModeOpen.value = true
   }
   const closeFocusMode = () => {
     fmSettingsOpen.value = false
+    fmResourcesOpen.value = false
     focusModeOpen.value = false
   }
 
@@ -124,6 +138,10 @@ export const useUiStore = defineStore('ui', () => {
       closePicker()
       return true
     }
+    if (focusModeOpen.value && fmResourcesOpen.value) {
+      fmResourcesOpen.value = false
+      return true
+    }
     if (focusModeOpen.value && fmSettingsOpen.value) {
       fmSettingsOpen.value = false
       return true
@@ -138,6 +156,7 @@ export const useUiStore = defineStore('ui', () => {
   return {
     view, activeGoalId, dataMenuOpen, settingsMenuOpen, menuFor, editing, undo, startEdit, showUndo, dismissUndo, pickerOpen, pickerTab, pickerQuery, focusModeOpen, fmSettingsOpen, video, taskDraft, doneOpen, openGroups,
     expanded, adding, draft, goalDraft, goalTasksAll, selectGoal, heatMode, feedSize,
+    resourceStatus, resourceGoal, highlight, fmResourcesOpen, openResources,
     openPicker, closePicker, openFocusMode, closeFocusMode, openGoal, escape,
   }
 })

@@ -7,7 +7,7 @@ import SettingsMenu from './SettingsMenu.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
-const TABS: [View, string][] = [['today', 'Today'], ['goals', 'Goals'], ['activity', 'Activity']]
+const TABS: [View, string][] = [['today', 'Today'], ['goals', 'Goals'], ['activity', 'Activity'], ['resources', 'Resources']]
 </script>
 
 <template>

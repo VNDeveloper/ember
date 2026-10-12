@@ -6,6 +6,7 @@ import FocusMode from './components/FocusMode.vue'
 import FocusPicker from './components/FocusPicker.vue'
 import GoalsView from './components/goals/GoalsView.vue'
 import NavBar from './components/NavBar.vue'
+import ResourcesView from './components/resources/ResourcesView.vue'
 import TodayView from './components/today/TodayView.vue'
 import UndoBar from './components/UndoBar.vue'
 import UpdateBar from './components/UpdateBar.vue'
@@ -41,6 +42,7 @@ onBeforeUnmount(() => {
     <FocusBar />
     <TodayView v-if="ui.view === 'today'" />
     <GoalsView v-else-if="ui.view === 'goals'" />
+    <ResourcesView v-else-if="ui.view === 'resources'" />
     <ActivityView v-else />
     <UndoBar />
     <UpdateBar />

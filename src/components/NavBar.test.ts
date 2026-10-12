@@ -13,11 +13,18 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('NavBar', () => {
-  it("shows the brand, three tabs and today's date", () => {
+  it("shows the brand, four tabs and today's date", () => {
     const w = mount(NavBar)
     expect(w.text()).toContain('Ember')
-    expect(w.findAll('.tab').map((t) => t.text())).toEqual(['Today', 'Goals', 'Activity'])
+    expect(w.findAll('.tab').map((t) => t.text())).toEqual(['Today', 'Goals', 'Activity', 'Resources'])
     expect(w.find('.nav-date').text()).toBe('Wed 23 Sep 2026')
+  })
+
+  it('has a Resources tab', async () => {
+    const w = mount(NavBar)
+    const tab = w.findAll('.tab').find((b) => b.text() === 'Resources')!
+    await tab.trigger('click')
+    expect(useUiStore().view).toBe('resources')
   })
 
   it('switches views and marks the active tab', async () => {
