@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StepTarget } from './model'
-import { EMPTY_SELECTION, describeSelection, nextStepText, targetTitle } from './selection'
+import { EMPTY_SELECTION, describeSelection, nextStepText, selectionGoalId, targetTitle } from './selection'
 import { goalFixture, taskFixture } from './test-fixtures'
 
 const goals = [
@@ -68,5 +68,18 @@ describe('nextStepText', () => {
     expect(nextStepText(roadmap, { kind: 'task', taskId: 'x' })).toBe('')
     expect(nextStepText(roadmap, null)).toBe('')
     expect(nextStepText(roadmap, step('Motion', 'gone'))).toBe('')
+  })
+})
+
+describe('selectionGoalId', () => {
+  const goals = [goalFixture('D3', [['M', [['S', null]]]]), { ...goalFixture('Gone', [['M', [['S', null]]]]), deletedOn: '2026-09-01' }]
+  const tasks = [taskFixture('T', { goalId: 'D3' }), taskFixture('Loose'), taskFixture('Old', { goalId: 'Gone' })]
+  it("finds the goal of the selected step or task, if it's live", () => {
+    expect(selectionGoalId(goals, tasks, { kind: 'step', goalId: 'D3', msId: 'D3/M', stepId: 'D3/M/S' })).toBe('D3')
+    expect(selectionGoalId(goals, tasks, { kind: 'step', goalId: 'Gone', msId: 'Gone/M', stepId: 'Gone/M/S' })).toBeNull()
+    expect(selectionGoalId(goals, tasks, { kind: 'task', taskId: 'T' })).toBe('D3')
+    expect(selectionGoalId(goals, tasks, { kind: 'task', taskId: 'Loose' })).toBeNull()
+    expect(selectionGoalId(goals, tasks, { kind: 'task', taskId: 'Old' })).toBeNull()
+    expect(selectionGoalId(goals, tasks, null)).toBeNull()
   })
 })

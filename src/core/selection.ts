@@ -46,3 +46,10 @@ export function nextStepText(goals: Goal[], sel: Selection): string {
   const next = stepAfter(loc.goal, loc.step.id)
   return next ? `Then: ${next.title}` : ''
 }
+
+/** The live goal the current selection belongs to: a step's goal, or a task's linked goal. */
+export function selectionGoalId(goals: Goal[], tasks: Task[], sel: Selection): string | null {
+  if (!sel) return null
+  const id = sel.kind === 'step' ? sel.goalId : tasks.find((t) => t.id === sel.taskId && isLive(t))?.goalId
+  return id && goals.some((g) => g.id === id && isLive(g)) ? id : null
+}
