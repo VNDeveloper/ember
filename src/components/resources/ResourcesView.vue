@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount } from 'vue'
 import { libraryKicker, liveResources, moneyLine } from '../../core/resources'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
+import ResourceAdd from './ResourceAdd.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -10,6 +11,8 @@ const ui = useUiStore()
 const any = computed(() => liveResources(ember.resources).length > 0)
 const kicker = computed(() => (any.value ? libraryKicker(ember.resources) : 'Library'))
 const money = computed(() => moneyLine(ember.resources, ember.today))
+/** Adding while one goal is filtered links the new resource to it. */
+const filterGoal = computed(() => (ui.resourceGoal !== 'all' && ui.resourceGoal !== 'none' ? ui.resourceGoal : null))
 onBeforeUnmount(() => { ui.highlight = null })
 </script>
 
@@ -23,8 +26,10 @@ onBeforeUnmount(() => { ui.highlight = null })
           <b class="tabular">{{ money.total }}</b> {{ money.count }}<template v-if="money.renewal"> · <b class="rv-renewal" :class="{ 'text-accent': money.renewal.soon, 'is-quiet': !money.renewal.soon }">{{ money.renewal.text }}</b></template>
         </p>
       </header>
+      <p v-if="!any" class="rv-pitch">Keep the courses, videos, docs and models you learn from in one place, next to the goals they’re for.</p>
+      <!-- One add box for both states, so the just-added card survives the first resource leaving the empty state. -->
+      <ResourceAdd :goal-id="filterGoal" :large="!any" />
       <template v-if="!any">
-        <p class="rv-pitch">Keep the courses, videos, docs and models you learn from in one place, next to the goals they’re for.</p>
         <ol class="rv-how">
           <li>Ember fills in the company and the type from the link: Hugging Face, YouTube, Coursera, Udemy, GitHub, Kaggle and more.</li>
           <li>Link it to a goal, and it’s one click away whenever you focus on that goal.</li>

@@ -2,8 +2,9 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Resource } from '../../core/model'
-import { dataFixture, resourceFixture } from '../../core/test-fixtures'
+import { dataFixture, goalFixture, resourceFixture } from '../../core/test-fixtures'
 import { useEmberStore } from '../../stores/ember'
+import { useUiStore } from '../../stores/ui'
 import ResourcesView from './ResourcesView.vue'
 
 function setup(resources: Resource[]) {
@@ -38,5 +39,25 @@ describe('ResourcesView', () => {
     expect(w.find('.rv-money').text()).toBe('£49 a month on 1 subscription · Coursera Plus renews in 3 days')
     expect(w.find('.rv-renewal').classes()).toContain('text-accent')
     expect(w.find('.rv-pitch').exists()).toBe(false)
+  })
+
+  it('adds with the goal filter as the goal, and the empty state uses the large box', async () => {
+    const { w, ember } = setup([resourceFixture('A', { goalId: 'D3' })])
+    ember.goals.push(goalFixture('D3', []))
+    useUiStore().resourceGoal = 'D3'
+    await w.vm.$nextTick()
+    await w.find('.ra-input').setValue('example.com/b')
+    await w.find('.ra-form').trigger('submit')
+    expect(ember.resources[1].goalId).toBe('D3')
+    expect(setup([]).w.find('.resource-add').classes()).toContain('is-large')
+  })
+
+  it('keeps the just-added card when the first resource leaves the empty state', async () => {
+    const { w } = setup([])
+    await w.find('.ra-input').setValue('example.com/first')
+    await w.find('.ra-form').trigger('submit')
+    expect(w.find('.rv-pitch').exists()).toBe(false)
+    expect(w.find('.ra-card').exists()).toBe(true)
+    expect(w.find('.resource-add').classes()).not.toContain('is-large')
   })
 })
