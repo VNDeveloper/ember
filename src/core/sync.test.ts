@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EmberData } from './model'
 import { DEVICE_ONLY, canonical, makeSyncFile, mergeData, readSyncFile, sharedPart, stampChanges, syncSummary, syncedAgo, withDeviceState } from './sync'
-import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
+import { dataFixture, goalFixture, resourceFixture, taskFixture } from './test-fixtures'
 
 const T = 1_800_000_000_000
 const clone = <X>(x: X): X => JSON.parse(JSON.stringify(x))
@@ -14,7 +14,7 @@ describe('shared and per-device parts', () => {
   it('leaves per-device state out of the shared part', () => {
     const d = dataFixture({ tasks: [taskFixture('A')], selection: { kind: 'task', taskId: 'A' }, deviceUpdatedAt: 5 })
     const s = sharedPart(d)
-    expect(Object.keys(s).sort()).toEqual(['goals', 'logs', 'settings', 'tasks'])
+    expect(Object.keys(s).sort()).toEqual(['goals', 'logs', 'resources', 'settings', 'tasks'])
     expect(s.settings).not.toHaveProperty('muted')
     expect(s.settings).not.toHaveProperty('demo')
     expect(s.settings).not.toHaveProperty('volume')
@@ -60,6 +60,15 @@ describe('stampChanges', () => {
     expect(g.updatedAt).toBeUndefined()
     expect(g.milestones[0].updatedAt).toBeUndefined()
     expect(g.milestones[0].steps.map((s) => s.updatedAt)).toEqual([undefined, T])
+  })
+
+  it('stamps new and changed resources', () => {
+    const b = dataFixture({ resources: [resourceFixture('A'), resourceFixture('B')] })
+    const a = clone(b)
+    a.resources[1].status = 'finished'
+    a.resources.push(resourceFixture('C'))
+    expect(stampChanges(b, a, T)).toBe(2)
+    expect(a.resources.map((r) => r.updatedAt)).toEqual([undefined, T, T])
   })
 
   it('stamps a goal or milestone for its own fields only', () => {
@@ -185,6 +194,22 @@ describe('mergeData', () => {
     expect(ids(m.goals[0].milestones)).toEqual(['D3/Charts', 'D3/Motion'])
   })
 
+  it('merges resources by id, newer edit winning', () => {
+    const local = shared({ resources: [resourceFixture('A', { status: 'finished', updatedAt: 9 }), resourceFixture('L')] })
+    const remote = shared({ resources: [resourceFixture('A', { updatedAt: 3 }), resourceFixture('R')] })
+    const m = mergeData(local, remote)
+    expect(m.resources.map((r) => r.id)).toEqual(['A', 'R', 'L'])
+    expect(m.resources[0].status).toBe('finished')
+  })
+
+  it("keeps this device's resources when the Drive file was written by an app without them", () => {
+    const local = shared({ resources: [resourceFixture('A', { updatedAt: 2 })] })
+    const text = JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [], tasks: [], logs: [] } })
+    const r = readSyncFile(text)
+    expect(r.ok && r.data.resources).toEqual([])
+    if (r.ok) expect(mergeData(local, r.data).resources.map((x) => x.id)).toEqual(['A'])
+  })
+
   it('keeps a newer soft delete', () => {
     const local = shared({ tasks: [taskFixture('A', { deletedOn: '2026-09-23', updatedAt: 5 })] })
     const remote = shared({ tasks: [taskFixture('A', { title: 'renamed', updatedAt: 3 })] })
@@ -264,6 +289,17 @@ describe('sync file', () => {
     const r = readSyncFile(JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals, tasks: [], logs: [] } }))
     expect(r.ok && r.data.goals[0]).toMatchObject({ status: 'paused' })
     expect(r.ok && r.data.goals[0]).not.toHaveProperty('achievedOn')
+  })
+
+  it('repairs resources from the file, dropping unsafe links', () => {
+    const resources = [resourceFixture('A'), { ...resourceFixture('B'), url: 'javascript:alert(1)' }, { ...resourceFixture('C'), status: '??' }]
+    const r = readSyncFile(JSON.stringify({ app: 'ember', version: 1, generation: 'g', data: { goals: [], tasks: [], logs: [], resources } }))
+    expect(r.ok && r.data.resources.map((x) => [x.id, x.status])).toEqual([['A', 'using'], ['C', 'using']])
+  })
+
+  it('adds live resources to the summary only when there are some', () => {
+    expect(syncSummary(shared({ resources: [resourceFixture('A'), resourceFixture('B', { deletedOn: '2026-09-01' })] })))
+      .toBe('0 goals · 0 tasks · 0 focus sessions · 1 resource')
   })
 
   it('summarises live goals and tasks, and all focus sessions', () => {

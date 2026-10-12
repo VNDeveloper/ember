@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { backupFileName, lastBackup, makeBackup, readBackup, rememberBackup } from './backup'
-import { dataFixture, goalFixture, taskFixture } from './test-fixtures'
+import { dataFixture, goalFixture, resourceFixture, taskFixture } from './test-fixtures'
 
 const NOW = new Date(2026, 8, 23, 10, 0).getTime()
 
 describe('backup files', () => {
+  it('round-trips resources, and reads an older backup without them', () => {
+    const d = dataFixture({ resources: [resourceFixture('A')] })
+    const r = readBackup(makeBackup(d, 0))
+    expect(r.ok && r.data.resources.map((x) => x.id)).toEqual(['A'])
+    const old: Record<string, unknown> = { ...dataFixture() }
+    delete old.resources
+    const r2 = readBackup(JSON.stringify({ app: 'ember', version: 1, exportedAt: null, data: old }))
+    expect(r2.ok && r2.data.resources).toEqual([])
+  })
+
   it('round-trips the data with an export time', () => {
     const data = dataFixture({ goals: [goalFixture('D3', [])], tasks: [taskFixture('Review PR')] })
     const r = readBackup(makeBackup(data, NOW))

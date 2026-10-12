@@ -1,7 +1,8 @@
 import { dayLabel, todayISO } from './dates'
 import { pad2, plural } from './format'
-import type { EmberData, FocusLog, Goal, Settings, Task } from './model'
+import type { EmberData, FocusLog, Goal, Resource, Settings, Task } from './model'
 import { repairGoal } from './goals'
+import { repairResources } from './resources'
 import { DATA_VERSION } from './persist'
 import { repairSettings } from './settings'
 
@@ -13,7 +14,7 @@ export const DEVICE_ONLY = {
 
 type DeviceSettingKey = (typeof DEVICE_ONLY.settings)[number]
 export type SharedSettings = Omit<Settings, DeviceSettingKey>
-export interface SharedData { goals: Goal[]; tasks: Task[]; logs: FocusLog[]; settings: SharedSettings }
+export interface SharedData { goals: Goal[]; tasks: Task[]; logs: FocusLog[]; resources: Resource[]; settings: SharedSettings }
 
 const without = (x: object, keys: readonly string[]): Record<string, unknown> =>
   Object.fromEntries(Object.entries(x).filter(([k]) => !keys.includes(k)))
@@ -23,14 +24,14 @@ export function sharedSettings(s: Settings | SharedSettings): SharedSettings {
 }
 
 export function sharedPart(d: EmberData): SharedData {
-  return { goals: d.goals, tasks: d.tasks, logs: d.logs, settings: sharedSettings(d.settings) }
+  return { goals: d.goals, tasks: d.tasks, logs: d.logs, resources: d.resources, settings: sharedSettings(d.settings) }
 }
 
 /** Shared data plus this device's own timer, selection, sound, volume and demo speed. */
 export function withDeviceState(shared: SharedData, local: EmberData): EmberData {
   const settings = { ...shared.settings } as Settings
   for (const k of DEVICE_ONLY.settings) (settings as unknown as Record<string, unknown>)[k] = local.settings[k]
-  const out = { goals: shared.goals, tasks: shared.tasks, logs: shared.logs, settings } as EmberData
+  const out = { goals: shared.goals, tasks: shared.tasks, logs: shared.logs, resources: shared.resources, settings } as EmberData
   for (const k of DEVICE_ONLY.data) (out as unknown as Record<string, unknown>)[k] = local[k]
   return out
 }
@@ -61,6 +62,11 @@ export function stampChanges(before: EmberData, after: EmberData, now: number): 
   for (const t of after.tasks) {
     const p = tasks.get(t.id)
     if (changed(p, t)) { t.updatedAt = stampAfter(p); n++ }
+  }
+  const resources = new Map(before.resources.map((r) => [r.id, r]))
+  for (const r of after.resources) {
+    const p = resources.get(r.id)
+    if (changed(p, r)) { r.updatedAt = stampAfter(p); n++ }
   }
   const goals = new Map(before.goals.map((g) => [g.id, g]))
   for (const g of after.goals) {
@@ -124,6 +130,7 @@ export function mergeData(local: SharedData, remote: SharedData): SharedData {
   return {
     goals: unionById(local.goals, remote.goals, mergeGoal),
     tasks: unionById(local.tasks, remote.tasks, newer),
+    resources: unionById(local.resources, remote.resources, newer),
     logs,
     settings: newer(local.settings, remote.settings),
   }
@@ -147,15 +154,18 @@ export function readSyncFile(text: string): SyncFileResult {
       ok: true,
       generation: f.generation,
       exportedAt: typeof f.exportedAt === 'string' ? f.exportedAt : null,
-      data: { goals: d.goals.map(repairGoal), tasks: d.tasks, logs: d.logs, settings },
+      data: { goals: d.goals.map(repairGoal), tasks: d.tasks, logs: d.logs, resources: repairResources(d.resources), settings },
     }
   } catch {
     return { ok: false }
   }
 }
 
-export const syncSummary = (s: SharedData): string =>
-  `${plural(s.goals.filter((g) => !g.deletedOn).length, 'goal')} · ${plural(s.tasks.filter((t) => !t.deletedOn).length, 'task')} · ${plural(s.logs.length, 'focus session')}`
+export function syncSummary(s: SharedData): string {
+  const base = `${plural(s.goals.filter((g) => !g.deletedOn).length, 'goal')} · ${plural(s.tasks.filter((t) => !t.deletedOn).length, 'task')} · ${plural(s.logs.length, 'focus session')}`
+  const n = s.resources.filter((r) => !r.deletedOn).length
+  return n ? `${base} · ${plural(n, 'resource')}` : base
+}
 
 /** "just now", "3 min ago", "at 14:05" (earlier today) or "on Sep 16". */
 export function syncedAgo(last: number, now: number): string {
