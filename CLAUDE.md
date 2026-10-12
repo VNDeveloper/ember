@@ -12,11 +12,12 @@ Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/s
 
 ## Architecture
 - `src/core/` — framework-agnostic pure TS (model, dates, derivations, timer, seed, persistence). No `vue`/`pinia` imports. Unit-tested.
-- `src/stores/ember.ts` — the single Pinia store. Persisted slice (goals, tasks, logs, selection, timer, settings) → localStorage `ember:v1`.
+- `src/stores/ember.ts` — the single Pinia store. Persisted slice (goals, tasks, logs, resources, selection, timer, settings) → localStorage `ember:v1`.
 - Derive, don't store: spent minutes, today's totals, streaks and goal % come from `FocusLog` + `doneOn`.
 - Timer uses wall-clock `endsAt`, never tick counting.
 - Plans: one per phase in `docs/superpowers/plans/`.
 - Sync: `src/core/sync.ts` (pure merge/stamp), `src/stores/sync.ts` (controller), `src/sync/` (backends). The store stamps `updatedAt` on save; data from outside goes through `replaceData`/`applyShared` and is never stamped.
+- Resources: `src/core/companies.ts` (link → company/type/title, duplicates) and `src/core/resources.ts` (repair, costs, renewals, list views). Only http(s) links are stored; repair drops anything else.
 
 ## Visual rules (non-negotiable)
 Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog. Exception: Focus mode's bottom legibility gradient, blurred translucent panels, text shadow over the video, and the round volume slider thumb.
