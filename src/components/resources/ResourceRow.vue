@@ -4,6 +4,7 @@ import { STATUS_LABEL, TYPE_LABEL, type ResourceRowView } from '../../core/resou
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import RowMenu from '../RowMenu.vue'
+import ResourceEditPanel from './ResourceEditPanel.vue'
 
 const props = defineProps<{ row: ResourceRowView; showStatus: boolean }>()
 const ember = useEmberStore()
@@ -12,6 +13,7 @@ const root = ref<HTMLElement | null>(null)
 const r = computed(() => props.row.resource)
 const key = computed(() => `resource:${r.value.id}`)
 const highlighted = computed(() => ui.highlight === r.value.id)
+const editing = computed(() => ui.editing === key.value)
 
 watch(highlighted, (on) => { if (on) root.value?.scrollIntoView?.({ block: 'center' }) }, { flush: 'post', immediate: true })
 
@@ -39,6 +41,7 @@ function onDelete() {
       </div>
       <RowMenu :menu-key="key" :label="r.title" @delete="onDelete" />
     </div>
+    <ResourceEditPanel v-if="editing" :resource="r" @delete="onDelete" />
   </div>
 </template>
 

@@ -81,4 +81,11 @@ describe('Resources ledger', () => {
     await w.vm.$nextTick()
     expect(w.findAll('.rr')[2].classes()).toContain('is-highlight')
   })
+
+  it('opens the edit panel from the row menu', async () => {
+    const { w } = setup()
+    await w.findAll('.rr')[2].find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-edit').trigger('click')
+    expect(w.findAll('.rr')[2].find('.resource-edit').exists()).toBe(true)
+  })
 })
