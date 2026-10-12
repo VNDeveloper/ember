@@ -76,9 +76,14 @@ export function addMonthsClamped(anchor: ISODate, months: number): ISODate {
 /** The first renewal on or after today, stepping from the entered date (never written back). */
 export function nextRenewal(r: Resource, today: ISODate): ISODate | null {
   if (!isRecurring(r) || !r.renewsOn) return null
+  if (r.renewsOn >= today) return r.renewsOn
   const step = r.billing === 'month' ? 1 : 12
-  let date = r.renewsOn
-  for (let k = 1; date < today && k <= 1200; k++) date = addMonthsClamped(r.renewsOn, k * step)
+  // Jump straight to about today (a mistyped year can be centuries back), then step to the first date not before it.
+  const [y, m] = r.renewsOn.split('-').map(Number)
+  const [ty, tm] = today.split('-').map(Number)
+  let k = Math.max(1, Math.floor(((ty - y) * 12 + (tm - m)) / step))
+  let date = addMonthsClamped(r.renewsOn, k * step)
+  while (date < today) date = addMonthsClamped(r.renewsOn, ++k * step)
   return date
 }
 

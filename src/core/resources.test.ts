@@ -87,6 +87,13 @@ describe('renewals', () => {
     expect(nextRenewal({ ...plus, renewsOn: null }, TODAY)).toBeNull()
   })
 
+  it('steps forward from a renewal date any distance in the past, such as a mistyped year', () => {
+    expect(nextRenewal({ ...plus, renewsOn: '1900-01-01' }, TODAY)).toBe('2026-11-01')
+    expect(nextRenewal({ ...plus, renewsOn: '1900-10-31' }, TODAY)).toBe('2026-10-31')
+    expect(nextRenewal({ ...skill, renewsOn: '0026-10-15' }, TODAY)).toBe('2026-10-15')
+    expect(nextRenewal({ ...skill, renewsOn: '0026-10-11' }, TODAY)).toBe('2027-10-11')
+  })
+
   it('reminds 0–3 days ahead for in-use subscriptions, until kept, and again next cycle', () => {
     expect(dueRenewals([plus, premium, skill, udemy], TODAY)).toEqual([{ resource: plus, date: '2026-10-15', days: 3 }])
     expect(dueRenewals([plus], '2026-10-11')).toEqual([])

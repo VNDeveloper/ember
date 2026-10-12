@@ -48,6 +48,19 @@ describe('ResourceAdd', () => {
     expect(w.find('.ra-card').exists()).toBe(false)
   })
 
+  it('lets you clear the title and type a new one, falling back to the link only when left blank', async () => {
+    const { w, ember } = setup()
+    await w.find('.ra-input').setValue('https://huggingface.co/learn/llm-course')
+    await w.find('.ra-form').trigger('submit')
+    await w.find('.ra-title').setValue('')
+    expect((w.find('.ra-title').element as HTMLInputElement).value).toBe('')
+    await w.find('.ra-title').setValue('My title')
+    expect(ember.resources[0].title).toBe('My title')
+    await w.find('.ra-title').setValue('')
+    await w.find('.ra-done').trigger('click')
+    expect(ember.resources[0].title).toBe('huggingface.co/learn/llm-course')
+  })
+
   it('Undo on the card deletes it with the usual undo bar', async () => {
     const { w, ember, ui } = setup()
     await w.find('.ra-input').setValue('example.com/a')

@@ -69,6 +69,18 @@ describe('ResourceEditPanel', () => {
     expect(w.find('.re-save').attributes('disabled')).toBeUndefined()
   })
 
+  it('says when the link is not a link, and will not save it', async () => {
+    const { w, ember } = setup(resourceFixture('A'))
+    await w.find('.re-url').setValue('not a link')
+    expect(w.find('.re-url-error').text()).toBe('That doesn’t look like a link.')
+    expect(w.find('.re-save').attributes('disabled')).toBeDefined()
+    await w.find('.re-save').trigger('click')
+    expect(ember.resources[0].url).toBe('https://example.com/A')
+    await w.find('.re-url').setValue('example.com/b')
+    expect(w.find('.re-url-error').exists()).toBe(false)
+    expect(w.find('.re-save').attributes('disabled')).toBeUndefined()
+  })
+
   it('explains what a membership does', async () => {
     const { w } = setup(resourceFixture('Coursera Plus', { company: 'Coursera' }))
     expect(w.find('.re-hint').exists()).toBe(false)

@@ -33,6 +33,16 @@ export type TaskPatch = Partial<Pick<Task, 'title' | 'date' | 'deadline' | 'goal
 export type AddResult = { ok: true; id: string } | { ok: false; reason: 'invalid' } | { ok: false; reason: 'duplicate'; id: string }
 export type ResourcePatch = Partial<Pick<Resource, 'title' | 'url' | 'company' | 'type' | 'status' | 'goalId' | 'billing' | 'price' | 'renewsOn' | 'notes'>>
 
+/** Whether saved data (the localStorage JSON) carries a resources list at all. */
+function savedWithResources(raw: string): boolean {
+  try {
+    const data = (JSON.parse(raw) as { data?: Record<string, unknown> })?.data
+    return !!data && Array.isArray(data.resources)
+  } catch {
+    return false
+  }
+}
+
 export const useEmberStore = defineStore('ember', () => {
   const read = readData()
   const initial = read.status === 'ok' ? read.data : buildSeed(Date.now())
@@ -115,7 +125,10 @@ export const useEmberStore = defineStore('ember', () => {
     window.addEventListener('storage', (e) => {
       if (e.key !== STORAGE_KEY || !e.newValue) return
       const d = parseStored(e.newValue)
-      if (d) replaceData(d)
+      if (!d) return
+      // A tab still running an app version from before resources saves without them: keep ours, don't adopt an empty list.
+      if (!savedWithResources(e.newValue)) d.resources = resources.value
+      replaceData(d)
     })
   }
 

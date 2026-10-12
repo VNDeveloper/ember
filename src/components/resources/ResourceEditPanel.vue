@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { companySuggestions } from '../../core/companies'
+import { companySuggestions, normaliseUrl } from '../../core/companies'
 import { goalOptions } from '../../core/goals'
 import { RESOURCE_STATUSES, RESOURCE_TYPES, type Billing, type Resource } from '../../core/model'
 import { STATUS_LABEL, TYPE_LABEL } from '../../core/resources'
@@ -32,7 +32,8 @@ const suggestions = computed(() => companySuggestions(ember.resources, ''))
 const priceValue = computed(() => Number(price.value))
 const paid = computed(() => billing.value !== 'free')
 const recurring = computed(() => billing.value === 'month' || billing.value === 'year')
-const canSave = computed(() => !paid.value || (Number.isFinite(priceValue.value) && priceValue.value > 0))
+const urlOk = computed(() => normaliseUrl(url.value) !== null)
+const canSave = computed(() => urlOk.value && (!paid.value || (Number.isFinite(priceValue.value) && priceValue.value > 0)))
 
 onMounted(() => titleInput.value?.focus())
 
@@ -66,7 +67,15 @@ function onEnter(e: KeyboardEvent) {
     </label>
     <div class="re-row">
       <label class="re-field re-grow"><span class="label">Link</span>
-        <input v-model="url" class="input re-url" inputmode="url" @keydown.enter="onEnter" />
+        <input
+          v-model="url"
+          class="input re-url"
+          inputmode="url"
+          :aria-invalid="!urlOk || undefined"
+          :aria-describedby="urlOk ? undefined : `re-url-error-${resource.id}`"
+          @keydown.enter="onEnter"
+        />
+        <span v-if="!urlOk" :id="`re-url-error-${resource.id}`" class="re-url-error" role="alert">That doesn’t look like a link.</span>
       </label>
       <label class="re-field"><span class="label">Company</span>
         <input v-model="company" class="input re-company" list="re-companies" @keydown.enter="onEnter" />
@@ -127,5 +136,6 @@ function onEnter(e: KeyboardEvent) {
 .re-grow { flex: 2 1 240px; }
 .re-field .input { background: var(--color-bg); }
 .re-notes { resize: vertical; }
+.re-url-error { font-size: 12px; font-weight: 700; color: var(--color-accent-700); }
 .re-hint { margin-top: calc(-1 * var(--space-2)); font-size: 12px; color: var(--color-neutral-700); }
 </style>

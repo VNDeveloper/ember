@@ -241,6 +241,18 @@ describe('sync triggers', () => {
     sync.stop()
   })
 
+  it('syncs 5 seconds after adding a resource', async () => {
+    const { sync, ember, backend } = setup({ saved: connectedTo('g1') })
+    backend.file = driveFile('g1')
+    sync.start()
+    await vi.advanceTimersByTimeAsync(10_000)
+    const p = backend.pulls
+    ember.addResource('https://example.com/new')
+    await vi.advanceTimersByTimeAsync(5_100)
+    expect(backend.pulls).toBe(p + 1)
+    sync.stop()
+  })
+
   it('polls every minute while visible, not while hidden, and syncs on becoming visible', async () => {
     const { sync, backend } = setup({ saved: connectedTo('g1') })
     backend.file = driveFile('g1')

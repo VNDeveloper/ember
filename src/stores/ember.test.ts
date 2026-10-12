@@ -412,6 +412,17 @@ describe('other tabs', () => {
     expect(loadData()?.tasks.map((t) => t.title)).toContain('Added in tab B')
   })
 
+  it("keeps this tab's resources when an older app version in another tab saves without them", async () => {
+    const store = storeWith({ resources: [resourceFixture('A')] })
+    const old: Record<string, unknown> = { ...fixture(), tasks: [taskFixture('From old tab')] }
+    delete old.resources
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify({ version: 1, data: old }) }))
+    expect(store.tasks.map((t) => t.title)).toEqual(['From old tab'])
+    expect(store.resources.map((r) => r.id)).toEqual(['A'])
+    // What this tab saves next (localStorage itself is shared with earlier tests' stores, which also listen).
+    expect(store.snapshot().resources.map((r) => r.id)).toEqual(['A'])
+  })
+
   it('ignores unreadable or unrelated storage events', () => {
     const store = storeWith()
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: '{bad' }))

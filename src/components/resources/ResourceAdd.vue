@@ -14,6 +14,8 @@ const ui = useUiStore()
 const text = ref('')
 const invalid = ref(false)
 const addedId = ref<string | null>(null)
+/** The card's title text: blank stays blank while typing; the link fallback applies only when the card closes. */
+const titleText = ref('')
 const titleInput = ref<HTMLInputElement | null>(null)
 
 watch(text, () => { invalid.value = false })
@@ -42,16 +44,22 @@ async function add() {
   }
   text.value = ''
   addedId.value = res.id
+  titleText.value = ember.resourceById(res.id)?.title ?? ''
   await nextTick()
   titleInput.value?.focus()
   titleInput.value?.select()
 }
 
-function onTitle(e: Event) {
-  if (addedId.value) ember.updateResource(addedId.value, { title: (e.target as HTMLInputElement).value })
+function onTitle() {
+  if (addedId.value && titleText.value.trim()) ember.updateResource(addedId.value, { title: titleText.value })
+}
+/** Close the card; a title left blank falls back to the link here, not while typing. */
+function done() {
+  if (addedId.value && !titleText.value.trim()) ember.updateResource(addedId.value, { title: '' })
+  addedId.value = null
 }
 function onTitleEnter(e: KeyboardEvent) {
-  if (!e.isComposing) addedId.value = null
+  if (!e.isComposing) done()
 }
 
 function edit() {
@@ -108,13 +116,13 @@ function showIt() {
       <span class="ra-added">Added {{ shortLink(added.url) }}</span>
       <label class="ra-field">
         <span class="label">Title</span>
-        <input ref="titleInput" class="input ra-title" :value="added.title" @input="onTitle" @keydown.enter="onTitleEnter" />
+        <input ref="titleInput" v-model="titleText" class="input ra-title" @input="onTitle" @keydown.enter="onTitleEnter" />
       </label>
       <div class="ra-chips">
         <button v-for="(c, i) in chips" :key="i" type="button" class="ra-chip" :class="{ 'is-company': i === 0 }" @click="edit">{{ c }}</button>
       </div>
       <div class="ep-actions">
-        <button type="button" class="btn btn-secondary ra-done" @click="addedId = null">Done</button>
+        <button type="button" class="btn btn-secondary ra-done" @click="done">Done</button>
         <button type="button" class="btn btn-ghost ra-undo" @click="undo">Undo</button>
       </div>
     </div>

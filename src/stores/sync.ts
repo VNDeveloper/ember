@@ -272,7 +272,7 @@ export const useSyncStore = defineStore('sync', () => {
 
     let debounce: ReturnType<typeof setTimeout> | undefined
     const stopWatch = watch(
-      () => [ember.goals, ember.tasks, ember.logs, ember.settings],
+      () => [ember.goals, ember.tasks, ember.logs, ember.resources, ember.settings],
       () => {
         clearTimeout(debounce)
         debounce = setTimeout(() => { if (hasLocalChanges()) auto() }, DEBOUNCE_MS)
