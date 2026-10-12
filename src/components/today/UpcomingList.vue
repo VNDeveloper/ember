@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, RefreshCw } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { TYPE_LABEL, money, upcomingRenewals } from '../../core/resources'
 import { upcomingGroups, upcomingSummary, type UpcomingGroup } from '../../core/today'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
@@ -9,7 +10,7 @@ import TaskRow from '../TaskRow.vue'
 const ember = useEmberStore()
 const ui = useUiStore()
 
-const groups = computed(() => upcomingGroups(ember.tasks, ember.today))
+const groups = computed(() => upcomingGroups(ember.tasks, ember.today, upcomingRenewals(ember.resources, ember.today)))
 const summary = computed(() => upcomingSummary(ember.tasks, ember.today))
 const isOpen = (g: UpcomingGroup) => !g.collapsible || !!ui.openGroups[g.key]
 const toggle = (g: UpcomingGroup) => { ui.openGroups[g.key] = !ui.openGroups[g.key] }
@@ -31,6 +32,13 @@ const toggle = (g: UpcomingGroup) => { ui.openGroups[g.key] = !ui.openGroups[g.k
           <span class="up-label">{{ g.label }}</span><span class="up-right">{{ g.right }}</span>
         </button>
         <template v-if="isOpen(g)">
+          <div v-for="r in g.renewals" :key="`ren-${r.resource.id}`" class="up-renewal">
+            <RefreshCw :size="14" :stroke-width="2.5" aria-hidden="true" />
+            <span class="up-ren-body">
+              <span class="up-ren-title">{{ r.resource.title }} renews</span>
+              <span class="up-ren-meta">{{ money(r.resource.price ?? 0) }} · {{ TYPE_LABEL[r.resource.type] }}</span>
+            </span>
+          </div>
           <TaskRow v-for="it in g.items" :key="it.task.id" :task="it.task" variant="upcoming" :show-date="it.showDate" />
         </template>
       </template>
@@ -58,5 +66,12 @@ const toggle = (g: UpcomingGroup) => { ui.openGroups[g.key] = !ui.openGroups[g.k
 .up-toggle .up-right { margin-left: auto; letter-spacing: 0; text-transform: none; }
 .up-toggle svg { flex: none; transition: transform .15s; }
 .up-toggle svg.is-open { transform: rotate(90deg); }
+.up-renewal {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--space-3); align-items: center;
+  padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider); color: var(--color-neutral-700);
+}
+.up-ren-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.up-ren-title { font-size: 14px; color: var(--color-text); }
+.up-ren-meta { font-size: 11px; }
 .up-empty { padding: var(--space-3) 0; font-size: 13px; color: var(--color-neutral-700); }
 </style>

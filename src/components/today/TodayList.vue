@@ -2,12 +2,14 @@
 import { ChevronRight } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { doneByDay, lastDays, streakLength } from '../../core/activity'
+import { dueRenewals } from '../../core/resources'
 import { todayList } from '../../core/today'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import TaskRow from '../TaskRow.vue'
 import { popClass } from '../anim'
 import AddTask from './AddTask.vue'
+import RenewalCard from './RenewalCard.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -17,6 +19,8 @@ const total = computed(() => list.value.open.length + list.value.done.length)
 const counts = computed(() => doneByDay(ember.goals, ember.tasks))
 const week = computed(() => lastDays(counts.value, ember.today, 7))
 const streak = computed(() => streakLength(counts.value, ember.today))
+/** Subscriptions renewing in the next few days: reminders, not tasks (never counted as done). */
+const renewals = computed(() => dueRenewals(ember.resources, ember.today))
 </script>
 
 <template>
@@ -33,6 +37,7 @@ const streak = computed(() => streakLength(counts.value, ember.today))
     </div>
     <AddTask />
     <div class="tl-rows">
+      <RenewalCard v-for="d in renewals" :key="`ren-${d.resource.id}`" :due="d" />
       <p v-if="!list.open.length && !list.done.length" class="muted tl-empty">Nothing for today. Add a task above.</p>
       <TaskRow v-for="t in list.open" :key="t.id" :task="t" variant="today" />
       <template v-if="ui.doneOpen">

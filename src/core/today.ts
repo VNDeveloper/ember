@@ -3,6 +3,7 @@ import { pad2, plural } from './format'
 import { goalColor, goalStats, isActiveGoal, isLive, liveMilestones, liveSteps, nextOpenStep, stepTarget } from './goals'
 import type { Goal, Selection, StepTarget, Task } from './model'
 import { sameTarget } from './model'
+import type { DueRenewal } from './resources'
 
 export interface TaskNote { text: string; accent: boolean }
 
@@ -38,38 +39,42 @@ export function todayList(tasks: Task[], today: ISODate): TodayLists {
 }
 
 export interface UpcomingItem { task: Task; showDate: boolean }
-export interface UpcomingGroup { key: string; label: string; right: string; collapsible: boolean; items: UpcomingItem[] }
+/** renewals: subscriptions renewing that day (Upcoming shows them as rows that can't be ticked). */
+export interface UpcomingGroup { key: string; label: string; right: string; collapsible: boolean; items: UpcomingItem[]; renewals: DueRenewal[] }
 
 const byDate = (a: Task, b: Task) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0)
 /** Finished tasks stay visible only on the day they were finished. */
 const visibleToday = (t: Task, today: ISODate) => t.doneOn == null || t.doneOn === today
 
-export function upcomingGroups(tasks: Task[], today: ISODate): UpcomingGroup[] {
+export function upcomingGroups(tasks: Task[], today: ISODate, renewals: DueRenewal[] = []): UpcomingGroup[] {
   const tomorrow = addDays(today, 1)
   const horizon = addDays(today, 6)
-  const groups: UpcomingGroup[] = []
   const live = tasks.filter(isLive)
+  const dayGroup = (date: ISODate): UpcomingGroup => ({
+    key: date, label: date === tomorrow ? 'Tomorrow' : weekdayLong(date), right: dayLabel(date), collapsible: false, items: [], renewals: [],
+  })
+  const days = new Map<ISODate, UpcomingGroup>()
+  const later: UpcomingGroup = { key: 'later', label: 'Later', right: '', collapsible: true, items: [], renewals: [] }
   const future = live.filter((t) => t.date != null && t.date > today && visibleToday(t, today)).sort(byDate)
   for (const t of future) {
     const date = t.date!
-    const later = date > horizon
-    const key = later ? 'later' : date
-    let g = groups.find((x) => x.key === key)
-    if (!g) {
-      g = {
-        key,
-        label: later ? 'Later' : date === tomorrow ? 'Tomorrow' : weekdayLong(date),
-        right: later ? '' : dayLabel(date),
-        collapsible: later,
-        items: [],
-      }
-      groups.push(g)
+    if (date > horizon) {
+      later.items.push({ task: t, showDate: true })
+      continue
     }
-    g.items.push({ task: t, showDate: later })
+    if (!days.has(date)) days.set(date, dayGroup(date))
+    days.get(date)!.items.push({ task: t, showDate: false })
   }
+  for (const r of renewals) {
+    if (r.date <= today || r.date > horizon) continue
+    if (!days.has(r.date)) days.set(r.date, dayGroup(r.date))
+    days.get(r.date)!.renewals.push(r)
+  }
+  const groups = [...days.values()].sort((a, b) => a.key.localeCompare(b.key))
+  if (later.items.length) groups.push(later)
   const someday = live.filter((t) => t.date == null && visibleToday(t, today))
   if (someday.length) {
-    groups.push({ key: 'someday', label: 'Someday', right: '', collapsible: true, items: someday.map((task) => ({ task, showDate: false })) })
+    groups.push({ key: 'someday', label: 'Someday', right: '', collapsible: true, items: someday.map((task) => ({ task, showDate: false })), renewals: [] })
   }
   for (const g of groups) if (g.collapsible) g.right = plural(g.items.length, 'task')
   return groups

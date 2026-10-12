@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StepTarget, Task } from './model'
 import { goalColor } from './goals'
-import { goalFixture, taskFixture } from './test-fixtures'
+import { goalFixture, resourceFixture, taskFixture } from './test-fixtures'
 import { isLate, taskNote, todayList, upcomingGroups, upcomingSummary, workingOn } from './today'
 
 const TODAY = '2026-09-23'
@@ -129,5 +129,18 @@ describe('workingOn', () => {
       segments: [true, false, false], nextTitle: 'Line', target: LINE, selected: true,
     })
     expect(cards[1]).toMatchObject({ goalId: 'Spanish', swatch: 'var(--color-accent-300)', pct: 0, milestoneLabel: 'Milestone 01 of 01', selected: false })
+  })
+})
+
+describe('upcomingGroups with renewals', () => {
+  it('puts a renewal under its date, creating the day group if no task has it, in date order', () => {
+    const today = '2026-09-23'
+    const tasks = [taskFixture('Fri', { date: '2026-09-25' }), taskFixture('Later', { date: '2026-10-20' })]
+    const plus = resourceFixture('Plus', { billing: 'month', price: 49, renewsOn: '2026-09-24' })
+    const groups = upcomingGroups(tasks, today, [{ resource: plus, date: '2026-09-24', days: 1 }])
+    expect(groups.map((g) => [g.key, g.items.length, g.renewals.length])).toEqual([
+      ['2026-09-24', 0, 1], ['2026-09-25', 1, 0], ['later', 1, 0],
+    ])
+    expect(groups[0].label).toBe('Tomorrow')
   })
 })

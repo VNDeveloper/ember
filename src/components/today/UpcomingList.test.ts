@@ -1,14 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Task } from '../../core/model'
-import { dataFixture, taskFixture } from '../../core/test-fixtures'
+import type { Resource, Task } from '../../core/model'
+import { dataFixture, resourceFixture, taskFixture } from '../../core/test-fixtures'
 import { useEmberStore } from '../../stores/ember'
 import UpcomingList from './UpcomingList.vue'
 
-function setup(tasks: Task[]) {
+function setup(tasks: Task[], resources: Resource[] = []) {
   setActivePinia(createPinia())
-  useEmberStore().replaceData(dataFixture({ tasks }))
+  useEmberStore().replaceData(dataFixture({ tasks, resources }))
   return mount(UpcomingList)
 }
 const tasks = () => [
@@ -46,5 +46,13 @@ describe('UpcomingList', () => {
   it('says when nothing is planned', () => {
     const w = setup([taskFixture('Today only')])
     expect(w.find('.up-empty').text()).toBe('Nothing planned. Pick a date or Someday when you add a task.')
+  })
+
+  it('shows a renewal as a row that cannot be ticked', () => {
+    const w = setup(tasks(), [resourceFixture('Plus', { type: 'membership', billing: 'month', price: 49, renewsOn: '2026-09-25' })])
+    const row = w.find('.up-renewal')
+    expect(row.find('.up-ren-title').text()).toBe('Plus renews')
+    expect(row.find('.up-ren-meta').text()).toBe('£49 · Membership')
+    expect(row.find('.check').exists()).toBe(false)
   })
 })

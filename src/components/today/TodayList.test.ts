@@ -1,13 +1,14 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { dataFixture, taskFixture } from '../../core/test-fixtures'
+import type { Resource } from '../../core/model'
+import { dataFixture, resourceFixture, taskFixture } from '../../core/test-fixtures'
 import { useEmberStore } from '../../stores/ember'
 import TodayList from './TodayList.vue'
 
 const TODAY = '2026-09-23'
 
-function setup() {
+function setup(resources: Resource[] = []) {
   setActivePinia(createPinia())
   useEmberStore().replaceData(dataFixture({
     tasks: [
@@ -16,6 +17,7 @@ function setup() {
       taskFixture('C', { date: '2026-09-21', deadline: true }),
       taskFixture('D', { date: '2026-09-25' }),
     ],
+    resources,
   }))
   return mount(TodayList, { attachTo: document.body })
 }
@@ -88,5 +90,13 @@ describe('TodayList', () => {
     const w = mount(TodayList, { attachTo: document.body })
     expect(w.find('.tl-empty').text()).toBe('Nothing for today. Add a task above.')
     w.unmount()
+  })
+
+  it('shows due renewals above the tasks, without counting them as tasks', () => {
+    const plain = setup().find('.tl-summary').text()
+    document.body.innerHTML = ''
+    const w = setup([resourceFixture('Plus', { billing: 'month', price: 49, renewsOn: '2026-09-25' })])
+    expect(w.find('.tl-rows > .renewal-card').exists()).toBe(true)
+    expect(w.find('.tl-summary').text()).toBe(plain)
   })
 })
