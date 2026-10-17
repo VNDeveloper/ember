@@ -70,13 +70,16 @@ describe('timer engine', () => {
     expect(startLabel(brk)).toBe('Start break')
   })
 
-  it('offers Reset only in focus once the timer has run', () => {
+  it('offers Reset in focus or a break once the timer has run', () => {
     const idle = idleTimer('25/5')
     const running = startTimer(idle, T0, 1)
     expect(canReset(idle)).toBe(false)
     expect(canReset(running)).toBe(true)
     expect(canReset(pauseTimer(running, T0 + MIN))).toBe(true)
-    expect(canReset(idleTimer('25/5', 'break'))).toBe(false)
+    const brk = idleTimer('25/5', 'break')
+    expect(canReset(brk)).toBe(false)
+    expect(canReset(startTimer(brk, T0, 1))).toBe(true)
+    expect(canReset(pauseTimer(startTimer(brk, T0, 1), T0 + MIN))).toBe(true)
   })
 
   it("labels follow the timer's own length, not a session setting changed mid-run", () => {

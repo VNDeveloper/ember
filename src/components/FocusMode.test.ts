@@ -88,6 +88,16 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
+  it('offers Reset once the timer has run, in focus or a break', async () => {
+    const fresh = await setup()
+    expect(fresh.w.find('.fm-reset').exists()).toBe(false)
+    fresh.w.unmount()
+    const brk = await setup({ timer: { phase: 'break', running: true, endsAt: Date.now() + 60_000, leftSec: 300, speed: 1, lengthSec: 300 } })
+    await brk.w.find('.fm-reset').trigger('click')
+    expect(brk.ember.timer).toMatchObject({ phase: 'break', running: false, leftSec: 300 })
+    brk.w.unmount()
+  })
+
   it('hides Mark done without a selection or during a break, and offers Skip break', async () => {
     const none = await setup({ selection: null })
     expect(none.w.find('.fm-done').exists()).toBe(false)

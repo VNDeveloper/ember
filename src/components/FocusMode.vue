@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookOpen, Check, ChevronDown, CirclePause, CirclePlay, ExternalLink, Pause, Play, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
+import { BookOpen, Check, ChevronDown, CirclePause, CirclePlay, ExternalLink, Pause, Play, RotateCcw, SkipForward, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDialogFocus } from '../composables/useDialogFocus'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
@@ -9,7 +9,7 @@ import { clock } from '../core/format'
 import type { Resource } from '../core/model'
 import { TYPE_LABEL, goalResources } from '../core/resources'
 import { describeSelection, nextStepText, selectionGoalId } from '../core/selection'
-import { phaseLabel, progress, startLabel } from '../core/timer'
+import { canReset, phaseLabel, progress, startLabel } from '../core/timer'
 import { ytId } from '../core/youtube'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
@@ -118,8 +118,8 @@ watch(() => ui.fmSettingsOpen, async (open) => {
   else if (!document.activeElement || document.activeElement === document.body) settingsButton.value?.focus()
 })
 
-/** Skip break or Mark done can vanish under keyboard focus (phase change, last step done): keep focus on Play/Pause. */
-watch([() => ember.timer.phase, canMarkDone], async () => {
+/** Skip break, Mark done or Reset can vanish under keyboard focus (phase change, last step done, reset): keep focus on Play/Pause. */
+watch([() => ember.timer.phase, canMarkDone, () => canReset(ember.timer)], async () => {
   await nextTick()
   if (!document.activeElement || document.activeElement === document.body) startButton.value?.focus()
 })
@@ -267,6 +267,9 @@ onBeforeUnmount(() => {
       </button>
       <button v-if="ember.timer.phase === 'break'" class="fm-icon fm-outline fm-skip" aria-label="Skip break" title="Skip break" @click="ember.skipBreak()">
         <SkipForward :size="18" :stroke-width="2.25" />
+      </button>
+      <button v-if="canReset(ember.timer)" class="fm-icon fm-outline fm-reset" aria-label="Reset" title="Reset" @click="ember.resetTimer()">
+        <RotateCcw :size="18" :stroke-width="2.25" />
       </button>
       <button class="fm-item" title="Change what you're focusing on" @click="ui.openPicker(ember.selection)">
         <span class="fm-item-line"><span class="fm-item-title">{{ info.title }}</span><ChevronDown :size="16" :stroke-width="2.5" /></span>

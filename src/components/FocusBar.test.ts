@@ -86,6 +86,17 @@ describe('FocusBar', () => {
     expect(ember.timer).toMatchObject({ phase: 'focus', running: false, leftSec: 1500 })
   })
 
+  it('resets a running break to its full length, staying on the break', async () => {
+    const { w, ember } = setup()
+    await w.find('.fb-start').trigger('click')
+    ember.tick(NOW + 25 * 60_000)
+    await nextTick()
+    await w.find('.fb-start').trigger('click')
+    expect(ember.timer).toMatchObject({ phase: 'break', running: true })
+    await w.find('.fb-reset').trigger('click')
+    expect(ember.timer).toMatchObject({ phase: 'break', running: false, leftSec: 300 })
+  })
+
   it('opens the picker from the title and Focus mode from the icon button', async () => {
     const { w, ui } = setup()
     await w.find('.fb-title').trigger('click')

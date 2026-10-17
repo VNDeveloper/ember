@@ -77,4 +77,5 @@ export function startLabel(t: Timer): string {
   return hasProgress(t) ? 'Resume' : 'Start focus'
 }
 
-export const canReset = (t: Timer): boolean => t.phase === 'focus' && (t.running || hasProgress(t))
+/** Reset is offered once the current phase (focus or break) has started. */
+export const canReset = (t: Timer): boolean => t.running || hasProgress(t)

@@ -443,7 +443,11 @@ export const useEmberStore = defineStore('ember', () => {
     timer.value = timer.value.running ? pauseTimer(timer.value, at) : startTimer(timer.value, at, speed.value)
   }
 
-  const resetTimer = () => { timer.value = idleTimer(settings.value.session) }
+  /** Back to the start of the current phase: focus takes the session length; a break keeps its own length. */
+  function resetTimer() {
+    const t = timer.value
+    timer.value = t.phase === 'break' ? { ...t, running: false, endsAt: null, leftSec: t.lengthSec } : idleTimer(settings.value.session)
+  }
   const skipBreak = () => { timer.value = idleTimer(settings.value.session) }
 
   function setSession(s: SessionLength) {
