@@ -168,7 +168,36 @@ export const useEmberStore = defineStore('ember', () => {
   // — selection —
   function select(t: Selection) {
     selection.value = t
+    doneEarly.value = null
   }
+
+  // — finishing early —
+  /** Set when the selected item is finished mid-session: Today/Focus mode ask what's next. */
+  const doneEarly = ref<{ title: string; next: Target | null; nextTitle: string } | null>(null)
+  const focusInProgress = () => timer.value.phase === 'focus' && (timer.value.running || hasProgress(timer.value))
+
+  /** Log the minutes so far against `target`, so the rest of the session counts toward what comes next. */
+  function logSoFar(target: Target) {
+    const at = Date.now()
+    now.value = at
+    const t = timer.value
+    const elapsed = t.lengthSec - remainingSec(t, at) - (t.loggedSec ?? 0)
+    if (elapsed < 30) return
+    const min = Math.round(elapsed / 60)
+    const session = t.sessionId ?? `focus-part-${at}`
+    logs.value.push({ id: `focus-part-${at}`, at, date: todayISO(at), min, target, session })
+    timer.value = { ...t, loggedSec: (t.loggedSec ?? 0) + min * 60, sessionId: session }
+  }
+
+  /** "Take a break now" after finishing early: the session ends here (its minutes are already logged). */
+  function takeBreakNow() {
+    doneEarly.value = null
+    if (timer.value.phase !== 'focus') return
+    const at = Date.now()
+    now.value = at
+    timer.value = startTimer(idleTimer(settings.value.session, 'break'), at, speed.value)
+  }
+  const dismissDoneEarly = () => { doneEarly.value = null }
 
   // — tasks —
   function addTask(input: NewTask): Task | null {
@@ -188,9 +217,13 @@ export const useEmberStore = defineStore('ember', () => {
     const t = taskById(id)
     if (!t) return
     const completing = t.doneOn == null
+    const target: Target = { kind: 'task', taskId: id }
+    const early = completing && sameTarget(selection.value, target) && focusInProgress()
+    if (early) logSoFar(target)
     t.doneOn = completing ? today.value : null
     if (completing) signalDone(`task:${id}`)
-    if (completing && sameTarget(selection.value, { kind: 'task', taskId: id })) selection.value = null
+    if (completing && sameTarget(selection.value, target)) selection.value = null
+    if (early) doneEarly.value = { title: t.title, next: null, nextTitle: '' }
   }
 
   function moveTask(id: string, date: ISODate) {
@@ -260,11 +293,14 @@ export const useEmberStore = defineStore('ember', () => {
     const loc = findStep(goals.value, t)
     if (!loc) return
     const completing = loc.step.doneOn == null
+    const early = completing && sameTarget(selection.value, t) && focusInProgress()
+    if (early) logSoFar(t)
     loc.step.doneOn = completing ? today.value : null
     if (completing) signalDone(`step:${t.stepId}`)
     if (completing && sameTarget(selection.value, t)) {
       const next = nextOpenStep(loc.goal)
       selection.value = next ? stepTarget(loc.goal, next.milestone, next.step) : null
+      if (early) doneEarly.value = { title: loc.step.title, next: selection.value, nextTitle: next?.step.title ?? '' }
     }
   }
 
@@ -422,11 +458,18 @@ export const useEmberStore = defineStore('ember', () => {
       return
     }
     const sel = selection.value
-    logs.value.push({
-      // The run's end time names the session, so devices that both log it produce one record.
-      id: `focus-${at}`, at, date: todayISO(at), min: timer.value.lengthSec / 60,
-      target: sel && targetExists(sel) ? sel : null,
-    })
+    const t = timer.value
+    // Minutes already logged by finishing early belong to what was finished; this logs the rest.
+    const rest = (t.lengthSec - (t.loggedSec ?? 0)) / 60
+    if (rest > 0) {
+      logs.value.push({
+        // The run's end time names the session, so devices that both log it produce one record.
+        id: `focus-${at}`, at, date: todayISO(at), min: rest,
+        target: sel && targetExists(sel) ? sel : null,
+        ...(t.sessionId ? { session: t.sessionId } : {}),
+      })
+    }
+    doneEarly.value = null
     timer.value = idleTimer(session, 'break')
     completions.value++
   }
@@ -446,6 +489,7 @@ export const useEmberStore = defineStore('ember', () => {
   /** Back to the start of the current phase: focus takes the session length; a break keeps its own length. */
   function resetTimer() {
     const t = timer.value
+    doneEarly.value = null
     timer.value = t.phase === 'break' ? { ...t, running: false, endsAt: null, leftSec: t.lengthSec } : idleTimer(settings.value.session)
   }
   const skipBreak = () => { timer.value = idleTimer(settings.value.session) }
@@ -465,7 +509,7 @@ export const useEmberStore = defineStore('ember', () => {
     today, demo, demoFromUrl, speed, tally, remaining, lastLog,
     snapshot, replaceData, restore, applyShared, eraseAll, seeded, select, targetExists,
     addTask, toggleTask, moveTask, moveToToday, moveToTomorrow,
-    addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected,
+    addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected, doneEarly, takeBreakNow, dismissDoneEarly,
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
     resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled,

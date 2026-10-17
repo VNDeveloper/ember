@@ -13,6 +13,7 @@ import { canReset, phaseLabel, progress, startLabel } from '../core/timer'
 import { ytId } from '../core/youtube'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
+import DoneEarlyPrompt from './DoneEarlyPrompt.vue'
 import SoundSettings from './SoundSettings.vue'
 import TimerSettings from './TimerSettings.vue'
 
@@ -164,6 +165,7 @@ onBeforeUnmount(() => {
         <span class="fm-task-title">{{ info.title }}</span>
         <span class="fm-task-sub">{{ info.sub }}</span>
       </div>
+      <DoneEarlyPrompt class="fm-panel fm-done-early" />
     </div>
 
     <div class="fm-tr fm-chrome">
@@ -332,6 +334,7 @@ onBeforeUnmount(() => {
   max-width: min(640px, calc(100vw - 48px)); margin-top: var(--space-3); padding: var(--space-3) var(--space-6);
   text-align: center;
 }
+.fm-done-early { max-width: min(560px, calc(100vw - 48px)); pointer-events: auto; text-align: left; }
 .fm-task-title { font: 700 clamp(20px, 2.4vw, 28px)/1.25 var(--font-heading); overflow-wrap: anywhere; }
 .fm-task-sub { font-size: 14px; opacity: .85; overflow-wrap: anywhere; }
 .fm-phase {

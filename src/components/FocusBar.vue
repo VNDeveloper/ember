@@ -7,6 +7,7 @@ import { describeSelection, selectionGoalId, targetTitle } from '../core/selecti
 import { canReset, phaseLabel, progress, startLabel } from '../core/timer'
 import { useEmberStore } from '../stores/ember'
 import { useUiStore } from '../stores/ui'
+import DoneEarlyPrompt from './DoneEarlyPrompt.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -68,6 +69,7 @@ const toastText = computed(() => {
         <button v-if="ember.timer.phase === 'break'" class="btn btn-ghost fb-ghost fb-skip" @click="ember.skipBreak()">Skip break</button>
       </div>
     </div>
+    <DoneEarlyPrompt v-if="!ui.focusModeOpen" class="fb-done-early" />
     <div class="fb-progress"><div class="fb-progress-fill" :style="{ width: pct }"></div></div>
     <div v-if="showToast" :key="ember.completions" class="fb-toast">{{ toastText }}</div>
     <span class="sr-only fb-live" role="status" aria-live="polite">{{ showToast ? `Session done: ${toastText}` : '' }}</span>
@@ -110,6 +112,7 @@ const toastText = computed(() => {
 .fb-actions { display: flex; gap: var(--space-2); }
 .fb-ghost { color: inherit; }
 
+.fb-done-early { padding: var(--space-3) calc(var(--space-6) + 32px) var(--space-3) var(--space-6); border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
 .fb-progress { height: 4px; background: var(--color-neutral-300); }
 .fb-progress-fill { height: 100%; background: var(--color-accent); transition: width .25s linear; }
 

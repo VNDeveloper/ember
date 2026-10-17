@@ -117,4 +117,9 @@ describe('achievedSummary', () => {
     const other = { ...logs[0], id: 'x', target: { kind: 'task' as const, taskId: 'T' } }
     expect(achievedSummary(done, [...logs, other]).sessions).toBe(5)
   })
+  it('counts a session split between two of its steps once', () => {
+    const done = { ...goal, status: 'achieved' as const, achievedOn: '2026-10-12' }
+    const split = [{ ...logs[0], session: 'S' }, { ...logs[1], session: 'S' }, ...logs.slice(2)]
+    expect(achievedSummary(done, split).sessions).toBe(4)
+  })
 })

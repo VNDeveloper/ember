@@ -97,6 +97,18 @@ describe('FocusBar', () => {
     expect(ember.timer).toMatchObject({ phase: 'break', running: false, leftSec: 300 })
   })
 
+  it('asks what next under the bar when the selection is finished early, but not while Focus mode is open', async () => {
+    const { w, ember, ui } = setup()
+    await w.find('.fb-start').trigger('click')
+    vi.setSystemTime(NOW + 10 * 60_000)
+    ember.toggleStep(LINE)
+    await nextTick()
+    expect(w.find('.done-early').exists()).toBe(true)
+    ui.openFocusMode()
+    await nextTick()
+    expect(w.find('.done-early').exists()).toBe(false)
+  })
+
   it('opens the picker from the title and Focus mode from the icon button', async () => {
     const { w, ui } = setup()
     await w.find('.fb-title').trigger('click')

@@ -3,6 +3,7 @@ import { fmtM, pad2, plural } from './format'
 import { goalColor, goalStats, goalStatus, isLive, isMilestoneDone, liveMilestones, liveSteps, stepTarget } from './goals'
 import type { FocusLog, Goal, GoalStatus, Selection, Step, StepTarget, Task } from './model'
 import { sameTarget } from './model'
+import { sessionCount } from './tally'
 
 const SESSION = 25
 
@@ -168,7 +169,7 @@ export function achievedSummary(g: Goal, logs: FocusLog[]): AchievedSummary {
     outcome: g.outcome,
     span: `${dayLabel(g.createdAt)} → ${dayLabel(on)} · ${days === 0 ? 'same day' : plural(days, 'day')}`,
     focused: fmtM(mine.reduce((a, l) => a + l.min, 0)),
-    sessions: mine.length,
+    sessions: sessionCount(mine),
     steps: st.done,
     milestones: st.milestonesDone,
   }

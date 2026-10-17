@@ -69,7 +69,8 @@ export interface StepTarget { kind: 'step'; goalId: string; msId: string; stepId
 export type Target = TaskTarget | StepTarget
 export type Selection = Target | null
 
-export interface FocusLog { id: string; at: number; date: ISODate; min: number; target: Target | null }
+/** session: shared by the logs of one focus session split by finishing early (missing = its own session). */
+export interface FocusLog { id: string; at: number; date: ISODate; min: number; target: Target | null; session?: string }
 
 export type Phase = 'focus' | 'break'
 export interface Timer {
@@ -83,6 +84,9 @@ export interface Timer {
   speed: number
   /** Full length of this phase in timer-seconds, fixed when the phase begins (what a finished focus logs). */
   lengthSec: number
+  /** Timer-seconds of this focus phase already logged by finishing early, and that session's key. */
+  loggedSec?: number
+  sessionId?: string
 }
 
 /** Focus and break minutes, e.g. '25/5' or a custom '40/8' (see core/timer parseSession). */

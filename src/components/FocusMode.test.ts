@@ -101,6 +101,16 @@ describe('FocusMode', () => {
     none.w.unmount()
   })
 
+  it('asks what next in the middle of the screen when the selection is finished early', async () => {
+    const { w, ember } = await setup()
+    ember.startPause()
+    vi.setSystemTime(Date.now() + 10 * 60_000)
+    await w.find('.fm-done').trigger('click')
+    expect(w.find('.fm-center .done-early').exists()).toBe(true)
+    expect(w.find('.fm-center .done-early .de-keep').text()).toBe('Keep going on Scatter')
+    w.unmount()
+  })
+
   it('offers Reset once the timer has run, in focus or a break', async () => {
     const fresh = await setup()
     expect(fresh.w.find('.fm-reset').exists()).toBe(false)
