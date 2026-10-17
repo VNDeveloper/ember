@@ -10,8 +10,8 @@ export interface FocusUIState {
 }
 
 /**
- * Focus mode controls hide when the mouse leaves the window, or while a session runs, nobody is
- * using them and no panel is open. The timer itself always stays.
+ * Focus mode's controls, timer included, hide when the mouse leaves the window, or while a session
+ * runs, nobody is using them and no panel is open: then only the video shows.
  */
 export const hideFocusUI = (s: FocusUIState): boolean =>
   s.pointerOut || (s.running && s.idle && !s.settingsOpen && !s.pickerOpen)

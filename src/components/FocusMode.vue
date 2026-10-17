@@ -193,17 +193,13 @@ onBeforeUnmount(() => {
     @keydown="onKeydown"
   >
     <div v-if="videoId" class="fm-video" aria-hidden="true"><div ref="host" class="fm-player"></div></div>
-    <div class="fm-gradient" aria-hidden="true"></div>
+    <div class="fm-gradient fm-chrome" aria-hidden="true"></div>
 
-    <div class="fm-center">
+    <!-- Fades with the controls: while idle only the video shows. -->
+    <div class="fm-center fm-chrome">
       <span class="fm-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fm-bar"><div class="fm-bar-fill" :style="{ width: pct }"></div></div>
-      <span class="fm-phase fm-chrome">{{ phaseText }}</span>
-      <!-- What you're on, readable over any footage; stays when the controls hide. -->
-      <div v-if="!info.empty" class="fm-panel fm-task">
-        <span class="fm-task-title">{{ info.title }}</span>
-        <span class="fm-task-sub">{{ info.sub }}</span>
-      </div>
+      <span class="fm-phase">{{ phaseText }}</span>
       <DoneEarlyPrompt class="fm-panel fm-done-early" />
     </div>
 
@@ -368,14 +364,7 @@ onBeforeUnmount(() => {
 }
 .fm-bar { width: clamp(160px, 18vw, 260px); height: 3px; background: color-mix(in oklch, var(--fm-light) 30%, transparent); }
 .fm-bar-fill { height: 100%; background: var(--fm-light); transition: width .25s linear; }
-.fm-task {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  max-width: min(640px, calc(100vw - 48px)); margin-top: var(--space-3); padding: var(--space-3) var(--space-6);
-  text-align: center;
-}
 .fm-done-early { max-width: min(560px, calc(100vw - 48px)); pointer-events: auto; text-align: left; }
-.fm-task-title { font: 700 clamp(20px, 2.4vw, 28px)/1.25 var(--font-heading); overflow-wrap: anywhere; }
-.fm-task-sub { font-size: 14px; opacity: .85; overflow-wrap: anywhere; }
 .fm-phase {
   font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   text-shadow: 0 1px 12px color-mix(in oklch, var(--fm-ink) 60%, transparent);
@@ -444,7 +433,7 @@ onBeforeUnmount(() => {
 
 .fm-bl {
   position: absolute; left: var(--space-6); bottom: var(--space-6);
-  width: min(380px, calc(100vw - 48px)); padding: var(--space-2);
+  width: min(460px, calc(100vw - 48px)); padding: var(--space-2);
   display: flex; align-items: center; gap: 8px;
 }
 .fm-res {
@@ -469,8 +458,12 @@ onBeforeUnmount(() => {
 .fm-item:hover { background: color-mix(in srgb, var(--fm-light) 12%, transparent); }
 .fm-item-line { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .fm-item-line svg { flex: none; }
-.fm-item-title { font: 700 14px/1.2 var(--font-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fm-item-sub { font-size: 12px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Large enough to read over the video; up to two lines. */
+.fm-item-title {
+  font: 700 18px/1.25 var(--font-heading); overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+.fm-item-sub { font-size: 13px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 560px) {
   .fm-tr { top: var(--space-4); right: var(--space-4); }

@@ -91,26 +91,17 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
-  it('shows what you are focusing on in large type under the timer, even when the controls hide', async () => {
+  it('shows the task in the bottom panel only, not under the timer', async () => {
     const { w } = await setup()
-    const task = w.find('.fm-task')
-    expect(task.find('.fm-task-title').text()).toBe('Line')
-    expect(task.find('.fm-task-sub').text()).toBe('D3 · 01 First charts · 0m of est. 50m')
-    expect(task.classes()).not.toContain('fm-chrome')
-    expect(w.find('.fm-center .fm-task').exists()).toBe(true)
+    expect(w.find('.fm-task').exists()).toBe(false)
+    expect(w.find('.fm-bl .fm-item-title').text()).toBe('Line')
     w.unmount()
-    const none = await setup({ selection: null })
-    expect(none.w.find('.fm-task').exists()).toBe(false)
-    none.w.unmount()
   })
 
-  it('asks what next in the middle of the screen when the selection is finished early', async () => {
-    const { w, ember } = await setup()
-    ember.startPause()
-    vi.setSystemTime(Date.now() + 10 * 60_000)
-    await w.find('.fm-done').trigger('click')
-    expect(w.find('.fm-center .done-early').exists()).toBe(true)
-    expect(w.find('.fm-center .done-early .de-keep').text()).toBe('Keep going on Scatter')
+  it('fades everything, timer and gradient included, when the controls hide', async () => {
+    const { w } = await setup()
+    expect(w.find('.fm-center').classes()).toContain('fm-chrome')
+    expect(w.find('.fm-gradient').classes()).toContain('fm-chrome')
     w.unmount()
   })
 

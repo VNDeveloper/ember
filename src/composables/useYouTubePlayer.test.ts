@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref, type Ref } from 'vue'
-import { useYouTubePlayer } from './useYouTubePlayer'
+import { playerVars, useYouTubePlayer } from './useYouTubePlayer'
 
 type Fn = ReturnType<typeof vi.fn>
 interface FakePlayer { mute: Fn; unMute: Fn; playVideo: Fn; pauseVideo: Fn; setVolume: Fn; destroy: Fn; getIframe: () => HTMLIFrameElement }
@@ -209,5 +209,16 @@ describe('useYouTubePlayer — playing', () => {
     id.value = 'dQw4w9WgXcQ'
     await flushPromises()
     expect(playing.value).toBe(false)
+  })
+})
+
+describe('useYouTubePlayer — captions', () => {
+  it('asks YouTube for no captions, and unloads them once ready', async () => {
+    expect(playerVars('jfKfPfyJRdk')).toMatchObject({ cc_load_policy: 0 })
+    mount(host(ref('jfKfPfyJRdk'), ref(true)))
+    await flushPromises()
+    const target = { ...players[0], unloadModule: vi.fn() }
+    Player.mock.calls[0][1].events.onReady({ target })
+    expect(target.unloadModule).toHaveBeenCalledWith('captions')
   })
 })

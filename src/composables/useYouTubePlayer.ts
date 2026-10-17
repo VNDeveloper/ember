@@ -8,6 +8,7 @@ interface YTPlayer {
   pauseVideo(): void
   destroy(): void
   getIframe?(): HTMLIFrameElement
+  unloadModule?(name: string): void
 }
 
 interface YTPlayerOptions {
@@ -69,7 +70,7 @@ export function loadYouTubeApi(): Promise<YTNamespace> {
 /** Muted, looping, control-less background embed (see handoff §Focus mode). */
 export const playerVars = (id: string) => ({
   autoplay: 1, mute: 1, loop: 1, playlist: id, controls: 0, modestbranding: 1,
-  playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1,
+  playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1, cc_load_policy: 0,
 })
 
 export interface PlayerControls {
@@ -119,6 +120,8 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
           const frame = target.getIframe?.()
           frame?.setAttribute('tabindex', '-1')
           frame?.setAttribute('title', 'Background video')
+          // Nothing over the video: captions stay off even when the viewer's YouTube settings turn them on.
+          target.unloadModule?.('captions')
           target.setVolume(volume.value)
           if (muted.value) target.mute()
           else target.unMute()
