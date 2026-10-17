@@ -159,6 +159,11 @@ onBeforeUnmount(() => {
       <span class="fm-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fm-bar"><div class="fm-bar-fill" :style="{ width: pct }"></div></div>
       <span class="fm-phase fm-chrome">{{ phaseLabel(ember.timer) }}</span>
+      <!-- What you're on, readable over any footage; stays when the controls hide. -->
+      <div v-if="!info.empty" class="fm-panel fm-task">
+        <span class="fm-task-title">{{ info.title }}</span>
+        <span class="fm-task-sub">{{ info.sub }}</span>
+      </div>
     </div>
 
     <div class="fm-tr fm-chrome">
@@ -322,6 +327,13 @@ onBeforeUnmount(() => {
 }
 .fm-bar { width: clamp(160px, 18vw, 260px); height: 3px; background: color-mix(in oklch, var(--fm-light) 30%, transparent); }
 .fm-bar-fill { height: 100%; background: var(--fm-light); transition: width .25s linear; }
+.fm-task {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  max-width: min(640px, calc(100vw - 48px)); margin-top: var(--space-3); padding: var(--space-3) var(--space-6);
+  text-align: center;
+}
+.fm-task-title { font: 700 clamp(20px, 2.4vw, 28px)/1.25 var(--font-heading); overflow-wrap: anywhere; }
+.fm-task-sub { font-size: 14px; opacity: .85; overflow-wrap: anywhere; }
 .fm-phase {
   font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   text-shadow: 0 1px 12px color-mix(in oklch, var(--fm-ink) 60%, transparent);

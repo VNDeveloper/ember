@@ -88,6 +88,19 @@ describe('FocusMode', () => {
     w.unmount()
   })
 
+  it('shows what you are focusing on in large type under the timer, even when the controls hide', async () => {
+    const { w } = await setup()
+    const task = w.find('.fm-task')
+    expect(task.find('.fm-task-title').text()).toBe('Line')
+    expect(task.find('.fm-task-sub').text()).toBe('D3 · 01 First charts · 0m of est. 50m')
+    expect(task.classes()).not.toContain('fm-chrome')
+    expect(w.find('.fm-center .fm-task').exists()).toBe(true)
+    w.unmount()
+    const none = await setup({ selection: null })
+    expect(none.w.find('.fm-task').exists()).toBe(false)
+    none.w.unmount()
+  })
+
   it('offers Reset once the timer has run, in focus or a break', async () => {
     const fresh = await setup()
     expect(fresh.w.find('.fm-reset').exists()).toBe(false)
