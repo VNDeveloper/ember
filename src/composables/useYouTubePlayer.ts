@@ -14,7 +14,11 @@ interface YTPlayerOptions {
   videoId: string
   host: string
   playerVars: Record<string, string | number>
-  events: { onReady: (e: { target: YTPlayer }) => void; onError: (e: { data: number }) => void }
+  events: {
+    onReady: (e: { target: YTPlayer }) => void
+    onError: (e: { data: number }) => void
+    onStateChange: (e: { data: number }) => void
+  }
 }
 
 interface YTNamespace {
@@ -78,11 +82,12 @@ export interface PlayerControls {
 /**
  * One background player inside `host`. Changing the video recreates it; sound, volume and
  * pause are applied to the running player. `failed` is true while YouTube refuses the video
- * (removed, private, or not allowed in embeds).
+ * (removed, private, or not allowed in embeds). `playing` is true while the video is actually playing.
  */
-export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<string | null>, controls: PlayerControls): { failed: Ref<boolean> } {
+export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<string | null>, controls: PlayerControls): { failed: Ref<boolean>; playing: Ref<boolean> } {
   const { muted, volume, paused } = controls
   const failed = ref(false)
+  const playing = ref(false)
   let player: YTPlayer | null = null
   /** The player's methods exist only once it reports ready. */
   let ready = false
@@ -97,6 +102,7 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
   async function create(id: string | null) {
     destroy()
     failed.value = false
+    playing.value = false
     if (!id) return
     const YT = await loadYouTubeApi().catch(() => null)
     if (!YT || !alive || !host.value || videoId.value !== id) return
@@ -120,6 +126,8 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
           else target.playVideo()
         },
         onError: () => { failed.value = true },
+        // YT.PlayerState.PLAYING is 1; buffering, paused, ended and cued are not playing.
+        onStateChange: ({ data }) => { playing.value = data === 1 },
       },
     })
   }
@@ -136,5 +144,5 @@ export function useYouTubePlayer(host: Ref<HTMLElement | null>, videoId: Ref<str
     alive = false
     destroy()
   })
-  return { failed }
+  return { failed, playing }
 }

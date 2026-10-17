@@ -12,7 +12,8 @@ type Fn = ReturnType<typeof vi.fn>
 let players: { mute: Fn; unMute: Fn; playVideo: Fn; pauseVideo: Fn; setVolume: Fn; destroy: Fn }[]
 let Player: ReturnType<typeof vi.fn>
 
-async function setup(patch: Partial<EmberData> = {}) {
+/** playing: the background video already reports playing (default), so Start runs at once; false = still loading. */
+async function setup(patch: Partial<EmberData> = {}, opts: { playing?: boolean } = {}) {
   setActivePinia(createPinia())
   const ember = useEmberStore()
   ember.replaceData(dataFixture({
@@ -23,6 +24,8 @@ async function setup(patch: Partial<EmberData> = {}) {
   const ui = useUiStore()
   ui.openFocusMode()
   const w = mount(FocusMode, { attachTo: document.body })
+  await flushPromises()
+  if (opts.playing !== false) Player.mock.calls.at(-1)?.[1].events.onStateChange({ data: 1 })
   await flushPromises()
   return { w, ember, ui }
 }
@@ -461,6 +464,85 @@ describe('FocusMode — resources', () => {
   it('has no resources button when the goal has none', async () => {
     const { w } = await setup()
     expect(w.find('.fm-res-btn').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+describe('FocusMode — waits for the video', () => {
+  const play = () => Player.mock.calls.at(-1)![1].events.onStateChange({ data: 1 })
+
+  it('holds the countdown at Starting… until the video plays', async () => {
+    const { w, ember } = await setup({}, { playing: false })
+    await w.find('.fm-start').trigger('click')
+    expect(ember.timer.running).toBe(false)
+    expect(w.find('.fm-phase').text()).toBe('Starting…')
+    play()
+    await flushPromises()
+    expect(ember.timer.running).toBe(true)
+    expect(w.find('.fm-phase').text()).toBe('Focusing on')
+    w.unmount()
+  })
+
+  it('starts anyway after 10 seconds, or at once if the video fails', async () => {
+    const slow = await setup({}, { playing: false })
+    await slow.w.find('.fm-start').trigger('click')
+    await vi.advanceTimersByTimeAsync(9_900)
+    expect(slow.ember.timer.running).toBe(false)
+    await vi.advanceTimersByTimeAsync(200)
+    expect(slow.ember.timer.running).toBe(true)
+    slow.w.unmount()
+    const broken = await setup({}, { playing: false })
+    await broken.w.find('.fm-start').trigger('click')
+    Player.mock.calls.at(-1)![1].events.onError({ data: 150 })
+    await flushPromises()
+    expect(broken.ember.timer.running).toBe(true)
+    broken.w.unmount()
+  })
+
+  it('pressing Start again while waiting cancels the wait', async () => {
+    const { w, ember } = await setup({}, { playing: false })
+    await w.find('.fm-start').trigger('click')
+    await w.find('.fm-start').trigger('click')
+    expect(w.find('.fm-phase').text()).toBe('Next focus session')
+    play()
+    await flushPromises()
+    expect(ember.timer.running).toBe(false)
+    w.unmount()
+  })
+
+  it('starts at once when the video is already playing, switched off, or paused by you', async () => {
+    const on = await setup({}, { playing: false })
+    play()
+    await on.w.find('.fm-start').trigger('click')
+    expect(on.ember.timer.running).toBe(true)
+    on.w.unmount()
+    const off = await setup({ settings: { ...dataFixture().settings, focusBg: 'off' } }, { playing: false })
+    await off.w.find('.fm-start').trigger('click')
+    expect(off.ember.timer.running).toBe(true)
+    off.w.unmount()
+    const paused = await setup({}, { playing: false })
+    paused.ui.video = { paused: true, auto: false }
+    await paused.w.find('.fm-start').trigger('click')
+    expect(paused.ember.timer.running).toBe(true)
+    paused.w.unmount()
+  })
+
+  it('pauses a running session when Focus mode opens, and carries on once the video plays', async () => {
+    const { w, ember } = await setup({ timer: { phase: 'focus', running: true, endsAt: Date.now() + 20 * 60_000, leftSec: 1500, speed: 1, lengthSec: 1500 } }, { playing: false })
+    expect(ember.timer.running).toBe(false)
+    expect(ember.timer.leftSec).toBe(1200)
+    expect(w.find('.fm-phase').text()).toBe('Starting…')
+    play()
+    await flushPromises()
+    expect(ember.timer).toMatchObject({ running: true })
+    w.unmount()
+  })
+
+  it('plays a video that a finished session paused, so the next session can start', async () => {
+    const { w, ui } = await setup({ timer: { phase: 'focus', running: false, endsAt: null, leftSec: 1500, speed: 1, lengthSec: 1500 } }, { playing: false })
+    ui.video = { paused: true, auto: true }
+    await w.find('.fm-start').trigger('click')
+    expect(ui.video.paused).toBe(false)
     w.unmount()
   })
 })

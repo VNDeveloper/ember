@@ -3,7 +3,7 @@ import { BookOpen, Check, ChevronDown, CirclePause, CirclePlay, ExternalLink, Pa
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDialogFocus } from '../composables/useDialogFocus'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
-import { hideFocusUI, videoOnTimer } from '../core/focusMode'
+import { hideFocusUI, videoOnTimer, waitForVideo } from '../core/focusMode'
 import { clampVolume } from '../core/settings'
 import { clock } from '../core/format'
 import type { Resource } from '../core/model'
@@ -31,7 +31,8 @@ const info = computed(() => describeSelection(ember.goals, ember.tasks, ember.se
 const itemSub = computed(() => nextStepText(ember.goals, ember.selection) || info.value.sub)
 const canMarkDone = computed(() => !info.value.empty && ember.timer.phase === 'focus')
 const pct = computed(() => `${Math.round(Math.min(1, Math.max(0, progress(ember.timer, ember.now))) * 100_000) / 1000}%`)
-const startText = computed(() => startLabel(ember.timer))
+const startText = computed(() => (waiting.value ? 'Cancel start' : startLabel(ember.timer)))
+const phaseText = computed(() => (waiting.value ? 'Starting…' : phaseLabel(ember.timer)))
 
 /** The selected goal's in-use resources, a click away without leaving the timer. */
 const resGoal = computed(() => {
@@ -47,7 +48,38 @@ const videoId = computed(() => (ember.settings.focusBg === 'video' ? currentId.v
 const muted = computed(() => ember.settings.muted)
 const volume = computed(() => clampVolume(ember.settings.volume))
 const videoPaused = computed(() => ui.video.paused)
-const { failed: videoFailed } = useYouTubePlayer(host, videoId, { muted, volume, paused: videoPaused })
+const { failed: videoFailed, playing: videoPlaying } = useYouTubePlayer(host, videoId, { muted, volume, paused: videoPaused })
+
+/** A focus session holds at "Starting…" until the video plays (10 s at most), so no minutes go to a loading screen. */
+const WAIT_MS = 10_000
+const waiting = ref(false)
+let waitTimer: ReturnType<typeof setTimeout> | undefined
+const videoNotReady = () => waitForVideo({
+  videoOn: !!videoId.value, failed: videoFailed.value, playing: videoPlaying.value, userPaused: ui.video.paused && !ui.video.auto,
+})
+function beginWait() {
+  waiting.value = true
+  // A video paused by the last session ending has to play again before this one can start.
+  if (ui.video.paused && ui.video.auto) ui.video = { paused: false, auto: false }
+  clearTimeout(waitTimer)
+  waitTimer = setTimeout(endWait, WAIT_MS)
+}
+function endWait() {
+  if (!waiting.value) return
+  waiting.value = false
+  clearTimeout(waitTimer)
+  if (!ember.timer.running) ember.startPause()
+}
+function cancelWait() {
+  waiting.value = false
+  clearTimeout(waitTimer)
+}
+function onStart() {
+  if (waiting.value) return cancelWait()
+  if (!ember.timer.running && ember.timer.phase === 'focus' && videoNotReady()) return beginWait()
+  ember.startPause()
+}
+watch([videoPlaying, videoFailed, videoId, () => ui.video.paused], () => { if (waiting.value && !videoNotReady()) endWait() })
 
 function toggleVideo() {
   ui.video = { paused: !ui.video.paused, auto: false }
@@ -133,6 +165,11 @@ onMounted(() => {
   document.documentElement.addEventListener('mouseleave', onPointerLeave)
   document.documentElement.addEventListener('mouseenter', onPointerEnter)
   wake()
+  // Opened mid-session: hold the countdown until the video is playing.
+  if (ember.timer.running && ember.timer.phase === 'focus' && videoNotReady()) {
+    ember.startPause()
+    beginWait()
+  }
 })
 onBeforeUnmount(() => {
   document.body.style.overflow = previousOverflow
@@ -140,6 +177,8 @@ onBeforeUnmount(() => {
   document.documentElement.removeEventListener('mouseleave', onPointerLeave)
   document.documentElement.removeEventListener('mouseenter', onPointerEnter)
   clearTimeout(idleTimer)
+  // Closed while waiting: the session was meant to run, so start it.
+  endWait()
 })
 </script>
 
@@ -159,7 +198,7 @@ onBeforeUnmount(() => {
     <div class="fm-center">
       <span class="fm-time tabular">{{ clock(ember.remaining) }}</span>
       <div class="fm-bar"><div class="fm-bar-fill" :style="{ width: pct }"></div></div>
-      <span class="fm-phase fm-chrome">{{ phaseLabel(ember.timer) }}</span>
+      <span class="fm-phase fm-chrome">{{ phaseText }}</span>
       <!-- What you're on, readable over any footage; stays when the controls hide. -->
       <div v-if="!info.empty" class="fm-panel fm-task">
         <span class="fm-task-title">{{ info.title }}</span>
@@ -266,8 +305,8 @@ onBeforeUnmount(() => {
           <ExternalLink :size="14" :stroke-width="2.5" aria-hidden="true" />
         </a>
       </div>
-      <button ref="startButton" class="fm-icon fm-start" :aria-label="startText" :title="startText" @click="ember.startPause()">
-        <Pause v-if="ember.timer.running" :size="18" :stroke-width="2.5" /><Play v-else :size="18" :stroke-width="2.5" />
+      <button ref="startButton" class="fm-icon fm-start" :aria-label="startText" :title="startText" @click="onStart">
+        <Pause v-if="ember.timer.running || waiting" :size="18" :stroke-width="2.5" /><Play v-else :size="18" :stroke-width="2.5" />
       </button>
       <button v-if="canMarkDone" class="fm-icon fm-outline fm-done" aria-label="Mark done" title="Mark done" @click="ember.completeSelected()">
         <Check :size="18" :stroke-width="3" />

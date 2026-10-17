@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hideFocusUI, videoOnTimer } from './focusMode'
+import { hideFocusUI, videoOnTimer, waitForVideo } from './focusMode'
 
 const base = { running: true, idle: true, settingsOpen: false, pickerOpen: false, pointerOut: false }
 
@@ -55,5 +55,16 @@ describe('videoOnTimer', () => {
   it('changes nothing on pause, resume or reset within a focus session', () => {
     expect(videoOnTimer(focusRun, focusIdle, playing)).toEqual(playing)
     expect(videoOnTimer(focusIdle, focusRun, playing)).toEqual(playing)
+  })
+})
+
+describe('waitForVideo', () => {
+  const base = { videoOn: true, failed: false, playing: false, userPaused: false }
+  it('waits only while a working, wanted video is not playing yet', () => {
+    expect(waitForVideo(base)).toBe(true)
+    expect(waitForVideo({ ...base, playing: true })).toBe(false)
+    expect(waitForVideo({ ...base, videoOn: false })).toBe(false)
+    expect(waitForVideo({ ...base, failed: true })).toBe(false)
+    expect(waitForVideo({ ...base, userPaused: true })).toBe(false)
   })
 })

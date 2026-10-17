@@ -9,11 +9,12 @@ let players: FakePlayer[]
 let Player: ReturnType<typeof vi.fn>
 
 let failed: Ref<boolean>
+let playing: Ref<boolean>
 function host(videoId: Ref<string | null>, muted: Ref<boolean>, volume = ref(80), paused = ref(false)) {
   return defineComponent({
     setup() {
       const el = ref<HTMLElement | null>(null)
-      ;({ failed } = useYouTubePlayer(el, videoId, { muted, volume, paused }))
+      ;({ failed, playing } = useYouTubePlayer(el, videoId, { muted, volume, paused }))
       return () => h('div', { ref: el, class: 'host' })
     },
   })
@@ -188,5 +189,25 @@ describe('loadYouTubeApi', () => {
     expect(scripts).toHaveLength(1)
     scripts.forEach((s) => s.remove())
     vi.useRealTimers()
+  })
+})
+
+describe('useYouTubePlayer — playing', () => {
+  it('reports when the video is actually playing, and resets for a new video', async () => {
+    const id = ref<string | null>('jfKfPfyJRdk')
+    mount(host(id, ref(true)))
+    await flushPromises()
+    const events = Player.mock.calls[0][1].events
+    expect(playing.value).toBe(false)
+    events.onStateChange({ data: 3 })
+    expect(playing.value).toBe(false)
+    events.onStateChange({ data: 1 })
+    expect(playing.value).toBe(true)
+    events.onStateChange({ data: 2 })
+    expect(playing.value).toBe(false)
+    events.onStateChange({ data: 1 })
+    id.value = 'dQw4w9WgXcQ'
+    await flushPromises()
+    expect(playing.value).toBe(false)
   })
 })
