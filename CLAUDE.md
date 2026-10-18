@@ -18,6 +18,7 @@ Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/s
 - Plans: one per phase in `docs/superpowers/plans/`.
 - Sync: `src/core/sync.ts` (pure merge/stamp), `src/stores/sync.ts` (controller), `src/sync/` (backends). The store stamps `updatedAt` on save; data from outside goes through `replaceData`/`applyShared` and is never stamped.
 - Resources: `src/core/companies.ts` (link → company/type/title, duplicates) and `src/core/resources.ts` (repair, costs, renewals, list views). Only http(s) links are stored; repair drops anything else.
+- Habits: `src/core/habits.ts` — a goal's optional practice habit (minutes on N days a week), measured from focus logs; weeks Mon–Sun, streak in weeks (`off` weeks: paused or the first week). No new collection: it syncs as part of the goal.
 
 ## Visual rules (non-negotiable)
 Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog. Exception: Focus mode's bottom legibility gradient, blurred translucent panels, text shadow over the video, and the round volume slider thumb.
