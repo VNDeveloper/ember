@@ -69,8 +69,10 @@ export function forecastDate(leftMin: number, perWeek: number, today: ISODate): 
 
 export type Verdict = 'ahead' | 'on track' | 'behind' | 'past due'
 
-export function verdict(forecast: ISODate | null, finishBy: ISODate, leftMin: number, today: ISODate): Verdict | null {
-  if (leftMin > 0 && today > finishBy) return 'past due'
+/** workLeft: open steps or milestones without steps remain (minutes can round to 0 while a step is still open). */
+export function verdict(forecast: ISODate | null, finishBy: ISODate, workLeft: boolean, today: ISODate): Verdict | null {
+  if (!workLeft) return 'on track'
+  if (today > finishBy) return 'past due'
   if (!forecast) return null
   if (forecast <= addDays(finishBy, -14)) return 'ahead'
   return forecast <= finishBy ? 'on track' : 'behind'
@@ -107,9 +109,10 @@ export function paceView(g: Goal, logs: FocusLog[], spent: Map<string, number>, 
   const h = liveHabit(g)
   const target = h?.targets[h.targets.length - 1]
   const atH = target ? forecastDate(left.min, target.minutes * target.daysPerWeek, today) : null
+  const workLeft = liveMilestones(g).some((m) => milestoneEstimate(g, m) != null || liveSteps(m).some((s) => s.doneOn == null))
   let finishBy: PaceView['finishBy'] = null
   if (g.finishBy) {
-    const v = verdict(at, g.finishBy, left.min, today)
+    const v = verdict(at, g.finishBy, workLeft, today)
     const need = v === 'past due' ? null : needPerWeek(left.min, g.finishBy, today)
     finishBy = { date: g.finishBy, text: when(g.finishBy, today), verdict: v, need: need ? `${fmtM(need)} a week` : '' }
   }
@@ -122,6 +125,7 @@ export function paceView(g: Goal, logs: FocusLog[], spent: Map<string, number>, 
     atPace: at ? `~${when(at, today)}` : null,
     atHabit: atH ? `~${when(atH, today)}` : null,
     finishBy,
-    behind: finishBy?.verdict === 'behind' || finishBy?.verdict === 'past due',
+    // Only an active goal can be behind: a paused one shows no forecast.
+    behind: status === 'active' && (finishBy?.verdict === 'behind' || finishBy?.verdict === 'past due'),
   }
 }

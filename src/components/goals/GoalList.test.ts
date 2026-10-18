@@ -104,5 +104,13 @@ describe('GoalList', () => {
     await w.vm.$nextTick()
     expect(w.find('.gl-behind').text()).toBe('· behind')
   })
+
+  it('does not mark a paused goal behind', async () => {
+    const { w, ember } = setup()
+    ember.setFinishBy('D3', '2026-09-01')
+    ember.setGoalStatus('D3', 'paused')
+    await w.vm.$nextTick()
+    expect(w.find('.gl-behind').exists()).toBe(false)
+  })
 })
 

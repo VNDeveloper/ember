@@ -56,12 +56,12 @@ describe('pace and forecast', () => {
     expect(forecastDate(471, 0, TODAY)).toBeNull()
   })
   it('judges a finish-by date', () => {
-    expect(verdict('2026-12-19', '2027-01-15', 471, TODAY)).toBe('ahead')
-    expect(verdict('2026-12-19', '2026-12-25', 471, TODAY)).toBe('on track')
-    expect(verdict('2026-12-19', '2026-12-01', 471, TODAY)).toBe('behind')
-    expect(verdict(null, '2026-12-01', 471, TODAY)).toBeNull()
-    expect(verdict('2026-12-19', TODAY, 471, TODAY)).toBe('behind')
-    expect(verdict('2026-12-19', '2026-10-13', 471, TODAY)).toBe('past due')
+    expect(verdict('2026-12-19', '2027-01-15', true, TODAY)).toBe('ahead')
+    expect(verdict('2026-12-19', '2026-12-25', true, TODAY)).toBe('on track')
+    expect(verdict('2026-12-19', '2026-12-01', true, TODAY)).toBe('behind')
+    expect(verdict(null, '2026-12-01', true, TODAY)).toBeNull()
+    expect(verdict('2026-12-19', TODAY, true, TODAY)).toBe('behind')
+    expect(verdict('2026-12-19', '2026-10-13', true, TODAY)).toBe('past due')
     expect(needPerWeek(471, '2027-01-15', TODAY)).toBe(36)
     expect(needPerWeek(471, '2026-12-01', TODAY)).toBe(69)
     expect(needPerWeek(471, TODAY, TODAY)).toBeNull()
@@ -88,3 +88,23 @@ describe('paceView', () => {
     expect(paceView({ ...plan(), status: 'achieved', achievedOn: TODAY }, logs, spent, TODAY)).toBeNull()
   })
 })
+
+describe('verdicts when little or nothing is left', () => {
+  it('a goal with every step done is on track, even after its date', () => {
+    const done = { ...goalFixture('Q', [['M', [['A', '2026-10-10'], ['B', '2026-10-11']]]]), finishBy: '2026-10-12' }
+    const v = paceView(done, [], new Map([['step:Q/M/A', 50], ['step:Q/M/B', 50]]), TODAY)!
+    expect(v.finishBy).toMatchObject({ verdict: 'on track' })
+    expect(v.behind).toBe(false)
+    expect(verdict(TODAY, '2026-10-12', false, TODAY)).toBe('on track')
+  })
+  it('an open step that ran over its estimate still counts as work left', () => {
+    const over = { ...goalFixture('Q', [['M', [['A', null]]]]), finishBy: '2026-10-12' }
+    const v = paceView(over, [], new Map([['step:Q/M/A', 90]]), TODAY)!
+    expect(v.finishBy).toMatchObject({ verdict: 'past due' })
+    expect(v.behind).toBe(true)
+  })
+  it('a paused goal is never flagged behind', () => {
+    expect(paceView({ ...plan(), status: 'paused', finishBy: '2026-10-01' }, logs, spent, TODAY)!.behind).toBe(false)
+  })
+})
+
