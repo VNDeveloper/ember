@@ -869,3 +869,28 @@ describe('habits', () => {
     expect(store.goals[0].habit!.pauses.every((p) => p.to === '2026-10-07')).toBe(true)
   })
 })
+
+describe('pace settings', () => {
+  it('sets and clears a finish-by date, ignoring junk', () => {
+    const store = storeWith()
+    store.setFinishBy('D3', '2026-12-01')
+    expect(store.goals[0].finishBy).toBe('2026-12-01')
+    store.setFinishBy('D3', 'soon')
+    expect(store.goals[0].finishBy).toBe('2026-12-01')
+    store.setFinishBy('D3', null)
+    expect(store.goals[0]).not.toHaveProperty('finishBy')
+  })
+  it('sets a milestone estimate in hours, in range, and clears it', () => {
+    const store = storeWith()
+    const ms = () => store.goals[0].milestones[1]
+    store.setMilestoneEstimate('D3', 'D3/Motion', 1.5)
+    expect(ms().estMin).toBe(90)
+    store.setMilestoneEstimate('D3', 'D3/Motion', 0.1)
+    expect(ms().estMin).toBe(30)
+    store.setMilestoneEstimate('D3', 'D3/Motion', 200)
+    expect(ms().estMin).toBe(6000)
+    store.setMilestoneEstimate('D3', 'D3/Motion', null)
+    expect(ms()).not.toHaveProperty('estMin')
+  })
+})
+

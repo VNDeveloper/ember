@@ -293,6 +293,22 @@ export const useEmberStore = defineStore('ember', () => {
     if (goalStatus(g) === 'achieved') setGoalStatus(g.id, 'active')
   }
 
+  // — pace —
+  function setFinishBy(goalId: string, date: ISODate | null) {
+    const g = goalById(goalId)
+    if (!g || !isLive(g)) return
+    if (date === null) delete g.finishBy
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(date)) g.finishBy = date
+  }
+
+  /** Rough hours for a milestone without steps: stored as minutes (multiples of 5, 30–6000); null clears it. */
+  function setMilestoneEstimate(goalId: string, msId: string, hours: number | null) {
+    const m = goalById(goalId)?.milestones.find((x) => x.id === msId)
+    if (!m) return
+    if (hours === null || !Number.isFinite(hours)) delete m.estMin
+    else m.estMin = Math.min(6000, Math.max(30, Math.round((hours * 60) / 5) * 5))
+  }
+
   // — habits —
   /** Start a habit, or change its target from this week on. */
   function setHabit(goalId: string, input: { minutes: number; daysPerWeek: number }) {
@@ -535,7 +551,7 @@ export const useEmberStore = defineStore('ember', () => {
     addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected, doneEarly, takeBreakNow, dismissDoneEarly,
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
-    resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled, setHabit, removeHabit,
+    resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled, setHabit, removeHabit, setFinishBy, setMilestoneEstimate,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,
   }
 })
