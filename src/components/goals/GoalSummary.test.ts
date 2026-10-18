@@ -33,7 +33,7 @@ describe('GoalSummary', () => {
   it('shows the ledger stats', () => {
     const { w } = setup()
     expect(w.findAll('.gs-stat').map((s) => s.text())).toEqual([
-      'Focused2h 5m', 'Estimated4h 10m', 'Left to go1h 40m', 'Accuracy75%',
+      'Focused2h 5m', 'Estimated4h 10m', 'Left to go1h 40m', 'Estimates—',
     ])
     expect(w.findAll('.gs-stat-value')[0].classes()).toContain('is-accent')
   })

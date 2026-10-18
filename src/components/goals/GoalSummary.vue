@@ -11,6 +11,7 @@ import RowMenu from '../RowMenu.vue'
 import TitleEditPanel from '../TitleEditPanel.vue'
 import GoalResources from './GoalResources.vue'
 import HabitRow from './HabitRow.vue'
+import PaceSection from './PaceSection.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -32,7 +33,7 @@ const stats = computed(() => [
   { label: 'Focused', value: ledger.value.focused, accent: true },
   { label: 'Estimated', value: ledger.value.estimated, accent: false },
   { label: 'Left to go', value: ledger.value.left, accent: false },
-  { label: 'Accuracy', value: ledger.value.accuracy, accent: false },
+  { label: 'Estimates', value: ledger.value.estimates, accent: false },
 ])
 
 const onOutcome = (e: Event) => ember.setOutcome(props.goal.id, (e.target as HTMLTextAreaElement).value)
@@ -103,6 +104,7 @@ watch(() => [props.goal.id, status.value] as const, ([id, s], [pid, ps]) => {
       </div>
     </div>
     <HabitRow :goal="goal" />
+    <PaceSection :goal="goal" />
   </div>
 </template>
 
