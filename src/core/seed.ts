@@ -1,5 +1,5 @@
 import {
-  addDays, dayOfYear, daysInYear, fromISO, isWeekend, startOfYear, todayISO, yearOf, type ISODate,
+  addDays, dayOfYear, daysInYear, fromISO, isWeekend, mondayOf, startOfYear, todayISO, yearOf, type ISODate,
 } from './dates'
 import { hashStr } from './format'
 import { nextOpenStep, stepTarget } from './goals'
@@ -111,6 +111,9 @@ export function buildSeed(now: number = Date.now()): EmberData {
       })),
     })),
   }))
+
+  // Spanish has a demo practice habit: 25 minutes on 3 days a week, for the last 8 weeks.
+  goals[1].habit = { targets: [{ minutes: 25, daysPerWeek: 3, from: addDays(mondayOf(today), -56) }], pauses: [] }
 
   // Done steps took their estimate ± 25 minutes, one session a day leading up to completion.
   for (const g of goals) for (const m of g.milestones) for (const s of m.steps) {

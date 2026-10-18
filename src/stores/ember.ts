@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { addDays, todayISO, type ISODate } from '../core/dates'
 import { detect, findDuplicate, normaliseUrl, shortLink } from '../core/companies'
+import { clampHabit, liveHabit, newHabit, withTarget } from '../core/habits'
 import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
@@ -25,6 +26,7 @@ const demoInUrl = (): boolean =>
 export type DeleteKey =
   | { kind: 'task'; id: string }
   | { kind: 'resource'; id: string }
+  | { kind: 'habit'; goalId: string }
   | { kind: 'step'; goalId: string; msId: string; stepId: string }
   | { kind: 'milestone'; goalId: string; msId: string }
   | { kind: 'goal'; goalId: string }
@@ -270,6 +272,13 @@ export const useEmberStore = defineStore('ember', () => {
   function setGoalStatus(goalId: string, status: GoalStatus) {
     const g = goalById(goalId)
     if (!g || !isLive(g) || goalStatus(g) === status) return
+    // The habit remembers when its goal was paused, so those weeks don't break its streak.
+    const h = liveHabit(g)
+    if (h && status === 'paused') h.pauses.push({ from: today.value, to: null })
+    else if (h) {
+      const open = h.pauses.find((p) => p.to === null)
+      if (open) open.to = today.value
+    }
     if (status === 'achieved') {
       g.status = 'achieved'
       g.achievedOn = today.value
@@ -282,6 +291,16 @@ export const useEmberStore = defineStore('ember', () => {
   /** Adding work to an achieved goal reopens it: there is more to do. */
   function reopenIfAchieved(g: Goal) {
     if (goalStatus(g) === 'achieved') setGoalStatus(g.id, 'active')
+  }
+
+  // — habits —
+  /** Start a habit, or change its target from this week on. */
+  function setHabit(goalId: string, input: { minutes: number; daysPerWeek: number }) {
+    const g = goalById(goalId)
+    if (!g || !isLive(g)) return
+    const { minutes, daysPerWeek } = clampHabit(input.minutes, input.daysPerWeek)
+    const h = liveHabit(g)
+    g.habit = h ? withTarget(h, minutes, daysPerWeek, today.value) : newHabit(minutes, daysPerWeek, today.value, goalStatus(g) === 'paused')
   }
 
   function setOutcome(goalId: string, text: string) {
@@ -408,6 +427,7 @@ export const useEmberStore = defineStore('ember', () => {
   function itemFor(key: DeleteKey): { deletedOn?: ISODate | null } | null {
     if (key.kind === 'task') return taskById(key.id)
     if (key.kind === 'resource') return resourceById(key.id)
+    if (key.kind === 'habit') return goalById(key.goalId)?.habit ?? null
     const g = goalById(key.goalId)
     if (!g || key.kind === 'goal') return g
     const m = g.milestones.find((x) => x.id === key.msId) ?? null
@@ -438,6 +458,9 @@ export const useEmberStore = defineStore('ember', () => {
   }
 
   const deleteResource = (id: string) => softDelete({ kind: 'resource', id }, `Deleted “${resourceById(id)?.title ?? ''}”`)
+
+  const removeHabit = (goalId: string) =>
+    softDelete({ kind: 'habit', goalId }, `Removed the habit on “${goalById(goalId)?.title ?? ''}”`)
 
   const deleteGoal = (goalId: string) =>
     softDelete({ kind: 'goal', goalId }, `Deleted goal “${goalById(goalId)?.title ?? ''}”`)
@@ -512,7 +535,7 @@ export const useEmberStore = defineStore('ember', () => {
     addGoal, addMilestone, addStep, setGoalStatus, setOutcome, toggleStep, completeSelected, doneEarly, takeBreakNow, dismissDoneEarly,
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
-    resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled,
+    resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled, setHabit, removeHabit,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,
   }
 })

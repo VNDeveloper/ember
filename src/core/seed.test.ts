@@ -107,6 +107,11 @@ describe('buildSeed', () => {
     for (const r of seed.resources) if (r.goalId) expect(goalIds.has(r.goalId)).toBe(true)
   })
 
+  it('gives the Spanish goal a demo habit that started 8 weeks ago', () => {
+    const spanish = seed.goals.find((g) => g.title === 'Speak Spanish at B1')!
+    expect(spanish.habit).toEqual({ targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-07-27' }], pauses: [] })
+  })
+
   it('starts with an idle timer and default settings', () => {
     expect(seed.timer).toMatchObject({ phase: 'focus', running: false, leftSec: 1500 })
     expect(seed.settings.session).toBe('25/5')

@@ -804,3 +804,47 @@ describe('finishing early', () => {
     expect(store.doneEarly).toBeNull()
   })
 })
+
+describe('habits', () => {
+  it('sets a habit from this Monday, in range, and changes it within the week', () => {
+    const store = storeWith()
+    store.setHabit('D3', { minutes: 27, daysPerWeek: 9 })
+    expect(store.goals[0].habit).toEqual({ targets: [{ minutes: 25, daysPerWeek: 7, from: '2026-09-21' }], pauses: [] })
+    store.setHabit('D3', { minutes: 50, daysPerWeek: 3 })
+    expect(store.goals[0].habit!.targets).toEqual([{ minutes: 50, daysPerWeek: 3, from: '2026-09-21' }])
+    store.setHabit('missing', { minutes: 25, daysPerWeek: 3 })
+  })
+
+  it('removes a habit with undo, and starts fresh when added again', () => {
+    const store = storeWith()
+    store.setHabit('D3', { minutes: 25, daysPerWeek: 3 })
+    const rec = store.removeHabit('D3')!
+    expect(rec.label).toBe('Removed the habit on “D3”')
+    expect(store.goals[0].habit!.deletedOn).toBe('2026-09-23')
+    store.undoDelete(rec)
+    expect(store.goals[0].habit!.deletedOn).toBeNull()
+    store.removeHabit('D3')
+    store.setHabit('D3', { minutes: 40, daysPerWeek: 2 })
+    expect(store.goals[0].habit).toEqual({ targets: [{ minutes: 40, daysPerWeek: 2, from: '2026-09-21' }], pauses: [] })
+    expect(store.removeHabit('missing')).toBeNull()
+  })
+
+  it('records pauses while the goal is paused', () => {
+    const store = storeWith()
+    store.setHabit('D3', { minutes: 25, daysPerWeek: 3 })
+    store.setGoalStatus('D3', 'paused')
+    expect(store.goals[0].habit!.pauses).toEqual([{ from: '2026-09-23', to: null }])
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0))
+    store.tick()
+    store.setGoalStatus('D3', 'active')
+    expect(store.goals[0].habit!.pauses).toEqual([{ from: '2026-09-23', to: '2026-09-30' }])
+  })
+
+  it('a habit set on a paused goal starts paused', () => {
+    const store = storeWith()
+    store.setGoalStatus('D3', 'paused')
+    store.setHabit('D3', { minutes: 25, daysPerWeek: 3 })
+    expect(store.goals[0].habit!.pauses).toEqual([{ from: '2026-09-23', to: null }])
+  })
+})
+
