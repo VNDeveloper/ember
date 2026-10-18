@@ -2,13 +2,24 @@
 import { isActiveGoal, isLive } from '../../core/goals'
 import { ArrowRight, Timer } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { habitView, type HabitView } from '../../core/habits'
 import { workingOn } from '../../core/today'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
+import HabitLine from '../goals/HabitLine.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
 const cards = computed(() => workingOn(ember.goals, ember.selection))
+/** Each card's habit, from the same focus log the rest of Today uses. */
+const habits = computed(() => {
+  const out = new Map<string, HabitView>()
+  for (const g of ember.goals) {
+    const v = habitView(g, ember.tasks, ember.logs, ember.today)
+    if (v) out.set(g.id, v)
+  }
+  return out
+})
 const emptyText = computed(() => {
   if (!ember.goals.some(isLive)) return 'No goals yet. Add one on the Goals tab.'
   if (!ember.goals.some(isActiveGoal)) return 'No active goals. Resume one on the Goals tab.'
@@ -49,6 +60,9 @@ const emptyText = computed(() => {
             <Timer :size="16" :stroke-width="2.25" />
           </button>
         </div>
+        <div v-if="habits.get(c.goalId)" class="wo-habit">
+          <HabitLine :view="habits.get(c.goalId)!" compact />
+        </div>
       </div>
     </div>
     <p v-else class="muted wo-empty">{{ emptyText }}</p>
@@ -88,4 +102,5 @@ const emptyText = computed(() => {
 .wo-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .wo-next-label { font-size: 11px; color: var(--color-neutral-700); }
 .wo-next-title { font-size: 14px; }
+.wo-habit { padding-top: var(--space-2); border-top: 1px solid var(--color-divider); }
 </style>

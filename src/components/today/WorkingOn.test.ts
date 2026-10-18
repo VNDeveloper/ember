@@ -79,4 +79,13 @@ describe('WorkingOn', () => {
     expect(w.findAll('.wo-card')).toHaveLength(0)
     expect(w.find('.wo-empty').text()).toBe('No active goals. Resume one on the Goals tab.')
   })
+
+  it('shows a habit line on cards whose goal has a habit', () => {
+    const goals = GOALS()
+    goals[1] = { ...goals[1], habit: { targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-09-21' }], pauses: [] } }
+    const { w } = setup(goals)
+    const cards = w.findAll('.wo-card')
+    expect(cards[0].find('.wo-habit').exists()).toBe(false)
+    expect(cards[1].find('.wo-habit .habit-line .hl-today').text()).toBe('0 of 25m today')
+  })
 })
