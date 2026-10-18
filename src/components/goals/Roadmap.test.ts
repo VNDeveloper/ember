@@ -271,4 +271,18 @@ describe('Roadmap', () => {
       done.w.unmount()
     })
   })
+
+  it('shows and sets a rough estimate on a milestone without steps', async () => {
+    const { w, ember } = setup(goalFixture('D3', [['Planned', [['A', null]]], ['Later', []]]))
+    const later = () => w.findAll('.rm-ms')[1]
+    expect(later().find('.rm-ledger').text()).toBe('~50m guess')
+    await later().find('.rm-est-set').trigger('click')
+    await later().find('.rm-est-input').setValue('2')
+    await later().find('.rm-est-save').trigger('click')
+    expect(ember.goals[0].milestones[1].estMin).toBe(120)
+    expect(later().find('.rm-ledger').text()).toBe('~2h')
+    await later().find('.rm-est-set').trigger('click')
+    await later().find('.rm-est-clear').trigger('click')
+    expect(ember.goals[0].milestones[1]).not.toHaveProperty('estMin')
+  })
 })

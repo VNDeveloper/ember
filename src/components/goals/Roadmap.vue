@@ -27,6 +27,24 @@ const newestBlock = (blocks: string[]) => blocks.reduce((last, b, i) => (b === '
 
 const vFocus: Directive<HTMLElement> = { mounted: (el) => el.focus() }
 
+/** Rough estimate for a milestone without steps: one inline hours input at a time. */
+const estimating = ref<string | null>(null)
+const estHours = ref<string | number>('')
+function openEst(r: MilestoneRow) {
+  const m = props.goal.milestones.find((x) => x.id === r.id)
+  estHours.value = m?.estMin != null ? String(m.estMin / 60) : ''
+  estimating.value = r.id
+}
+function saveEst(r: MilestoneRow) {
+  const h = Number(estHours.value)
+  if (Number.isFinite(h) && h > 0) ember.setMilestoneEstimate(props.goal.id, r.id, h)
+  estimating.value = null
+}
+function clearEst(r: MilestoneRow) {
+  ember.setMilestoneEstimate(props.goal.id, r.id, null)
+  estimating.value = null
+}
+
 const isExpanded = (r: MilestoneRow) => ui.expanded[r.id] ?? r.current
 const toggle = (r: MilestoneRow) => { ui.expanded[r.id] = !isExpanded(r) }
 const addingStepTo = (msId: string) => ui.adding?.kind === 'step' && ui.adding.msId === msId
@@ -108,7 +126,7 @@ function commit(e: KeyboardEvent) {
             <button class="rm-head" :aria-expanded="isExpanded(r)" @click="toggle(r)">
               <span class="rm-title">{{ r.title }}</span>
               <span v-if="r.current" class="tag tag-accent">You are here</span>
-              <span class="rm-ledger">{{ r.ledger }}</span>
+              <span class="rm-ledger" :class="{ 'is-guess': r.estimate?.guess }">{{ r.estimate ? r.estimate.text : r.ledger }}</span>
               <span class="rm-count">{{ r.count }}</span>
               <ChevronDown :size="18" :stroke-width="2.5" class="rm-chev" :class="{ 'is-open': isExpanded(r) }" />
             </button>
@@ -121,6 +139,17 @@ function commit(e: KeyboardEvent) {
             @save="(t) => renameMilestone(r.id, t)"
             @delete="deleteMilestone(r.id)"
           />
+          <div v-if="r.estimate" class="rm-est">
+            <button v-if="estimating !== r.id" class="btn btn-ghost rm-est-set" @click="openEst(r)">{{ r.estimate.guess ? 'Set estimate' : 'Change estimate' }}</button>
+            <template v-else>
+              <label class="rm-est-label">Rough hours
+                <input v-model="estHours" class="input input-sm rm-est-input" type="number" min="0.5" max="100" step="0.5" />
+              </label>
+              <button class="btn btn-primary rm-est-save" :disabled="!(Number(estHours) > 0)" @click="saveEst(r)">Save</button>
+              <button v-if="!r.estimate.guess" class="btn btn-ghost rm-est-clear" @click="clearEst(r)">Clear</button>
+              <button class="btn btn-ghost rm-est-cancel" @click="estimating = null">Cancel</button>
+            </template>
+          </div>
           <div class="rm-segs"><span v-for="(isDone, i) in r.segments" :key="i" :class="{ 'is-done': isDone }"></span></div>
           <div v-if="isExpanded(r)" class="rm-steps">
             <div v-for="s in r.steps" :key="s.id" class="step-item">
@@ -252,6 +281,11 @@ function commit(e: KeyboardEvent) {
 }
 .rm-title { font: 800 20px/1.2 var(--font-heading); }
 .rm-ledger { margin-left: auto; font-size: 12px; color: var(--color-neutral-700); white-space: nowrap; }
+.rm-ledger.is-guess { font-style: italic; }
+.rm-est { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.rm-est-set { padding-inline: 0; font-size: 13px; }
+.rm-est-label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 13px; }
+.rm-est-input { width: 80px; }
 .rm-count { font-size: 13px; font-weight: 700; white-space: nowrap; }
 .rm-chev { flex: none; transition: transform .2s; }
 .rm-chev.is-open { transform: rotate(180deg); }
