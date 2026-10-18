@@ -23,6 +23,11 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('GoalsView', () => {
+  it('shows the habit row on the goal page', () => {
+    const w = setup(two())
+    expect(w.find('.gs-stats + .habit-row').exists()).toBe(true)
+  })
+
   it('shows the resources strip under the readme', () => {
     const w = setup(two())
     expect(w.find('.gs-readme + .goal-resources').exists()).toBe(true)

@@ -10,6 +10,7 @@ import { popClass } from '../anim'
 import RowMenu from '../RowMenu.vue'
 import TitleEditPanel from '../TitleEditPanel.vue'
 import GoalResources from './GoalResources.vue'
+import HabitRow from './HabitRow.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -101,6 +102,7 @@ watch(() => [props.goal.id, status.value] as const, ([id, s], [pid, ps]) => {
         <div class="stat-value gs-stat-value" :class="{ 'is-accent': s.accent }">{{ s.value }}</div>
       </div>
     </div>
+    <HabitRow :goal="goal" />
   </div>
 </template>
 
