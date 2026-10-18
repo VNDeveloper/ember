@@ -76,6 +76,19 @@ describe('goal status', () => {
     expect(isActiveGoal({ ...g, status: 'achieved' })).toBe(false)
     expect(isActiveGoal({ ...g, deletedOn: '2026-09-01' })).toBe(false)
   })
+  it('drops an invalid finish-by date and invalid milestone estimates, keeping valid goals as they are', () => {
+    const ok = { ...goalFixture('G', [['M', []]]), finishBy: '2026-12-01' }
+    ok.milestones[0].estMin = 120
+    expect(repairGoal(ok)).toBe(ok)
+    const bad = { ...goalFixture('G', [['M', []], ['N', []]]), finishBy: 'soon' }
+    bad.milestones[0].estMin = 7
+    bad.milestones[1].estMin = 90
+    const r = repairGoal(bad)
+    expect(r).not.toHaveProperty('finishBy')
+    expect(r.milestones[0]).not.toHaveProperty('estMin')
+    expect(r.milestones[1].estMin).toBe(90)
+  })
+
   it('repairs a goal’s habit, and drops one that cannot be repaired', () => {
     const ok = { ...goalFixture('G', []), habit: { targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-09-28' }], pauses: [] } }
     expect(repairGoal(ok)).toBe(ok)

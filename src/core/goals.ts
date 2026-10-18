@@ -20,9 +20,26 @@ function repairStatus(g: Goal): Goal {
   return status === 'active' ? rest : status === 'paused' ? { ...rest, status } : { ...rest, status, achievedOn: g.achievedOn ?? null }
 }
 
-/** Repairs a goal's status and habit; a valid goal comes back as the same object. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const okEst = (n: unknown): boolean => n == null || (Number.isInteger(n) && (n as number) >= 30 && (n as number) <= 6000)
+
+/** Drops an invalid finish-by date and invalid milestone estimates; a valid goal comes back as the same object. */
+function repairPlan(g: Goal): Goal {
+  const badFinish = g.finishBy != null && !(typeof g.finishBy === 'string' && ISO_DATE.test(g.finishBy))
+  const badMs = g.milestones.some((m) => !okEst(m.estMin))
+  if (!badFinish && !badMs) return g
+  const milestones = badMs ? g.milestones.map((m) => {
+    if (okEst(m.estMin)) return m
+    const { estMin: _e, ...rest } = m
+    return rest
+  }) : g.milestones
+  const { finishBy: _f, ...rest } = g
+  return badFinish ? { ...rest, milestones } : { ...g, milestones }
+}
+
+/** Repairs a goal's status, plan fields and habit; a valid goal comes back as the same object. */
 export function repairGoal(g: Goal): Goal {
-  const s = repairStatus(g)
+  const s = repairPlan(repairStatus(g))
   if (s.habit === undefined || s.habit === null) return s
   const habit = repairHabit(s.habit)
   if (habit === s.habit) return s

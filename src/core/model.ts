@@ -6,7 +6,12 @@ export type { ISODate }
 
 /** deletedOn (soft delete): hidden from live views, kept for history. updatedAt: last edit (sync merge). */
 export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null; updatedAt?: number }
-export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null; updatedAt?: number }
+export interface Milestone {
+  id: string; title: string; steps: Step[]
+  /** Rough estimate in minutes, used only while it has no steps (pace check). */
+  estMin?: number | null
+  deletedOn?: ISODate | null; updatedAt?: number
+}
 export interface HabitTarget {
   /** Minutes of focus on the goal that make a day count (5–240). */
   minutes: number
@@ -34,6 +39,8 @@ export interface Goal {
   achievedOn?: ISODate | null
   /** Optional practice habit: focus minutes on N days a week. */
   habit?: Habit | null
+  /** Optional finish-by date (pace check). */
+  finishBy?: ISODate | null
   deletedOn?: ISODate | null; updatedAt?: number
 }
 
