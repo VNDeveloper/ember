@@ -18,8 +18,8 @@ describe('goal list, kicker and ledger', () => {
       ['active', 'Active', ['D3', 'Spanish']], ['paused', 'Paused', ['Art']], ['achieved', 'Achieved', ['Run']],
     ])
     expect(groups[0].items).toEqual([
-      { id: 'D3', title: 'D3', swatch: 'var(--color-accent)', pct: 40, complete: false, meta: '2h 5m focused · 2/5 steps' },
-      { id: 'Spanish', title: 'Spanish', swatch: goalColor(2), pct: 100, complete: true, meta: '0m focused · 2/2 steps' },
+      { id: 'D3', title: 'D3', swatch: 'var(--color-accent)', pct: 40, complete: false, meta: '2h 5m focused · 2/5 steps', behind: false },
+      { id: 'Spanish', title: 'Spanish', swatch: goalColor(2), pct: 100, complete: true, meta: '0m focused · 2/2 steps', behind: false },
     ])
     expect(groups[1].items[0].meta).toBe('Paused · 0m focused')
     expect(groups[2].items[0].meta).toBe('Achieved Oct 12 · 0m focused')
@@ -36,14 +36,27 @@ describe('goal list, kicker and ledger', () => {
   })
 
   it('computes focused, estimated, left to go and accuracy', () => {
-    expect(goalLedger(goal, spent)).toEqual({ focused: '2h 5m', estimated: '4h 10m', left: '1h 40m', accuracy: '75%' })
+    expect(goalLedger(goal, spent)).toEqual({ focused: '2h 5m', estimated: '4h 10m', left: '1h 40m', estimates: '—' })
   })
 
   it('handles an empty goal', () => {
     const fresh = goalFixture('New', [['Getting started', []]])
-    expect(goalLedger(fresh, spent)).toEqual({ focused: '0m', estimated: '0m', left: '0m', accuracy: '—' })
+    expect(goalLedger(fresh, spent)).toEqual({ focused: '0m', estimated: '0m', left: '~4h', estimates: '—' })
     expect(goalKicker(fresh, spent)).toBe('Goal · 0m focused · 0 of 1 milestones')
     expect(roadmap(fresh, spent, spentToday, null)[0]).toMatchObject({ current: true, complete: false, count: '0 / 0', steps: [] })
+  })
+})
+
+describe('pace in the roadmap and list', () => {
+  it('shows unplanned milestone estimates in the roadmap and flags behind goals in the list', () => {
+    const g = goalFixture('G', [['Planned', [['A', null]]], ['Later', []]])
+    const rows = roadmap(g, spent, spentToday, null)
+    expect(rows[0].estimate).toBeNull()
+    expect(rows[1].estimate).toEqual({ text: '~50m guess', guess: true })
+    g.milestones[1].estMin = 120
+    expect(roadmap(g, spent, spentToday, null)[1].estimate).toEqual({ text: '~2h', guess: false })
+    const items = goalList([g, goalFixture('H', [])], spent, new Set(['G']))[0].items
+    expect(items.map((i) => i.behind)).toEqual([true, false])
   })
 })
 

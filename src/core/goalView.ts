@@ -3,6 +3,7 @@ import { fmtM, pad2, plural } from './format'
 import { goalColor, goalStats, goalStatus, isLive, isMilestoneDone, liveMilestones, liveSteps, stepTarget } from './goals'
 import type { FocusLog, Goal, GoalStatus, Selection, Step, StepTarget, Task } from './model'
 import { sameTarget } from './model'
+import { correction, leftToGo, milestoneEstimate } from './pace'
 import { sessionCount } from './tally'
 
 const SESSION = 25
@@ -15,13 +16,14 @@ const sumMin = (steps: Step[], spent: Map<string, number>) => steps.reduce((a, s
 /** Minutes focused on a goal's steps. */
 export const goalFocused = (g: Goal, spent: Map<string, number>): number => sumMin(allSteps(g), spent)
 
-export interface GoalListItem { id: string; title: string; swatch: string; pct: number; complete: boolean; meta: string }
+export interface GoalListItem { id: string; title: string; swatch: string; pct: number; complete: boolean; meta: string; behind: boolean }
 
 export interface GoalListGroup { status: GoalStatus; label: string; items: GoalListItem[] }
 const GROUP_LABEL: Record<GoalStatus, string> = { active: 'Active', paused: 'Paused', achieved: 'Achieved' }
 
 /** Goals grouped active, paused, achieved (empty groups left out). */
-export function goalList(goals: Goal[], spent: Map<string, number>): GoalListGroup[] {
+/** behind: goals whose pace check says behind or past due (see core/pace). */
+export function goalList(goals: Goal[], spent: Map<string, number>, behind: Set<string> = new Set()): GoalListGroup[] {
   const by: Record<GoalStatus, GoalListItem[]> = { active: [], paused: [], achieved: [] }
   // Index over all goals so colours keep their positions; deleted goals are dropped.
   goals.forEach((g, gi) => {
@@ -32,7 +34,7 @@ export function goalList(goals: Goal[], spent: Map<string, number>): GoalListGro
     const meta = status === 'active' ? `${focused} · ${st.done}/${st.total} steps`
       : status === 'paused' ? `Paused · ${focused}`
       : `Achieved ${dayLabel(g.achievedOn ?? g.createdAt)} · ${focused}`
-    by[status].push({ id: g.id, title: g.title, swatch: goalColor(gi), pct: st.pct, complete: st.total > 0 && st.pct === 100, meta })
+    by[status].push({ id: g.id, title: g.title, swatch: goalColor(gi), pct: st.pct, complete: st.total > 0 && st.pct === 100, meta, behind: behind.has(g.id) })
   })
   return (['active', 'paused', 'achieved'] as const).filter((s) => by[s].length).map((s) => ({ status: s, label: GROUP_LABEL[s], items: by[s] }))
 }
@@ -42,20 +44,18 @@ export function goalKicker(g: Goal, spent: Map<string, number>): string {
   return `Goal · ${fmtM(goalFocused(g, spent))} focused · ${st.milestonesDone} of ${liveMilestones(g).length} milestones`
 }
 
-export interface GoalLedger { focused: string; estimated: string; left: string; accuracy: string }
+export interface GoalLedger { focused: string; estimated: string; left: string; estimates: string }
 
 export function goalLedger(g: Goal, spent: Map<string, number>): GoalLedger {
   const steps = allSteps(g)
-  const open = steps.filter((s) => s.doneOn == null)
-  const done = steps.filter((s) => s.doneOn != null)
-  const doneEst = sumEst(done)
-  const doneMin = sumMin(done, spent)
-  const hi = Math.max(doneEst, doneMin)
+  const left = leftToGo(g, spent)
+  const corr = correction(g, spent)
   return {
     focused: fmtM(sumMin(steps, spent)),
     estimated: fmtM(sumEst(steps)),
-    left: fmtM(open.reduce((a, s) => a + Math.max(0, s.estMin - stepMin(spent, s)), 0)),
-    accuracy: done.length && hi > 0 ? `${Math.round((Math.min(doneEst, doneMin) / hi) * 100)}%` : '—',
+    // Corrected for your track record and counting milestones without steps; "~" when either applies.
+    left: `${corr.applied || left.unplannedMin ? '~' : ''}${fmtM(left.min)}`,
+    estimates: corr.short,
   }
 }
 
@@ -106,6 +106,8 @@ export interface MilestoneRow {
   ledger: string
   segments: boolean[]
   steps: StepRow[]
+  /** A milestone without steps: its rough estimate (yours, or a guess). */
+  estimate: { text: string; guess: boolean } | null
 }
 
 export function roadmap(
@@ -114,6 +116,7 @@ export function roadmap(
   const current = goalStats(g).currentIndex
   return liveMilestones(g).map((m, mi) => {
     const live = liveSteps(m)
+    const e = milestoneEstimate(g, m)
     const steps: StepRow[] = live.map((s) => {
       const min = stepMin(spent, s)
       const done = s.doneOn != null
@@ -142,6 +145,7 @@ export function roadmap(
       ledger: `${fmtM(sumMin(live, spent))} of est. ${fmtM(sumEst(live))}`,
       segments: live.map((s) => s.doneOn != null),
       steps,
+      estimate: e ? { text: e.guess ? `~${fmtM(e.min)} guess` : `~${fmtM(e.min)}`, guess: e.guess } : null,
     }
   })
 }
