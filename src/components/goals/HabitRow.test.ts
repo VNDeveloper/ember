@@ -71,4 +71,32 @@ describe('HabitRow', () => {
     expect(w.find('.hr-edit').exists()).toBe(false)
     expect(w.find('.hr-line').exists()).toBe(false)
   })
+
+  it('closes the editor when another goal is shown, so Save never lands on the wrong goal', async () => {
+    const { w, ember } = setup(withHabit())
+    ember.goals.push(goalFixture('Other', [['M', [['S', null]]]]))
+    await w.find('.hr-edit').trigger('click')
+    await w.setProps({ goal: ember.goals[1] })
+    expect(w.find('.hr-panel').exists()).toBe(false)
+    expect(ember.goals[1].habit).toBeUndefined()
+  })
+
+  it('closes on Esc like the other edit panels', async () => {
+    const { w, ui } = setup(withHabit())
+    await w.find('.hr-edit').trigger('click')
+    expect(ui.escape()).toBe(true)
+    await w.vm.$nextTick()
+    expect(w.find('.hr-panel').exists()).toBe(false)
+  })
+
+  it('will not save an empty or too-small number of minutes', async () => {
+    const { w } = setup(withHabit())
+    await w.find('.hr-edit').trigger('click')
+    await w.find('.hr-minutes').setValue('')
+    expect(w.find('.hr-save').attributes('disabled')).toBeDefined()
+    await w.find('.hr-minutes').setValue('3')
+    expect(w.find('.hr-save').attributes('disabled')).toBeDefined()
+    await w.find('.hr-minutes').setValue('30')
+    expect(w.find('.hr-save').attributes('disabled')).toBeUndefined()
+  })
 })

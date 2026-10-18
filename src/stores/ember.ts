@@ -272,12 +272,12 @@ export const useEmberStore = defineStore('ember', () => {
   function setGoalStatus(goalId: string, status: GoalStatus) {
     const g = goalById(goalId)
     if (!g || !isLive(g) || goalStatus(g) === status) return
-    // The habit remembers when its goal was paused, so those weeks don't break its streak.
+    // The habit remembers when its goal was not active (paused or achieved), so those weeks don't break its streak.
     const h = liveHabit(g)
-    if (h && status === 'paused') h.pauses.push({ from: today.value, to: null })
-    else if (h) {
-      const open = h.pauses.find((p) => p.to === null)
-      if (open) open.to = today.value
+    if (h && status === 'active') {
+      for (const p of h.pauses) if (p.to === null) p.to = today.value
+    } else if (h && !h.pauses.some((p) => p.to === null)) {
+      h.pauses.push({ from: today.value, to: null })
     }
     if (status === 'achieved') {
       g.status = 'achieved'
@@ -300,7 +300,7 @@ export const useEmberStore = defineStore('ember', () => {
     if (!g || !isLive(g)) return
     const { minutes, daysPerWeek } = clampHabit(input.minutes, input.daysPerWeek)
     const h = liveHabit(g)
-    g.habit = h ? withTarget(h, minutes, daysPerWeek, today.value) : newHabit(minutes, daysPerWeek, today.value, goalStatus(g) === 'paused')
+    g.habit = h ? withTarget(h, minutes, daysPerWeek, today.value) : newHabit(minutes, daysPerWeek, today.value, goalStatus(g) !== 'active')
   }
 
   function setOutcome(goalId: string, text: string) {

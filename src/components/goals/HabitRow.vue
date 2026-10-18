@@ -24,22 +24,29 @@ const bestEver = computed(() => {
 const weeksText = (n: number) => (n ? plural(n, 'week') : '–')
 const WEEK_WORDS = { hit: 'Hit', missed: 'Missed', off: 'Not counted', current: 'This week' } as const
 
-const editing = ref(false)
-const minutes = ref('25')
+/** One edit panel at a time, app-wide (ui.editing): switching goals or Esc closes it. */
+const editKey = computed(() => `habit:${props.goal.id}`)
+const editing = computed(() => ui.editing === editKey.value)
+const minutes = ref<string | number>('25')
 const days = ref(5)
 const DAYS = [1, 2, 3, 4, 5, 6, 7]
+const minutesOk = computed(() => {
+  const n = Number(minutes.value)
+  return String(minutes.value).trim() !== '' && Number.isFinite(n) && n >= 5 && n <= 240
+})
 
 function open() {
   minutes.value = String(view.value?.minutes ?? 25)
   days.value = view.value?.daysPerWeek ?? 5
-  editing.value = true
+  ui.startEdit(editKey.value)
 }
 function save() {
+  if (!minutesOk.value) return
   ember.setHabit(props.goal.id, clampHabit(Number(minutes.value), days.value))
-  editing.value = false
+  ui.editing = null
 }
 function remove() {
-  editing.value = false
+  ui.editing = null
   ui.showUndo(ember.removeHabit(props.goal.id))
 }
 </script>
@@ -85,8 +92,8 @@ function remove() {
         <span class="hr-unit">days a week</span>
       </div>
       <div class="ep-actions">
-        <button class="btn btn-primary hr-save" @click="save">Save</button>
-        <button class="btn btn-ghost hr-cancel" @click="editing = false">Cancel</button>
+        <button class="btn btn-primary hr-save" :disabled="!minutesOk" @click="save">Save</button>
+        <button class="btn btn-ghost hr-cancel" @click="ui.editing = null">Cancel</button>
         <button v-if="view" class="btn btn-ghost ep-delete hr-remove" @click="remove">Remove habit</button>
       </div>
     </div>
