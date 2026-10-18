@@ -72,12 +72,12 @@ habit?: Habit | null
 - For each week, the target is the latest one whose `from` is on or before that Monday.
 - A **qualifying day** has `minutes ≥ target.minutes`. A week is **hit** when its qualifying days reach `daysPerWeek`.
 
-**Week status** (`weekStatus` → `'hit' | 'missed' | 'paused' | 'current'`):
+**Week status** (`weekStatus` → `'hit' | 'missed' | 'off' | 'current'`):
 - **`current`** is this week while not yet hit. Once hit, it's `hit`.
-- **`paused`** is a past week that overlaps a pause and wasn't hit. It neither counts nor breaks the streak.
+- **`off`** neither counts nor breaks the streak. It's a past week that wasn't hit and either overlaps a pause, or is the habit's first week (a habit started midweek gets a fair start).
 - **`missed`** is any other past week that wasn't hit.
 
-**Streak** (`habitStreak`): walking back from the most recent week, `hit` adds 1, `paused` and `current` are skipped, and `missed` stops the count. **Best** is the longest run, by the same rule, over the whole history.
+**Streak** (`habitStreak`): walking back from the most recent week, `hit` adds 1, `off` and `current` are skipped, and `missed` stops the count. **Best** is the longest run, by the same rule, over the whole history.
 
 **Today's view** (`habitView(goal, tasks, logs, today)` → `HabitView | null`, null without a live habit):
 - `todayMin`, `targetMin`, `todayDone`;
@@ -128,7 +128,7 @@ habit?: Habit | null
 - **With a habit:**
   - a kicker "Habit · 25m on 5 days a week";
   - a full-width `HabitLine`;
-  - the last 8 weeks as squares (hit = filled, missed = outline, paused = dotted, current = outline with an accent edge), with "Best: 9 weeks";
+  - the last 8 weeks as squares (hit = filled, missed = outline, off = dotted, current = outline with an accent edge), with "Best: 9 weeks";
   - **Edit** opens an inline panel (`.edit-panel`) with Minutes (number, step 5, 5–240), Days a week (a 1–7 segmented control), Save, Cancel and **Remove habit**.
 - **Without a habit:** an "Add a habit" ghost button opens the same panel, pre-filled with 25m and 5 days.
 - **Achieved goals:** the row shows "Habit · best streak 9 weeks" and no editor.
