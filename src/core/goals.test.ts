@@ -89,6 +89,11 @@ describe('goal status', () => {
     expect(r.milestones[1].estMin).toBe(90)
   })
 
+  it('drops a finish-by date that is not a real calendar date', () => {
+    expect(repairGoal({ ...goalFixture('G', []), finishBy: '2026-99-99' })).not.toHaveProperty('finishBy')
+    expect(repairGoal({ ...goalFixture('G', []), finishBy: '2026-02-30' })).not.toHaveProperty('finishBy')
+  })
+
   it('repairs a goal’s habit, and drops one that cannot be repaired', () => {
     const ok = { ...goalFixture('G', []), habit: { targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-09-28' }], pauses: [] } }
     expect(repairGoal(ok)).toBe(ok)

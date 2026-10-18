@@ -35,15 +35,16 @@ export function milestoneEstimate(g: Goal, m: Milestone): { min: number; guess: 
   return { min: Math.round(avg / 5) * 5, guess: true }
 }
 
-/** Minutes still to go, corrected; unplannedMin is the part from milestones without steps. */
-export function leftToGo(g: Goal, spent: Map<string, number>): { min: number; unplannedMin: number } {
-  const { ratio } = correction(g, spent)
+/** Minutes still to go, corrected; unplannedMin is the part from milestones without steps (none once achieved). */
+export function leftToGo(g: Goal, spent: Map<string, number>, corr: Correction = correction(g, spent)): { min: number; unplannedMin: number } {
+  const { ratio } = corr
+  const achieved = goalStatus(g) === 'achieved'
   let min = 0
   let unplanned = 0
   for (const m of liveMilestones(g)) {
     const e = milestoneEstimate(g, m)
     if (e) {
-      unplanned += e.min * ratio
+      if (!achieved) unplanned += e.min * ratio
       continue
     }
     for (const s of liveSteps(m)) if (s.doneOn == null) min += Math.max(0, s.estMin * ratio - stepMin(spent, s))
@@ -103,7 +104,8 @@ const when = (d: ISODate, today: ISODate): string => (yearOf(d) === yearOf(today
 export function paceView(g: Goal, logs: FocusLog[], spent: Map<string, number>, today: ISODate): PaceView | null {
   const status = goalStatus(g)
   if (status === 'achieved') return null
-  const left = leftToGo(g, spent)
+  const corr = correction(g, spent)
+  const left = leftToGo(g, spent, corr)
   const perWeek = stepPacePerWeek(g, logs, today)
   const at = forecastDate(left.min, perWeek, today)
   const h = liveHabit(g)
@@ -120,7 +122,7 @@ export function paceView(g: Goal, logs: FocusLog[], spent: Map<string, number>, 
     paused: status === 'paused',
     left: `~${fmtM(left.min)}`,
     unplanned: left.unplannedMin ? `incl. ~${fmtM(left.unplannedMin)} unplanned` : '',
-    correction: correction(g, spent).text,
+    correction: corr.text,
     pace: perWeek > 0 ? `${fmtM(perWeek)} a week · last 4 weeks` : 'No focus on its steps in the last 4 weeks',
     atPace: at ? `~${when(at, today)}` : null,
     atHabit: atH ? `~${when(atH, today)}` : null,

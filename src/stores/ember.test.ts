@@ -892,5 +892,16 @@ describe('pace settings', () => {
     store.setMilestoneEstimate('D3', 'D3/Motion', null)
     expect(ms()).not.toHaveProperty('estMin')
   })
+  it('ignores impossible dates and bad hours, and leaves deleted milestones alone', () => {
+    const store = storeWith()
+    store.setFinishBy('D3', '2026-02-30')
+    expect(store.goals[0]).not.toHaveProperty('finishBy')
+    store.setMilestoneEstimate('D3', 'D3/Motion', 2)
+    store.setMilestoneEstimate('D3', 'D3/Motion', Number.NaN)
+    store.setMilestoneEstimate('D3', 'D3/Motion', Number.POSITIVE_INFINITY)
+    expect(store.goals[0].milestones[1].estMin).toBe(120)
+    store.deleteMilestone('D3', 'D3/Motion')
+    store.setMilestoneEstimate('D3', 'D3/Motion', 3)
+    expect(store.goals[0].milestones[1].estMin).toBe(120)
+  })
 })
-

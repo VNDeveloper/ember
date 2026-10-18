@@ -1,4 +1,4 @@
-import type { ISODate } from './dates'
+import { isRealDate, type ISODate } from './dates'
 import { repairHabit } from './habits'
 import type { Goal, GoalStatus, Milestone, Step, StepTarget } from './model'
 
@@ -20,12 +20,11 @@ function repairStatus(g: Goal): Goal {
   return status === 'active' ? rest : status === 'paused' ? { ...rest, status } : { ...rest, status, achievedOn: g.achievedOn ?? null }
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const okEst = (n: unknown): boolean => n == null || (Number.isInteger(n) && (n as number) >= 30 && (n as number) <= 6000)
 
 /** Drops an invalid finish-by date and invalid milestone estimates; a valid goal comes back as the same object. */
 function repairPlan(g: Goal): Goal {
-  const badFinish = g.finishBy != null && !(typeof g.finishBy === 'string' && ISO_DATE.test(g.finishBy))
+  const badFinish = g.finishBy != null && !isRealDate(g.finishBy)
   const badMs = g.milestones.some((m) => !okEst(m.estMin))
   if (!badFinish && !badMs) return g
   const milestones = badMs ? g.milestones.map((m) => {

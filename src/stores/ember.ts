@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { addDays, todayISO, type ISODate } from '../core/dates'
+import { addDays, isRealDate, todayISO, type ISODate } from '../core/dates'
 import { detect, findDuplicate, normaliseUrl, shortLink } from '../core/companies'
 import { clampHabit, liveHabit, newHabit, withTarget } from '../core/habits'
 import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
@@ -298,15 +298,16 @@ export const useEmberStore = defineStore('ember', () => {
     const g = goalById(goalId)
     if (!g || !isLive(g)) return
     if (date === null) delete g.finishBy
-    else if (/^\d{4}-\d{2}-\d{2}$/.test(date)) g.finishBy = date
+    else if (isRealDate(date)) g.finishBy = date
   }
 
   /** Rough hours for a milestone without steps: stored as minutes (multiples of 5, 30–6000); null clears it. */
   function setMilestoneEstimate(goalId: string, msId: string, hours: number | null) {
-    const m = goalById(goalId)?.milestones.find((x) => x.id === msId)
-    if (!m) return
-    if (hours === null || !Number.isFinite(hours)) delete m.estMin
-    else m.estMin = Math.min(6000, Math.max(30, Math.round((hours * 60) / 5) * 5))
+    const g = goalById(goalId)
+    const m = g?.milestones.find((x) => x.id === msId)
+    if (!g || !m || !isLive(g) || !isLive(m)) return
+    if (hours === null) delete m.estMin
+    else if (Number.isFinite(hours)) m.estMin = Math.min(6000, Math.max(30, Math.round((hours * 60) / 5) * 5))
   }
 
   // — habits —

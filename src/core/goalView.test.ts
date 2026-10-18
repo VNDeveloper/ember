@@ -60,6 +60,13 @@ describe('pace in the roadmap and list', () => {
   })
 })
 
+describe('achieved goals', () => {
+  it('count nothing left for milestones they never planned', () => {
+    const done = { ...goalFixture('G', [['Planned', [['A', '2026-09-01']]], ['Getting started', []]]), status: 'achieved' as const, achievedOn: '2026-09-02' }
+    expect(goalLedger(done, spent).left).toBe('0m')
+  })
+})
+
 describe('goalTasks', () => {
   it("lists the goal's open tasks and today's finished ones by date, Someday last", () => {
     const tasks = [

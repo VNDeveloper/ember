@@ -48,8 +48,8 @@ export interface GoalLedger { focused: string; estimated: string; left: string; 
 
 export function goalLedger(g: Goal, spent: Map<string, number>): GoalLedger {
   const steps = allSteps(g)
-  const left = leftToGo(g, spent)
   const corr = correction(g, spent)
+  const left = leftToGo(g, spent, corr)
   return {
     focused: fmtM(sumMin(steps, spent)),
     estimated: fmtM(sumEst(steps)),

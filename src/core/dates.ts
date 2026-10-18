@@ -18,6 +18,10 @@ export function fromISO(s: ISODate): Date {
 
 export const todayISO = (now: number = Date.now()): ISODate => toISO(new Date(now))
 
+/** 'YYYY-MM-DD' that is a real calendar day (not 2026-02-30 or 2026-99-99). */
+export const isRealDate = (s: unknown): s is ISODate =>
+  typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && toISO(fromISO(s)) === s
+
 export function addDays(s: ISODate, n: number): ISODate {
   const d = fromISO(s)
   d.setDate(d.getDate() + n)

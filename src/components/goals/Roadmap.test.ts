@@ -285,4 +285,14 @@ describe('Roadmap', () => {
     await later().find('.rm-est-clear').trigger('click')
     expect(ember.goals[0].milestones[1]).not.toHaveProperty('estMin')
   })
+  it('names the milestone in its estimate controls, and pre-fills hours without long decimals', async () => {
+    const g = goalFixture('D3', [['Planned', [['A', null]]], ['Later', []]])
+    g.milestones[1].estMin = 125
+    const { w } = setup(g)
+    const later = () => w.findAll('.rm-ms')[1]
+    expect(later().find('.rm-est-set').attributes('aria-label')).toBe('Change the estimate for Later')
+    await later().find('.rm-est-set').trigger('click')
+    expect((later().find('.rm-est-input').element as HTMLInputElement).value).toBe('2.08')
+    expect(later().find('.rm-est-input').attributes('aria-label')).toBe('Rough hours for Later')
+  })
 })

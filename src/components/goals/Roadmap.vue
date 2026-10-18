@@ -32,7 +32,7 @@ const estimating = ref<string | null>(null)
 const estHours = ref<string | number>('')
 function openEst(r: MilestoneRow) {
   const m = props.goal.milestones.find((x) => x.id === r.id)
-  estHours.value = m?.estMin != null ? String(m.estMin / 60) : ''
+  estHours.value = m?.estMin != null ? String(Math.round((m.estMin / 60) * 100) / 100) : ''
   estimating.value = r.id
 }
 function saveEst(r: MilestoneRow) {
@@ -140,10 +140,15 @@ function commit(e: KeyboardEvent) {
             @delete="deleteMilestone(r.id)"
           />
           <div v-if="r.estimate" class="rm-est">
-            <button v-if="estimating !== r.id" class="btn btn-ghost rm-est-set" @click="openEst(r)">{{ r.estimate.guess ? 'Set estimate' : 'Change estimate' }}</button>
+            <button
+              v-if="estimating !== r.id"
+              class="btn btn-ghost rm-est-set"
+              :aria-label="`${r.estimate.guess ? 'Set' : 'Change'} the estimate for ${r.title}`"
+              @click="openEst(r)"
+            >{{ r.estimate.guess ? 'Set estimate' : 'Change estimate' }}</button>
             <template v-else>
               <label class="rm-est-label">Rough hours
-                <input v-model="estHours" class="input input-sm rm-est-input" type="number" min="0.5" max="100" step="0.5" />
+                <input v-model="estHours" class="input input-sm rm-est-input" type="number" min="0.5" max="100" step="0.5" :aria-label="`Rough hours for ${r.title}`" />
               </label>
               <button class="btn btn-primary rm-est-save" :disabled="!(Number(estHours) > 0)" @click="saveEst(r)">Save</button>
               <button v-if="!r.estimate.guess" class="btn btn-ghost rm-est-clear" @click="clearEst(r)">Clear</button>
