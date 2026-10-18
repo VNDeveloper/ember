@@ -96,4 +96,13 @@ describe('GoalList', () => {
       expect(names(w)).toEqual(['D3', 'Art'])
     })
   })
+
+  it('notes goals that are behind their finish-by date', async () => {
+    const { w, ember } = setup()
+    expect(w.find('.gl-behind').exists()).toBe(false)
+    ember.setFinishBy('D3', '2026-09-01')
+    await w.vm.$nextTick()
+    expect(w.find('.gl-behind').text()).toBe('· behind')
+  })
 })
+

@@ -2,13 +2,16 @@
 import { ChevronRight, Plus } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { goalList, type GoalListGroup } from '../../core/goalView'
+import { paceView } from '../../core/pace'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 
 const props = defineProps<{ activeId: string | null }>()
 const ember = useEmberStore()
 const ui = useUiStore()
-const groups = computed(() => goalList(ember.goals, ember.tally.spent))
+/** Goals behind (or past) their finish-by date, from the pace check. */
+const behind = computed(() => new Set(ember.goals.filter((g) => g.finishBy && paceView(g, ember.logs, ember.tally.spent, ember.today)?.behind).map((g) => g.id)))
+const groups = computed(() => goalList(ember.goals, ember.tally.spent, behind.value))
 
 /** Achieved starts collapsed, but opens to show the goal you're looking at unless you closed it yourself. */
 const ACHIEVED_KEY = 'goals:achieved'
@@ -57,7 +60,7 @@ function onEnter(e: KeyboardEvent) {
               <span class="gl-pct">{{ g.pct }}%</span>
             </span>
             <span class="gl-bar"><span :class="{ 'is-complete': g.complete }" :style="{ width: `${g.pct}%` }"></span></span>
-            <span class="gl-meta">{{ g.meta }}</span>
+            <span class="gl-meta">{{ g.meta }}<span v-if="g.behind" class="gl-behind"> · behind</span></span>
           </button>
         </template>
       </div>
@@ -107,4 +110,5 @@ function onEnter(e: KeyboardEvent) {
 @media (max-width: 860px) {
   .goal-list { padding: var(--space-4); border-right: 0; border-bottom: 2px solid var(--color-divider); }
 }
+.gl-behind { color: var(--color-accent-700); font-weight: 700; }
 </style>
