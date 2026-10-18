@@ -80,6 +80,15 @@ describe('WorkingOn', () => {
     expect(w.find('.wo-empty').text()).toBe('No active goals. Resume one on the Goals tab.')
   })
 
+  it('works out habits only for the goals on its cards', async () => {
+    const habits = await import('../../core/habits')
+    const spy = vi.spyOn(habits, 'habitView')
+    const goals = [...GOALS(), { ...goalFixture('Gone', [['M', [['S', null]]]]), deletedOn: '2026-09-01' }]
+    setup(goals)
+    expect(spy.mock.calls.map((c) => c[0].id).sort()).toEqual(['D3', 'Spanish'])
+    spy.mockRestore()
+  })
+
   it('shows a habit line on cards whose goal has a habit', () => {
     const goals = GOALS()
     goals[1] = { ...goals[1], habit: { targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-09-21' }], pauses: [] } }

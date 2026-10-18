@@ -25,11 +25,12 @@ export function repairHabit(x: unknown): Habit | null {
   const targets = rawTargets.filter(okTarget).sort((a, b) => a.from.localeCompare(b.from))
   if (!targets.length) return null
   const pauses = rawPauses.filter(okPause)
-  const unchanged = Array.isArray(h.pauses) && pauses.length === rawPauses.length
+  const unchanged = Array.isArray(h.pauses) && pauses.length === rawPauses.length && (h.deletedOn == null || isDate(h.deletedOn))
     && targets.length === rawTargets.length && targets.every((t, i) => t === rawTargets[i])
   if (unchanged) return x as Habit
   const out: Habit = { targets, pauses }
   if (isDate(h.deletedOn)) out.deletedOn = h.deletedOn
+  else if (h.deletedOn === null) out.deletedOn = null
   return out
 }
 
@@ -152,6 +153,8 @@ export function habitView(goal: Goal, tasks: Task[], logs: FocusLog[], today: IS
 export function withTarget(h: Habit, minutes: number, daysPerWeek: number, today: ISODate): Habit {
   const monday = mondayOf(today)
   const last = h.targets[h.targets.length - 1]
+  // Saving the same target again changes nothing (no history entry, no sync write).
+  if (last.minutes === minutes && last.daysPerWeek === daysPerWeek) return h
   const keep = mondayOf(last.from) === monday ? h.targets.slice(0, -1) : h.targets
   return { ...h, targets: [...keep, { minutes, daysPerWeek, from: monday }] }
 }

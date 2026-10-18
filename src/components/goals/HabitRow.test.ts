@@ -65,6 +65,11 @@ describe('HabitRow', () => {
     expect(w.find('.hr-add').exists()).toBe(true)
   })
 
+  it('renders nothing on an achieved goal that never had a habit', () => {
+    const { w } = setup({ ...G(), status: 'achieved', achievedOn: '2026-09-20' })
+    expect(w.find('.habit-row').exists()).toBe(false)
+  })
+
   it('shows only the best streak on an achieved goal', () => {
     const { w } = setup({ ...withHabit(), status: 'achieved', achievedOn: '2026-09-20' })
     expect(w.find('.hr-kicker').text()).toBe('Habit · best streak –')

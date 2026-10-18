@@ -133,3 +133,30 @@ describe('changing a habit', () => {
     ])
   })
 })
+
+describe('habit minor fixes', () => {
+  it('keeps the habit as it is when the target is saved unchanged', () => {
+    const h = habit()
+    expect(withTarget(h, 25, 3, TODAY)).toBe(h)
+  })
+
+  it('drops a garbage removal date instead of hiding the habit for good', () => {
+    const repaired = repairHabit({ ...habit(), deletedOn: 'garbage' })!
+    expect(repaired).not.toHaveProperty('deletedOn')
+    expect(repaired.targets).toEqual(habit().targets)
+  })
+
+  it('counts a log on a step that was deleted later', () => {
+    const goal = goalFixture('G', [['M', [['S', null]]]])
+    goal.milestones[0].steps[0].deletedOn = '2026-10-13'
+    expect(goalMinutesByDay(goal, [], [logFixture('2026-10-12', S, 25)]).get('2026-10-12')).toBe(25)
+  })
+
+  it('skips every week of a pause that spans several weeks, and the streak carries across', () => {
+    const h = habit({ targets: [{ minutes: 25, daysPerWeek: 2, from: '2026-08-31' }], pauses: [{ from: '2026-09-15', to: '2026-10-06' }] })
+    const by = days(['2026-09-07', '2026-09-08', '2026-10-12', '2026-10-13'])
+    const weeks = habitWeeks(h, by, TODAY)
+    expect(weeks.map((w) => w.status)).toEqual(['off', 'hit', 'off', 'off', 'off', 'off', 'hit'])
+    expect(habitStreak(weeks)).toEqual({ streak: 2, best: 2 })
+  })
+})

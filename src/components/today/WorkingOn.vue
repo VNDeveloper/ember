@@ -11,12 +11,13 @@ import HabitLine from '../goals/HabitLine.vue'
 const ember = useEmberStore()
 const ui = useUiStore()
 const cards = computed(() => workingOn(ember.goals, ember.selection))
-/** Each card's habit, from the same focus log the rest of Today uses. */
+/** Each card's habit, from the same focus log the rest of Today uses (only the goals on cards). */
 const habits = computed(() => {
   const out = new Map<string, HabitView>()
-  for (const g of ember.goals) {
-    const v = habitView(g, ember.tasks, ember.logs, ember.today)
-    if (v) out.set(g.id, v)
+  for (const c of cards.value) {
+    const g = ember.goals.find((x) => x.id === c.goalId)
+    const v = g ? habitView(g, ember.tasks, ember.logs, ember.today) : null
+    if (v) out.set(c.goalId, v)
   }
   return out
 })

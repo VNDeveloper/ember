@@ -840,6 +840,14 @@ describe('habits', () => {
     expect(store.goals[0].habit!.pauses).toEqual([{ from: '2026-09-23', to: '2026-09-30' }])
   })
 
+  it("stamps the goal when its habit changes, so the edit syncs", async () => {
+    const store = storeWith()
+    await nextTick()
+    store.setHabit('D3', { minutes: 25, daysPerWeek: 3 })
+    await nextTick()
+    expect(typeof loadData()!.goals[0].updatedAt).toBe('number')
+  })
+
   it('a habit set on a paused goal starts paused', () => {
     const store = storeWith()
     store.setGoalStatus('D3', 'paused')

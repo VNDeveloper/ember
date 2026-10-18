@@ -52,7 +52,7 @@ function remove() {
 </script>
 
 <template>
-  <section class="habit-row" aria-label="Habit">
+  <section v-if="!achieved || hasHabit" class="habit-row" aria-label="Habit">
     <template v-if="achieved">
       <span v-if="hasHabit" class="kicker hr-kicker">Habit · best streak {{ weeksText(bestEver) }}</span>
     </template>
