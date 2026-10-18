@@ -7,6 +7,24 @@ export type { ISODate }
 /** deletedOn (soft delete): hidden from live views, kept for history. updatedAt: last edit (sync merge). */
 export interface Step { id: string; title: string; doneOn: ISODate | null; estMin: number; deletedOn?: ISODate | null; updatedAt?: number }
 export interface Milestone { id: string; title: string; steps: Step[]; deletedOn?: ISODate | null; updatedAt?: number }
+export interface HabitTarget {
+  /** Minutes of focus on the goal that make a day count (5–240). */
+  minutes: number
+  /** Days a week that must count for the week to be hit (1–7). */
+  daysPerWeek: number
+  /** The Monday this target applies from. */
+  from: ISODate
+}
+/** A practice habit on a goal, measured from focus time (see core/habits). */
+export interface Habit {
+  /** Oldest first; the last is the current target. Never empty. */
+  targets: HabitTarget[]
+  /** Periods the goal was paused: [from, to); to is null while still paused. */
+  pauses: { from: ISODate; to: ISODate | null }[]
+  /** Soft delete (Remove habit), so the undo bar can bring it back. */
+  deletedOn?: ISODate | null
+}
+
 export type GoalStatus = 'active' | 'paused' | 'achieved'
 export interface Goal {
   id: string; title: string; outcome: string; milestones: Milestone[]; createdAt: ISODate
@@ -14,6 +32,8 @@ export interface Goal {
   status?: GoalStatus
   /** Set only while achieved: the day the user confirmed it. */
   achievedOn?: ISODate | null
+  /** Optional practice habit: focus minutes on N days a week. */
+  habit?: Habit | null
   deletedOn?: ISODate | null; updatedAt?: number
 }
 

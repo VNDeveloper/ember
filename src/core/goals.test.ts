@@ -76,6 +76,12 @@ describe('goal status', () => {
     expect(isActiveGoal({ ...g, status: 'achieved' })).toBe(false)
     expect(isActiveGoal({ ...g, deletedOn: '2026-09-01' })).toBe(false)
   })
+  it('repairs a goal’s habit, and drops one that cannot be repaired', () => {
+    const ok = { ...goalFixture('G', []), habit: { targets: [{ minutes: 25, daysPerWeek: 3, from: '2026-09-28' }], pauses: [] } }
+    expect(repairGoal(ok)).toBe(ok)
+    expect(repairGoal({ ...goalFixture('G', []), habit: { targets: [], pauses: [] } })).not.toHaveProperty('habit')
+  })
+
   it('repairs an unknown status and a stray achievedOn, leaving valid goals untouched', () => {
     expect(repairGoal(g)).toBe(g)
     const ok = { ...g, status: 'achieved' as const, achievedOn: '2026-10-11' }

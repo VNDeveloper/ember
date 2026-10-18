@@ -1,4 +1,5 @@
 import type { ISODate } from './dates'
+import { repairHabit } from './habits'
 import type { Goal, GoalStatus, Milestone, Step, StepTarget } from './model'
 
 /** Soft-deleted items keep their data for history but drop out of every live view. */
@@ -10,13 +11,23 @@ export const goalStatus = (g: Goal): GoalStatus => (STATUSES.includes(g.status a
 export const isActiveGoal = (g: Goal): boolean => isLive(g) && goalStatus(g) === 'active'
 
 /** Saved or synced goals: an unknown status becomes active; achievedOn stays only on achieved goals. Valid goals come back as is. */
-export function repairGoal(g: Goal): Goal {
+function repairStatus(g: Goal): Goal {
   const status = goalStatus(g)
   const badStatus = g.status !== undefined && (g.status !== status || status === 'active')
   const strayDate = 'achievedOn' in g && status !== 'achieved'
   if (!badStatus && !strayDate) return g
   const { status: _s, achievedOn: _a, ...rest } = g
   return status === 'active' ? rest : status === 'paused' ? { ...rest, status } : { ...rest, status, achievedOn: g.achievedOn ?? null }
+}
+
+/** Repairs a goal's status and habit; a valid goal comes back as the same object. */
+export function repairGoal(g: Goal): Goal {
+  const s = repairStatus(g)
+  if (s.habit === undefined || s.habit === null) return s
+  const habit = repairHabit(s.habit)
+  if (habit === s.habit) return s
+  const { habit: _h, ...rest } = s
+  return habit ? { ...rest, habit } : rest
 }
 
 /** Goals a task can link to: active and paused, plus its current goal if achieved (so editing never unlinks it). */
