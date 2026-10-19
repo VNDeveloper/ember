@@ -47,7 +47,8 @@ const taskResult = computed(() =>
   props.kind === 'tasks' && pasted.value && !wrongKind.value ? parseTasks(text.value, ember.goals, ember.today) : null)
 
 const picks = ref<Set<string>>(new Set())
-watch([plan, match, taskResult], () => {
+// Ticks reset only for a new paste: data changing underneath (a sync, another tab) keeps what you unticked.
+watch([text, () => props.kind, () => props.goal?.id], () => {
   picks.value = plan.value ? defaultPicks(plan.value, match.value) : new Set(taskResult.value?.tasks.map((_, i) => taskKey(i)) ?? [])
 }, { immediate: true })
 const toggle = (key: string) => { picks.value = togglePick(picks.value, key, plan.value, match.value) }

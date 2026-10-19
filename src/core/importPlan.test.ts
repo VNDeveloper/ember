@@ -59,7 +59,10 @@ describe('detectKind', () => {
     expect(detectKind('Sure!\n# Tasks\n- a')).toBe('tasks')
     expect(detectKind('## Task list\n- a')).toBe('tasks')
     expect(detectKind('# Goal: Spanish\n## Basics')).toBe('goal')
-    expect(detectKind('## Task 1: set up\n- a')).toBe('goal')
+    expect(detectKind('## Task 1: set up\n- a')).toBeNull()
+    expect(detectKind('# Tasks automation with Python\n## Basics')).toBe('goal')
+    expect(detectKind('## This week\n- Call mum')).toBeNull()
+    expect(detectKind('## Goal: Spanish\n- a')).toBe('goal')
     expect(detectKind('- a\n- b')).toBeNull()
   })
 })
@@ -264,5 +267,30 @@ describe('copy out and prompts', () => {
     expect(t).not.toContain('Gone')
     expect(t).not.toContain('- Done')
     expect(tasksPrompt([], TODAY)).toContain('leave out "goal:"')
+  })
+})
+
+describe('review fixes', () => {
+  it('stops at the closing fence, so tips after it never become steps or tasks', () => {
+    const p = parseGoal(`${SAMPLE}\nA few tips to stay on track:\n- Practise a little every day\n- Use spaced repetition (Anki works well)`)!
+    expect(p.milestones[2]).toMatchObject({ title: 'Real conversations', estMin: 360, steps: [] })
+    expect(p.skipped).toEqual([])
+    const t = parseTasks('Here you go:\n```\n# Tasks\n- Call mum\n```\nTips:\n- Batch your errands', [], TODAY)
+    expect(t.tasks.map((x) => x.title)).toEqual(['Call mum'])
+  })
+
+  it("matches milestones named by hand when a goal's own markdown comes back", () => {
+    const names = ['Milestone 1: Basics', 'Week 1 - Setup', '2. Intro', 'Part 2: Projects', 'Projects (2h)']
+    const g = goalFixture('G', names.map((n) => [n, [['Step', null]]]))
+    const back = parseGoal(goalMarkdown(g))!
+    const m = matchPlan(g, back)
+    expect(m.milestones.map((x) => x.msId)).toEqual(g.milestones.map((x) => x.id))
+    expect(m.milestones.every((x) => x.steps.every((st) => st === 'there'))).toBe(true)
+  })
+
+  it('keeps hyphenated words in milestone and goal names', () => {
+    const p = parseGoal('# Goal-setting for 2027\n## Week-long immersion\n- a\n## Part-time study plan\n- b\n## Week 1-2: Basics\n- c\n## Week 3 - Setup\n- d\n## Stage-fright practice\n- e')!
+    expect(p.title).toBe('Goal-setting for 2027')
+    expect(p.milestones.map((m) => m.title)).toEqual(['Week-long immersion', 'Part-time study plan', 'Week 1-2: Basics', 'Setup', 'Stage-fright practice'])
   })
 })

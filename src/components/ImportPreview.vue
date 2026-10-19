@@ -49,7 +49,7 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
       <ul class="ipv-list">
         <li v-for="(m, mi) in plan.milestones" :key="mi" class="ipv-ms">
           <label class="ipv-row ipv-ms-row">
-            <input type="checkbox" :checked="picks.has(msKey(mi))" @change="emit('toggle', msKey(mi))" />
+            <input type="checkbox" class="tick" :checked="picks.has(msKey(mi))" @change="emit('toggle', msKey(mi))" />
             <span class="ipv-ms-title">{{ m.title }}</span>
             <span v-if="matched(mi)" class="ipv-meta">adding to it</span>
             <span v-else-if="!m.steps.length && m.estMin" class="ipv-meta">~{{ fmtM(m.estMin) }}</span>
@@ -57,7 +57,7 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
           <ul class="ipv-steps">
             <li v-for="(s, si) in m.steps" :key="si" class="ipv-step" :class="{ 'is-there': there(mi, si) }">
               <label class="ipv-row">
-                <input v-if="!there(mi, si)" type="checkbox" :checked="picks.has(stepKey(mi, si))" @change="emit('toggle', stepKey(mi, si))" />
+                <input v-if="!there(mi, si)" type="checkbox" class="tick" :checked="picks.has(stepKey(mi, si))" @change="emit('toggle', stepKey(mi, si))" />
                 <span class="ipv-step-title" :class="{ 'is-done': s.done }">{{ s.title }}</span>
                 <span class="ipv-meta">{{ there(mi, si) ? 'already there' : fmtM(s.estMin) }}</span>
               </label>
@@ -75,7 +75,7 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
     <ul v-else-if="tasks" class="ipv-list">
       <li v-for="(t, ti) in tasks" :key="ti" class="ipv-task">
         <label class="ipv-row">
-          <input type="checkbox" :checked="picks.has(taskKey(ti))" @change="emit('toggle', taskKey(ti))" />
+          <input type="checkbox" class="tick" :checked="picks.has(taskKey(ti))" @change="emit('toggle', taskKey(ti))" />
           <span class="ipv-task-body">
             <span class="ipv-task-title">{{ t.title }}</span>
             <span class="ipv-task-meta">
@@ -107,7 +107,18 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
 .ipv-ms-title { font-weight: 700; }
 .ipv-meta { margin-left: auto; font-size: 12px; color: var(--color-neutral-700); white-space: nowrap; }
 .ipv-step.is-there { color: var(--color-neutral-700); }
-.ipv-step.is-there .ipv-row { cursor: default; padding-left: 28px; }
+.ipv-step.is-there .ipv-row { cursor: default; padding-left: 26px; }
+/* Square ticks like the rest of Ember, not the browser's rounded box. */
+.tick {
+  appearance: none; flex: none; align-self: center; width: 18px; height: 18px; margin: 0; border-radius: 0; cursor: pointer;
+  border: 2px solid var(--color-text); background: transparent center / 12px no-repeat;
+}
+.tick:hover { border-color: var(--color-accent); }
+.tick:checked {
+  background-color: var(--color-accent); border-color: var(--color-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='square'%3E%3Cpath d='M4 12l5 5L20 6'/%3E%3C/svg%3E");
+}
+.tick:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .ipv-step-title.is-done { text-decoration: line-through; }
 .ipv-task-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ipv-task-meta { font-size: 12px; color: var(--color-neutral-700); }

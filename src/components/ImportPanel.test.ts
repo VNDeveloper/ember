@@ -108,4 +108,27 @@ describe('ImportPanel', () => {
     expect(w.emitted('close')).toHaveLength(1)
     expect(ember.goals).toHaveLength(1)
   })
+
+  it('keeps your ticks when data changes underneath (a sync, another tab)', async () => {
+    const { w, ember } = setup('tasks')
+    await w.find('.ip-paste').setValue('- Call mum\n- Water plants')
+    await w.findAll('.ipv-task input')[1].setValue(false)
+    ember.addGoal('Arrived from sync')
+    await nextTick()
+    expect(w.find('.ip-create').text()).toBe('Add 1 task')
+  })
+
+  it('reads a task list grouped under day headings', async () => {
+    const { w } = setup('tasks')
+    await w.find('.ip-paste').setValue('## This week\n- Call mum\n## Later\n- Water plants')
+    expect(w.findAll('.ipv-task-title').map((x) => x.text())).toEqual(['Call mum', 'Water plants'])
+  })
+
+  it('uses square tick boxes, not the browser default', async () => {
+    const { w } = setup('goal')
+    await w.find('.ip-paste').setValue('# Goal: G\n## M\n- a')
+    const boxes = w.findAll('.import-preview input[type="checkbox"]')
+    expect(boxes.length).toBe(2)
+    expect(boxes.every((b) => b.classes().includes('tick'))).toBe(true)
+  })
 })

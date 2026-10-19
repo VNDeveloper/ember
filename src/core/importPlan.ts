@@ -29,7 +29,8 @@ export const BULLET = /^(\s*)(?:[-*+]|\d{1,3}[.)])\s+(.*)$/
 export const CHECK = /^\[([ xX])\]\s*/
 const FIELD = /^(?:[-*+]\s+)?(outcome|finish[ -]by|habit)\s*:\s*(.*)$/i
 const EST = /^(?:about\s+|~\s*)?(?:(\d+(?:[.,]\d+)?)\s*(?:h|hr|hrs|hours?))?\s*(?:(\d+)\s*(?:m|min|mins|minutes?))?$/i
-const TASKS_HEADING = /^(?:tasks|task list|to-?do list|to-?dos)\b/i
+const TASKS_HEADING = /^(?:tasks|task list|to-?do list|to-?dos?)\s*:?$/i
+const GOAL_PREFIX = /^goal\s*(?::|\s[—–-])\s*/i
 
 export const indentOf = (s: string): number => s.replace(/\t/g, '    ').length
 export const nested = (what: 'steps' | 'tasks'): string => `sub-points aren't imported — make them ${what}`
@@ -92,7 +93,7 @@ function splitEstimate(text: string): { title: string; est: number | null } {
 
 /** "Milestone 2: Basics", "Phase 1 — Basics", "1. Basics" → "Basics". */
 function cleanMilestone(s: string): string {
-  const out = s.replace(/^(?:(?:milestone|phase|stage|part|week)\s*\d*\s*[:.—–-]\s*|\d{1,3}[.):]\s+)/i, '').trim()
+  const out = s.replace(/^(?:(?:milestone|phase|stage|part|week)(?:\s+\d+)?\s*(?::|\.|\s[—–-])|\d{1,3}[.):])\s*/i, '').trim()
   return out || s.trim()
 }
 
@@ -108,10 +109,17 @@ export function cutTitle(title: string, line: number, raw: string, skipped: Skip
   return title.slice(0, LIMITS.title).trimEnd()
 }
 
+/**
+ * By the first heading: "# Tasks" is a task list; a "#" heading or one starting "Goal:" is a goal.
+ * Any other "##" heading (a milestone, or a task list grouped by day) is left to the panel.
+ */
 export function detectKind(input: string): 'goal' | 'tasks' | null {
   for (const raw of splitLines(input).lines) {
     const h = HEADING.exec(raw)
-    if (h) return TASKS_HEADING.test(stripMarks(h[2])) ? 'tasks' : 'goal'
+    if (!h) continue
+    const text = stripMarks(h[2])
+    if (TASKS_HEADING.test(text)) return 'tasks'
+    return h[1].length === 1 || GOAL_PREFIX.test(text) ? 'goal' : null
   }
   return null
 }
@@ -131,18 +139,25 @@ export function parseGoal(input: string): GoalPlan | null {
   let dropping = false
   let baseIndent = -1
   let stepCount = 0
+  let fenced = false
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]
     const line = i + 1
-    if (!raw.trim() || FENCE.test(raw) || RULE.test(raw)) continue
+    if (FENCE.test(raw)) {
+      // A plan wrapped in a code block ends at its closing fence: what follows is the AI's tips.
+      if (started && fenced) break
+      if (!started) fenced = true
+      continue
+    }
+    if (!raw.trim() || RULE.test(raw)) continue
     const h = HEADING.exec(raw)
     if (h) {
       started = true
       const text = stripMarks(h[2])
-      const named = /^goal\s*[:—–-]\s*(.+)$/i.exec(text)
+      const named = GOAL_PREFIX.test(text) ? text.replace(GOAL_PREFIX, '').trim() : null
       if (title === null && milestones.length === 0 && (h[1].length === 1 || named)) {
-        title = cutTitle((named ? named[1] : text).trim(), line, raw, skipped)
+        title = cutTitle(named || text, line, raw, skipped)
         continue
       }
       if (milestones.length >= LIMITS.milestones) {
@@ -241,10 +256,16 @@ export function parseTasks(input: string, goals: Goal[], today: ISODate): { task
   const live = goals.filter(isLive)
   const tasks: TaskPlan[] = []
   let baseIndent = -1
+  let fenced = false
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]
     const line = i + 1
-    if (!raw.trim() || FENCE.test(raw) || RULE.test(raw) || HEADING.test(raw)) continue
+    if (FENCE.test(raw)) {
+      if (fenced && tasks.length) break
+      if (!tasks.length) fenced = true
+      continue
+    }
+    if (!raw.trim() || RULE.test(raw) || HEADING.test(raw)) continue
     const b = BULLET.exec(raw)
     if (!b) continue
     const indent = indentOf(b[1])
@@ -304,12 +325,23 @@ export interface MilestoneMatch { msId: string | null; steps: ('new' | 'there')[
 export interface PlanMatch { milestones: MilestoneMatch[]; outcome: FieldMatch; finishBy: FieldMatch; habit: FieldMatch }
 
 /** Which plan milestones and steps the goal already has (by title), and which of its fields the paste would fill. */
+/** A milestone's name without "Milestone 1:"-style prefixes or a trailing estimate, so hand-named milestones match their own copy. */
+const milestoneKey = (title: string): string => normTitle(splitEstimate(cleanMilestone(stripMarks(title))).title)
+
 export function matchPlan(goal: Goal, plan: GoalPlan): PlanMatch {
   const live = liveMilestones(goal)
+  // One live milestone per plan milestone, in order; an exact title wins, the cleaned name is the fallback.
+  const used = new Set<string>()
+  const find = (t: string) => {
+    const free = live.filter((x) => !used.has(x.id))
+    const m = free.find((x) => normTitle(x.title) === normTitle(t)) ?? free.find((x) => milestoneKey(x.title) === milestoneKey(t)) ?? null
+    if (m) used.add(m.id)
+    return m
+  }
   const field = (inPaste: boolean, has: boolean): FieldMatch => (!inPaste ? 'none' : has ? 'kept' : 'fill')
   return {
     milestones: plan.milestones.map((pm) => {
-      const m = live.find((x) => normTitle(x.title) === normTitle(pm.title)) ?? null
+      const m = find(pm.title)
       const have = new Set(m ? liveSteps(m).map((s) => normTitle(s.title)) : [])
       return { msId: m?.id ?? null, steps: pm.steps.map((s) => (have.has(normTitle(s.title)) ? 'there' : 'new')) }
     }),
