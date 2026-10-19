@@ -105,10 +105,10 @@ Used for paste-back matching, duplicate steps and goal links.
 
 ### Telling the two apart
 
-`detectKind(text)`:
-- **`'tasks'`:** when the first heading is `# Tasks`;
-- **`'goal'`:** when it's any other `#` heading, or there's a `##`;
-- **`null`:** otherwise. The panel's own kind then decides.
+`detectKind(text)` looks at the first heading:
+- **`'tasks'`:** when it is `# Tasks` (or `Task list`, `To-dos`), optionally with a colon;
+- **`'goal'`:** when it is any other `#` heading, or a heading that starts with `Goal:`;
+- **`null`:** for any other `##` heading (a milestone, or a task list grouped by day), or no heading at all. The panel's own kind then decides.
 
 A paste whose detected kind is not the panel's own kind shows "This looks like a goal — use Import a goal on the Goals page" (or "…a task list — use Paste tasks on Today") and can't be created.
 
