@@ -1,6 +1,8 @@
 /** Plan with your AI: the markdown Ember reads back (a goal or a task list), what it writes out, and the prompts. Pure. */
-import { isRealDate, type ISODate } from './dates'
+import { addDays, isRealDate, type ISODate } from './dates'
+import { isLive } from './goals'
 import { clampHabit } from './habits'
+import type { Goal } from './model'
 
 export type ImportKind = 'goal' | 'next' | 'tasks'
 export const LIMITS = { chars: 50_000, milestones: 30, steps: 300, tasks: 100, title: 200, tag: 24 } as const
@@ -223,4 +225,74 @@ export function parseGoal(input: string): GoalPlan | null {
   if (title === null && milestones.length === 0) return null
   skipped.sort((a, b) => a.line - b.line)
   return { title: title ?? '', outcome, finishBy, habit, milestones, skipped }
+}
+
+export interface TaskPlan {
+  title: string; date: ISODate | null; deadline: boolean; tag: string; goalId: string | null; line: number
+  notes: string[]
+}
+
+/** One task per bullet; the parts after "|" come in any order. A past date becomes today; no date is Someday. */
+export function parseTasks(input: string, goals: Goal[], today: ISODate): { tasks: TaskPlan[]; skipped: Skipped[] } {
+  const skipped: Skipped[] = []
+  const skip = (line: number, raw: string, reason: string) => skipped.push({ line, text: raw.trim(), reason })
+  const { lines, cut } = splitLines(input)
+  const live = goals.filter(isLive)
+  const tasks: TaskPlan[] = []
+  let baseIndent = -1
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]
+    const line = i + 1
+    if (!raw.trim() || FENCE.test(raw) || RULE.test(raw) || HEADING.test(raw)) continue
+    const b = BULLET.exec(raw)
+    if (!b) continue
+    const indent = indentOf(b[1])
+    if (baseIndent >= 0 && indent > baseIndent + 1) {
+      skip(line, raw, nested('tasks'))
+      continue
+    }
+    if (baseIndent < 0) baseIndent = indent
+    let body = b[2]
+    const c = CHECK.exec(body)
+    if (c) {
+      if (c[1] !== ' ') {
+        skip(line, raw, 'already done')
+        continue
+      }
+      body = body.slice(c[0].length)
+    }
+    const [head, ...parts] = body.split('|')
+    const name = stripMarks(head)
+    if (!name) continue
+    if (tasks.length >= LIMITS.tasks) {
+      skip(line, raw, `more than ${LIMITS.tasks} tasks`)
+      continue
+    }
+    const task: TaskPlan = { title: cutTitle(name, line, raw, skipped), date: null, deadline: false, tag: 'Inbox', goalId: null, line, notes: [] }
+    for (const part of parts.map(stripMarks)) {
+      if (!part) continue
+      const low = part.toLowerCase()
+      if (low === 'today') task.date = today
+      else if (low === 'tomorrow') task.date = addDays(today, 1)
+      else if (low === 'someday') task.date = null
+      else if (/^\d{4}-\d{2}-\d{2}$/.test(part)) {
+        if (isRealDate(part)) task.date = part < today ? today : part
+        else task.notes.push(`‘${part}’ isn't a date`)
+      } else if (low === 'deadline') task.deadline = true
+      else if (part.startsWith('#') && part.length > 1) task.tag = part.slice(1).trim().slice(0, LIMITS.tag)
+      else if (/^goal\s*:/i.test(part)) {
+        const wanted = part.replace(/^goal\s*:\s*/i, '')
+        const g = live.find((x) => normTitle(x.title) === normTitle(wanted))
+        if (g) task.goalId = g.id
+        else task.notes.push(`no goal called ‘${wanted}’ — added without a goal`)
+      } else task.notes.push(`didn't understand ‘${part}’`)
+    }
+    if (task.deadline && task.date === null) {
+      task.deadline = false
+      task.notes.push('deadline needs a date')
+    }
+    tasks.push(task)
+  }
+  if (cut) skipped.push(cut)
+  return { tasks, skipped }
 }

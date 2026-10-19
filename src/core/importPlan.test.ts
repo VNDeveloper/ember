@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { detectKind, normTitle, parseEstimate, parseGoal, parseHabit } from './importPlan'
+import { detectKind, normTitle, parseEstimate, parseGoal, parseHabit, parseTasks, type TaskPlan } from './importPlan'
+import { goalFixture } from './test-fixtures'
 
 export const SAMPLE = [
   'Sure! Here is your plan:',
@@ -122,5 +123,55 @@ describe('parseGoal', () => {
     expect(steps.skipped.map((s) => s.reason)).toEqual(['more than 300 steps'])
     const long = parseGoal(`# G\n${'x'.repeat(60_000)}`)!
     expect(long.skipped.at(-1)!.reason).toBe('paste cut at 50 000 characters')
+  })
+})
+
+const TODAY = '2026-09-23'
+
+describe('parseTasks', () => {
+  const GOALS = [
+    goalFixture('Speak conversational Spanish', [['M', []]]),
+    { ...goalFixture('Old', [['M', []]]), deletedOn: '2026-09-01' },
+  ]
+  const fields = (t: TaskPlan) => ({ title: t.title, date: t.date, deadline: t.deadline, tag: t.tag, goalId: t.goalId, notes: t.notes })
+
+  it('reads each part in any order', () => {
+    const { tasks, skipped } = parseTasks([
+      '# Tasks',
+      '- Book a trial lesson | tomorrow | #Admin | goal: speak conversational spanish',
+      '- [ ] Renew passport | deadline | 2026-11-02',
+      '- Read about plateaus',
+      '- Pay the bill | 2026-09-01 | deadline',
+    ].join('\n'), GOALS, TODAY)
+    expect(tasks.map(fields)).toEqual([
+      { title: 'Book a trial lesson', date: '2026-09-24', deadline: false, tag: 'Admin', goalId: 'Speak conversational Spanish', notes: [] },
+      { title: 'Renew passport', date: '2026-11-02', deadline: true, tag: 'Inbox', goalId: null, notes: [] },
+      { title: 'Read about plateaus', date: null, deadline: false, tag: 'Inbox', goalId: null, notes: [] },
+      { title: 'Pay the bill', date: TODAY, deadline: true, tag: 'Inbox', goalId: null, notes: [] },
+    ])
+    expect(skipped).toEqual([])
+  })
+
+  it('notes what it could not use and skips done and nested items', () => {
+    const { tasks, skipped } = parseTasks([
+      '- Call mum | someday | deadline',
+      '- Water plants | soonish | 2026-02-30',
+      '- Plan trip | goal: Old',
+      '  - pick dates',
+      '- [x] Already sorted',
+    ].join('\n'), GOALS, TODAY)
+    expect(tasks.map((t) => t.notes)).toEqual([
+      ['deadline needs a date'],
+      ["didn't understand ‘soonish’", "‘2026-02-30’ isn't a date"],
+      ['no goal called ‘Old’ — added without a goal'],
+    ])
+    expect(tasks[0].deadline).toBe(false)
+    expect(skipped.map((s) => [s.line, s.reason])).toEqual([[4, "sub-points aren't imported — make them tasks"], [5, 'already done']])
+  })
+
+  it('stops at 100 tasks', () => {
+    const { tasks, skipped } = parseTasks(Array.from({ length: 101 }, (_, i) => `- t${i}`).join('\n'), [], TODAY)
+    expect(tasks).toHaveLength(100)
+    expect(skipped.map((s) => s.reason)).toEqual(['more than 100 tasks'])
   })
 })
