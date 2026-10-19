@@ -1,7 +1,8 @@
 /** Plan with your AI: the markdown Ember reads back (a goal or a task list), what it writes out, and the prompts. Pure. */
 import { addDays, isRealDate, type ISODate } from './dates'
-import { isLive } from './goals'
-import { clampHabit } from './habits'
+import { fmtM, plural } from './format'
+import { goalStatus, isLive, liveMilestones, liveSteps } from './goals'
+import { clampHabit, liveHabit, targetText } from './habits'
 import type { Goal } from './model'
 
 export type ImportKind = 'goal' | 'next' | 'tasks'
@@ -295,4 +296,210 @@ export function parseTasks(input: string, goals: Goal[], today: ISODate): { task
   }
   if (cut) skipped.push(cut)
   return { tasks, skipped }
+}
+
+// — paste-back —
+export type FieldMatch = 'fill' | 'kept' | 'none'
+export interface MilestoneMatch { msId: string | null; steps: ('new' | 'there')[] }
+export interface PlanMatch { milestones: MilestoneMatch[]; outcome: FieldMatch; finishBy: FieldMatch; habit: FieldMatch }
+
+/** Which plan milestones and steps the goal already has (by title), and which of its fields the paste would fill. */
+export function matchPlan(goal: Goal, plan: GoalPlan): PlanMatch {
+  const live = liveMilestones(goal)
+  const field = (inPaste: boolean, has: boolean): FieldMatch => (!inPaste ? 'none' : has ? 'kept' : 'fill')
+  return {
+    milestones: plan.milestones.map((pm) => {
+      const m = live.find((x) => normTitle(x.title) === normTitle(pm.title)) ?? null
+      const have = new Set(m ? liveSteps(m).map((s) => normTitle(s.title)) : [])
+      return { msId: m?.id ?? null, steps: pm.steps.map((s) => (have.has(normTitle(s.title)) ? 'there' : 'new')) }
+    }),
+    outcome: field(!!plan.outcome, goal.outcome.trim() !== ''),
+    finishBy: field(!!plan.finishBy, !!goal.finishBy),
+    habit: field(!!plan.habit, liveHabit(goal) !== null),
+  }
+}
+
+// — the preview's ticks —
+export const msKey = (mi: number): string => `m${mi}`
+export const stepKey = (mi: number, si: number): string => `m${mi}s${si}`
+export const taskKey = (ti: number): string => `t${ti}`
+const isThere = (match: PlanMatch | null, mi: number, si: number): boolean => match?.milestones[mi]?.steps[si] === 'there'
+
+/** Everything new starts ticked. */
+export function defaultPicks(plan: GoalPlan, match: PlanMatch | null): Set<string> {
+  const picks = new Set<string>()
+  plan.milestones.forEach((pm, mi) => {
+    picks.add(msKey(mi))
+    pm.steps.forEach((_, si) => { if (!isThere(match, mi, si)) picks.add(stepKey(mi, si)) })
+  })
+  return picks
+}
+
+/** Unticking a milestone unticks its steps (ticking re-ticks them); ticking a step ticks its milestone. */
+export function togglePick(picks: ReadonlySet<string>, key: string, plan: GoalPlan | null, match: PlanMatch | null): Set<string> {
+  const next = new Set(picks)
+  const k = /^m(\d+)(?:s(\d+))?$/.exec(key)
+  const pm = k && plan ? plan.milestones[Number(k[1])] : undefined
+  if (!k || !pm) {
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  }
+  const mi = Number(k[1])
+  if (k[2] === undefined) {
+    const on = !next.has(key)
+    if (on) next.add(key)
+    else next.delete(key)
+    pm.steps.forEach((_, si) => {
+      if (isThere(match, mi, si)) return
+      if (on) next.add(stepKey(mi, si))
+      else next.delete(stepKey(mi, si))
+    })
+    return next
+  }
+  const si = Number(k[2])
+  if (isThere(match, mi, si)) return next
+  if (next.has(key)) next.delete(key)
+  else {
+    next.add(key)
+    next.add(msKey(mi))
+  }
+  return next
+}
+
+export interface PickSummary { milestones: number; steps: number; minutes: number; there: number }
+
+/** What the picks would add: new milestones, steps and their minutes (an unplanned milestone counts its own estimate). */
+export function pickSummary(plan: GoalPlan, picks: ReadonlySet<string>, match: PlanMatch | null): PickSummary {
+  let milestones = 0
+  let steps = 0
+  let minutes = 0
+  let there = 0
+  plan.milestones.forEach((pm, mi) => {
+    let picked = 0
+    pm.steps.forEach((s, si) => {
+      if (isThere(match, mi, si)) there++
+      else if (picks.has(stepKey(mi, si))) {
+        picked++
+        minutes += s.estMin
+      }
+    })
+    steps += picked
+    if (!match?.milestones[mi]?.msId && picks.has(msKey(mi))) {
+      milestones++
+      if (picked === 0 && pm.estMin) minutes += pm.estMin
+    }
+  })
+  return { milestones, steps, minutes, there }
+}
+
+export function summaryText(s: PickSummary, next: boolean): string {
+  if (!next) return [plural(s.milestones, 'milestone'), plural(s.steps, 'step'), `~${fmtM(s.minutes)}`].join(' · ')
+  return [plural(s.steps, 'new step'), s.milestones ? plural(s.milestones, 'new milestone') : '', s.there ? `${s.there} already there` : '']
+    .filter(Boolean)
+    .join(' · ')
+}
+
+/** "5 steps and 1 milestone", "1 step", "2 milestones" (empty when nothing). */
+export const addedText = (steps: number, milestones: number): string =>
+  [steps ? plural(steps, 'step') : '', milestones ? plural(milestones, 'milestone') : ''].filter(Boolean).join(' and ')
+
+// — copy out —
+/** The goal in the import format: live parts only, done steps [x], every step with its estimate. */
+export function goalMarkdown(goal: Goal): string {
+  const out = [`# Goal: ${goal.title}`]
+  const outcome = goal.outcome.replace(/\s+/g, ' ').trim()
+  if (outcome) out.push(`Outcome: ${outcome}`)
+  if (goal.finishBy) out.push(`Finish by: ${goal.finishBy}`)
+  const h = liveHabit(goal)
+  const target = h?.targets[h.targets.length - 1]
+  if (target) out.push(`Habit: ${targetText(target.minutes, target.daysPerWeek)}`)
+  for (const m of liveMilestones(goal)) {
+    const steps = liveSteps(m)
+    out.push('', `## ${m.title}${!steps.length && m.estMin ? ` (~${fmtM(m.estMin)})` : ''}`)
+    for (const s of steps) out.push(`- [${s.doneOn ? 'x' : ' '}] ${s.title} (${fmtM(s.estMin)})`)
+  }
+  return `${out.join('\n')}\n`
+}
+
+// — prompts —
+const EXAMPLE_GOAL = [
+  '# Goal: Speak conversational Spanish',
+  'Outcome: Hold a 15-minute conversation with a native speaker',
+  'Finish by: 2027-01-31',
+  'Habit: 25m on 5 days a week',
+  '',
+  '## Sounds and greetings',
+  '- Learn the alphabet and vowel sounds (45m)',
+  '- Practise 20 greetings out loud (1h)',
+  '',
+  '## Everyday conversation',
+  '- Learn the 100 most common verbs (2h 30m)',
+  '',
+  '## Real conversations (6h)',
+].join('\n')
+
+const STEP_RULES = [
+  '- Each milestone is a "## " heading, in the order I\'ll do them.',
+  '- Each step is a "- " bullet: one concrete action under 3 hours, with its time in brackets at the end, like (45m) or (1h 30m).',
+  '- A milestone too far off to plan in detail can have no steps and a rough time in its heading, like "## Real conversations (6h)".',
+  '- No nested bullets, no extra notes.',
+]
+
+export function goalPrompt(today: ISODate): string {
+  return [
+    'My goal: [describe it — what, by when, how much time a week]',
+    '',
+    'I plan my learning in an app that reads the markdown format below. Turn my goal into a plan and reply with only that markdown, nothing before or after it.',
+    '',
+    'Format:',
+    '',
+    EXAMPLE_GOAL,
+    '',
+    'Rules:',
+    '- Start with "# Goal: " and a short name for the goal.',
+    '- "Outcome:" is one sentence: what I\'ll be able to do when it\'s done.',
+    '- "Finish by:" (a date as YYYY-MM-DD) and "Habit:" (minutes on a number of days a week, like "25m on 5 days a week") are optional.',
+    '- 3–7 milestones, with 3–7 steps each.',
+    ...STEP_RULES,
+    `- Today is ${today}.`,
+  ].join('\n')
+}
+
+export function nextStepsPrompt(goal: Goal, today: ISODate): string {
+  return [
+    'What I want next: [e.g. plan the next phase, or break down milestones without steps]',
+    '',
+    'I plan my learning in an app that reads the markdown format below. Here is my goal as it stands; steps marked [x] are done. Reply with the whole goal in the same format and nothing else. Keep my existing milestones and steps exactly as written; add new steps under them or new milestones after them.',
+    '',
+    goalMarkdown(goal),
+    'Rules:',
+    '- 3–7 steps per milestone.',
+    ...STEP_RULES,
+    `- Today is ${today}.`,
+  ].join('\n')
+}
+
+export function tasksPrompt(goals: Goal[], today: ISODate): string {
+  const names = goals.filter((g) => isLive(g) && goalStatus(g) !== 'achieved').map((g) => `- ${g.title}`)
+  return [
+    'What I need to do: [list or describe it]',
+    '',
+    'I keep my to-do list in an app that reads the markdown format below. Turn what I need to do into tasks and reply with only that markdown, nothing before or after it.',
+    '',
+    'Format:',
+    '',
+    '# Tasks',
+    '- Book a trial lesson | tomorrow | #Admin | goal: Speak conversational Spanish',
+    '- Renew passport | 2026-11-02 | deadline',
+    '- Read about learning plateaus',
+    '',
+    'Rules:',
+    '- One "- " bullet per task, starting with a short title that begins with a verb.',
+    '- After the title, optional parts separated by " | ": when (today, tomorrow, or a date as YYYY-MM-DD; leave it out for someday), "deadline" if that date is a hard deadline, a tag like #Admin, and "goal: " with one of my goals below when the task is for it.',
+    '- No nested bullets, no extra notes.',
+    `- Today is ${today}.`,
+    '',
+    ...(names.length ? ['My goals:', ...names] : ['I have no goals in the app yet, so leave out "goal:".']),
+  ].join('\n')
 }

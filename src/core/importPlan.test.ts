@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { detectKind, normTitle, parseEstimate, parseGoal, parseHabit, parseTasks, type TaskPlan } from './importPlan'
+import { newHabit } from './habits'
+import {
+  addedText, defaultPicks, detectKind, goalMarkdown, goalPrompt, matchPlan, msKey, nextStepsPrompt, normTitle, parseEstimate,
+  parseGoal, parseHabit, parseTasks, pickSummary, stepKey, summaryText, taskKey, tasksPrompt, togglePick, type TaskPlan,
+} from './importPlan'
 import { goalFixture } from './test-fixtures'
 
 export const SAMPLE = [
@@ -173,5 +177,92 @@ describe('parseTasks', () => {
     const { tasks, skipped } = parseTasks(Array.from({ length: 101 }, (_, i) => `- t${i}`).join('\n'), [], TODAY)
     expect(tasks).toHaveLength(100)
     expect(skipped.map((s) => s.reason)).toEqual(['more than 100 tasks'])
+  })
+})
+
+describe('paste-back', () => {
+  const spanish = () => ({
+    ...goalFixture('Spanish', [['Sounds and greetings', [['Learn the alphabet and vowel sounds', '2026-09-01']]]]),
+    outcome: 'Chat for 15 minutes',
+  })
+
+  it('matches milestones and steps by title and fills only what the goal lacks', () => {
+    const m = matchPlan(spanish(), parseGoal(SAMPLE)!)
+    expect(m.milestones.map((x) => x.msId)).toEqual(['Spanish/Sounds and greetings', null, null])
+    expect(m.milestones[0].steps).toEqual(['there', 'new', 'new'])
+    expect(m.milestones[1].steps).toEqual(['new', 'new'])
+    expect([m.outcome, m.finishBy, m.habit]).toEqual(['kept', 'fill', 'fill'])
+    expect(matchPlan(spanish(), parseGoal('## Sounds and greetings\n- New one')!).finishBy).toBe('none')
+  })
+
+  it('ticks everything new; ticking follows the milestone; "already there" never ticks', () => {
+    const plan = parseGoal(SAMPLE)!
+    const m = matchPlan(spanish(), plan)
+    let picks = defaultPicks(plan, m)
+    expect(picks.has(stepKey(0, 0))).toBe(false)
+    expect(pickSummary(plan, picks, m)).toEqual({ milestones: 2, steps: 4, minutes: 650, there: 1 })
+    expect(summaryText(pickSummary(plan, picks, m), true)).toBe('4 new steps · 2 new milestones · 1 already there')
+    picks = togglePick(picks, msKey(1), plan, m)
+    expect([...picks].filter((k) => k.startsWith('m1'))).toEqual([])
+    picks = togglePick(picks, stepKey(1, 0), plan, m)
+    expect(picks.has(msKey(1))).toBe(true)
+    expect(picks.has(stepKey(1, 1))).toBe(false)
+    expect(togglePick(picks, stepKey(0, 0), plan, m).has(stepKey(0, 0))).toBe(false)
+    expect(togglePick(new Set([taskKey(0)]), taskKey(0), null, null).size).toBe(0)
+  })
+
+  it('sums a new goal and words what an import adds', () => {
+    const plan = parseGoal(SAMPLE)!
+    expect(summaryText(pickSummary(plan, defaultPicks(plan, null), null), false)).toBe('3 milestones · 5 steps · ~11h 35m')
+    expect(addedText(5, 1)).toBe('5 steps and 1 milestone')
+    expect(addedText(1, 0)).toBe('1 step')
+    expect(addedText(0, 2)).toBe('2 milestones')
+  })
+})
+
+describe('copy out and prompts', () => {
+  it('writes a goal out and reads back the same, so pasting it back adds nothing', () => {
+    const g = goalFixture('Spanish', [['Basics', [['Alphabet', '2026-09-01'], ['Greetings', null], ['Gone', null]]], ['Later', []], ['Dropped', []]])
+    g.outcome = 'Chat\nfor 15 minutes'
+    g.finishBy = '2027-01-31'
+    g.milestones[0].steps[1].estMin = 75
+    g.milestones[0].steps[2].deletedOn = TODAY
+    g.milestones[1].estMin = 240
+    g.milestones[2].deletedOn = TODAY
+    g.habit = newHabit(25, 7, TODAY, false)
+    const md = goalMarkdown(g)
+    expect(md).toBe([
+      '# Goal: Spanish', 'Outcome: Chat for 15 minutes', 'Finish by: 2027-01-31', 'Habit: 25m every day',
+      '', '## Basics', '- [x] Alphabet (50m)', '- [ ] Greetings (1h 15m)', '', '## Later (~4h)', '',
+    ].join('\n'))
+    const back = parseGoal(md)!
+    expect(back.title).toBe('Spanish')
+    expect(back.habit).toEqual({ minutes: 25, daysPerWeek: 7 })
+    expect(back.milestones.map((m) => [m.title, m.estMin, m.steps.map((s) => [s.title, s.estMin, s.done])])).toEqual([
+      ['Basics', null, [['Alphabet', 50, true], ['Greetings', 75, false]]], ['Later', 240, []],
+    ])
+    const match = matchPlan(g, back)
+    expect(match.milestones.every((x) => x.msId !== null && x.steps.every((s) => s === 'there'))).toBe(true)
+    expect(pickSummary(back, defaultPicks(back, match), match)).toMatchObject({ milestones: 0, steps: 0 })
+  })
+
+  it('builds prompts with the fill-in line, the rules and today', () => {
+    const p = goalPrompt(TODAY)
+    expect(p.split('\n')[0]).toBe('My goal: [describe it — what, by when, how much time a week]')
+    expect(p).toContain('# Goal: ')
+    expect(p).toContain('Today is 2026-09-23.')
+    expect(parseGoal(p)!.milestones.length).toBeGreaterThan(0)
+    const g = goalFixture('Spanish', [['Basics', [['Alphabet', null]]]])
+    const n = nextStepsPrompt(g, TODAY)
+    expect(n.split('\n')[0]).toBe('What I want next: [e.g. plan the next phase, or break down milestones without steps]')
+    expect(n).toContain(goalMarkdown(g))
+    expect(n).toContain('Keep my existing milestones and steps exactly as written')
+    const done = { ...goalFixture('Done', []), status: 'achieved' as const }
+    const t = tasksPrompt([g, done, { ...goalFixture('Gone', []), deletedOn: TODAY }], TODAY)
+    expect(t.split('\n')[0]).toBe('What I need to do: [list or describe it]')
+    expect(t).toContain('- Spanish')
+    expect(t).not.toContain('Gone')
+    expect(t).not.toContain('- Done')
+    expect(tasksPrompt([], TODAY)).toContain('leave out "goal:"')
   })
 })
