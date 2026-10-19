@@ -211,8 +211,8 @@ A goal "has" an outcome when its trimmed outcome is non-empty, a finish-by date 
 
 **`ImportPanel.vue`**:
 - **Props:** `kind: 'goal' | 'next' | 'tasks'` and an optional `goal`. It's an inline `.edit-panel`.
-- **Copy prompt** (primary): a one-line explanation ("Paste this into your AI chat, fill in the first line, then paste its reply below.") and the button, which shows "Copied" for 2 s. If `navigator.clipboard` is missing or refuses, a read-only textarea with the prompt appears, focused and selected, with "Copy it from here".
-- **Paste box:** a textarea, "Paste the AI's reply" (8 rows). It's parsed on input, debounced 150 ms.
+- **Copy prompt** (a secondary button, so Create stays the panel's one primary action): a one-line explanation ("Paste this into your AI chat, fill in the first line, then paste its reply below.") and the button, which shows "Copied" for 2 s. If `navigator.clipboard` is missing or refuses, a read-only textarea with the prompt appears, focused and selected, with "Copy it from here".
+- **Paste box:** a textarea, "Paste the AI's reply" (8 rows). It's parsed on every input (parsing is linear and fast, so there's no debounce).
 - **Preview** (`ImportPreview.vue`):
   - **Goal / next:**
     - summary: `4 milestones · 18 steps · ~14h 30m` (new only, for next);
