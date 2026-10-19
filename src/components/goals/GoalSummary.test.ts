@@ -1,6 +1,7 @@
 import { useUiStore } from '../../stores/ui'
 import { nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { goalMarkdown } from '../../core/importPlan'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { d3Fixture, dataFixture } from '../../core/test-fixtures'
@@ -65,16 +66,16 @@ describe('GoalSummary', () => {
 
     it('offers Pause and Mark achieved while active, Resume once paused, Reopen once achieved', async () => {
       const { w, ember } = setup()
-      expect(await menu(w)).toEqual(['Edit', 'Pause', 'Mark achieved', 'Delete'])
+      expect(await menu(w)).toEqual(['Edit', 'Pause', 'Mark achieved', 'Copy as markdown', 'Delete'])
       await w.find('.rmn-pause').trigger('click')
       expect(ember.goals[0].status).toBe('paused')
-      expect(await menu(w)).toEqual(['Edit', 'Resume', 'Mark achieved', 'Delete'])
+      expect(await menu(w)).toEqual(['Edit', 'Resume', 'Mark achieved', 'Copy as markdown', 'Delete'])
       await w.find('.rmn-resume').trigger('click')
       expect(ember.goals[0]).not.toHaveProperty('status')
       await menu(w)
       await w.find('.rmn-achieve').trigger('click')
       expect(ember.goals[0]).toMatchObject({ status: 'achieved', achievedOn: '2026-09-23' })
-      expect(await menu(w)).toEqual(['Edit', 'Reopen', 'Delete'])
+      expect(await menu(w)).toEqual(['Edit', 'Reopen', 'Copy as markdown', 'Delete'])
       await w.find('.rmn-reopen').trigger('click')
       expect(ember.goals[0]).not.toHaveProperty('status')
     })
@@ -100,5 +101,21 @@ describe('GoalSummary', () => {
       expect(w.find('.gs-ach-outcome').text()).toBe('Goal achieved.')
       expect(w.find('.gs-ach-flag').classes().some((c) => c.startsWith('anim-pop'))).toBe(false)
     })
+  })
+
+  it('copies the goal as markdown, or shows it to copy by hand', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const { w, ember } = setup()
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-copy').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith(goalMarkdown(ember.goals[0]))
+    expect(w.find('.gs-copied').text()).toBe('Copied')
+    writeText.mockRejectedValue(new Error('denied'))
+    await w.find('.rmn-trigger').trigger('click')
+    await w.find('.rmn-copy').trigger('click')
+    await flushPromises()
+    expect(w.find<HTMLTextAreaElement>('.copy-box textarea').element.value).toBe(goalMarkdown(ember.goals[0]))
   })
 })

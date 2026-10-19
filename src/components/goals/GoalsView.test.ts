@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import type { Goal } from '../../core/model'
 import { dataFixture, goalFixture } from '../../core/test-fixtures'
 import { useEmberStore } from '../../stores/ember'
@@ -59,5 +60,14 @@ describe('GoalsView', () => {
   it('opens on the first active goal when none is chosen', () => {
     const run = { ...goalFixture('Run', [['M', [['A', '2026-09-01']]]]), status: 'achieved' as const, achievedOn: '2026-09-20' }
     expect(setup([run, ...two()]).find('.gs-title').text()).toBe('D3')
+  })
+
+  it('shows the goal import in the main column, even with no goals', async () => {
+    const w = setup([])
+    useUiStore().editing = 'import:goal'
+    await nextTick()
+    expect(w.find('.import-panel').exists()).toBe(true)
+    await w.find('.ip-cancel').trigger('click')
+    expect(useUiStore().editing).toBeNull()
   })
 })

@@ -112,5 +112,11 @@ describe('GoalList', () => {
     await w.vm.$nextTick()
     expect(w.find('.gl-behind').exists()).toBe(false)
   })
+
+  it('opens the goal import', async () => {
+    const { w, ui } = setup()
+    await w.find('.gl-import').trigger('click')
+    expect(ui.editing).toBe('import:goal')
+  })
 })
 

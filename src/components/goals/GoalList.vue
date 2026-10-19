@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, Plus } from 'lucide-vue-next'
+import { ChevronRight, ClipboardPaste, Plus } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { goalList, type GoalListGroup } from '../../core/goalView'
 import { paceView } from '../../core/pace'
@@ -71,6 +71,7 @@ function onEnter(e: KeyboardEvent) {
         <input id="ember-new-goal" v-model="ui.goalDraft" class="input gl-input" placeholder="e.g. Learn Three.js" @keydown.enter="onEnter" />
         <button class="btn btn-primary btn-icon gl-add" aria-label="Add goal" @click="add"><Plus :size="16" :stroke-width="2.5" /></button>
       </div>
+      <button class="btn btn-ghost gl-import" @click="ui.startEdit('import:goal')"><ClipboardPaste :size="16" :stroke-width="2.25" />Import a goal</button>
     </div>
   </aside>
 </template>
@@ -107,6 +108,7 @@ function onEnter(e: KeyboardEvent) {
 .gl-new { display: flex; flex-direction: column; gap: var(--space-2); margin-top: auto; }
 .gl-new-label { font-size: 12px; font-weight: 700; }
 .gl-new-row { display: flex; gap: var(--space-2); }
+.gl-import { align-self: flex-start; }
 @media (max-width: 860px) {
   .goal-list { padding: var(--space-4); border-right: 0; border-bottom: 2px solid var(--color-divider); }
 }

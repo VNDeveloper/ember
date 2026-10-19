@@ -10,6 +10,7 @@ import TaskRow from '../TaskRow.vue'
 import { popClass } from '../anim'
 import AddTask from './AddTask.vue'
 import RenewalCard from './RenewalCard.vue'
+import ImportPanel from '../ImportPanel.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -36,6 +37,8 @@ const renewals = computed(() => dueRenewals(ember.resources, ember.today))
       </div>
     </div>
     <AddTask />
+    <button class="btn btn-ghost tl-import" @click="ui.startEdit('import:tasks')">Paste tasks</button>
+    <ImportPanel v-if="ui.editing === 'import:tasks'" kind="tasks" @close="ui.editing = null" />
     <div class="tl-rows">
       <RenewalCard v-for="d in renewals" :key="`ren-${d.resource.id}`" :due="d" />
       <p v-if="!list.open.length && !list.done.length" class="muted tl-empty">Nothing for today. Add a task above.</p>
@@ -52,6 +55,7 @@ const renewals = computed(() => dueRenewals(ember.resources, ember.today))
 
 <style scoped>
 .today-list { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.tl-import { align-self: flex-start; }
 .tl-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .tl-stats { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); font-size: 13px; color: var(--color-neutral-700); }
 .tl-week { display: flex; gap: 3px; }

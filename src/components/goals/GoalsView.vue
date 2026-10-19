@@ -7,6 +7,7 @@ import GoalList from './GoalList.vue'
 import GoalSummary from './GoalSummary.vue'
 import GoalTasks from './GoalTasks.vue'
 import Roadmap from './Roadmap.vue'
+import ImportPanel from '../ImportPanel.vue'
 
 const ember = useEmberStore()
 const ui = useUiStore()
@@ -18,12 +19,15 @@ const goal = computed(() =>
 <template>
   <div class="view goals-view">
     <GoalList :active-id="goal?.id ?? null" />
-    <main v-if="goal" class="gv-main">
-      <GoalSummary :goal="goal" />
-      <GoalTasks :goal="goal" />
-      <Roadmap :goal="goal" />
+    <main class="gv-main" :class="{ 'gv-empty': !goal }">
+      <ImportPanel v-if="ui.editing === 'import:goal'" kind="goal" @close="ui.editing = null" />
+      <template v-if="goal">
+        <GoalSummary :goal="goal" />
+        <GoalTasks :goal="goal" />
+        <Roadmap :goal="goal" />
+      </template>
+      <p v-else class="muted">No goals yet. Add one on the left.</p>
     </main>
-    <main v-else class="gv-main gv-empty"><p class="muted">No goals yet. Add one on the left.</p></main>
   </div>
 </template>
 

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Flag } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { achievedSummary, goalKicker, goalLedger } from '../../core/goalView'
 import { goalStats, goalStatus } from '../../core/goals'
+import { goalMarkdown } from '../../core/importPlan'
 import type { Goal, GoalStatus } from '../../core/model'
 import { useEmberStore } from '../../stores/ember'
 import { useUiStore } from '../../stores/ui'
 import { popClass } from '../anim'
+import { copyText } from '../clipboard'
+import CopyBox from '../CopyBox.vue'
 import RowMenu from '../RowMenu.vue'
 import TitleEditPanel from '../TitleEditPanel.vue'
 import GoalResources from './GoalResources.vue'
@@ -45,7 +48,21 @@ const MENU: Record<GoalStatus, { key: string; label: string }[]> = {
   achieved: [{ key: 'reopen', label: 'Reopen' }],
 }
 const NEXT: Record<string, GoalStatus> = { pause: 'paused', achieve: 'achieved', resume: 'active', reopen: 'active' }
-const onSelect = (key: string) => ember.setGoalStatus(props.goal.id, NEXT[key])
+const menuItems = computed(() => [...MENU[status.value], { key: 'copy', label: 'Copy as markdown' }])
+const copied = ref(false)
+const copyFallback = ref<string | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+async function copyGoal() {
+  const md = goalMarkdown(props.goal)
+  if (await copyText(md)) {
+    copyFallback.value = null
+    copied.value = true
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => { copied.value = false }, 2000)
+  } else copyFallback.value = md
+}
+onBeforeUnmount(() => clearTimeout(copiedTimer))
+const onSelect = (key: string) => (key === 'copy' ? copyGoal() : ember.setGoalStatus(props.goal.id, NEXT[key]))
 
 const summary = computed(() => achievedSummary(props.goal, ember.logs))
 const word = (n: number, w: string) => (n === 1 ? w : `${w}s`)
@@ -64,11 +81,13 @@ watch(() => [props.goal.id, status.value] as const, ([id, s], [pid, ps]) => {
         <h2 class="gs-title">{{ goal.title }}</h2>
       </div>
       <div class="gs-side">
+        <span v-if="copied" class="gs-copied" role="status">Copied</span>
         <div class="gs-pct">{{ pct }}%</div>
-        <RowMenu :menu-key="`goal:${goal.id}`" :label="goal.title" :extra="MENU[status]" @select="onSelect" @delete="remove" />
+        <RowMenu :menu-key="`goal:${goal.id}`" :label="goal.title" :extra="menuItems" @select="onSelect" @delete="remove" />
       </div>
     </div>
     <TitleEditPanel v-if="ui.editing === `goal:${goal.id}`" what="goal" :title="goal.title" @save="rename" @delete="remove" />
+    <CopyBox v-if="copyFallback" :text="copyFallback" @close="copyFallback = null" />
     <div v-if="status === 'achieved'" class="gs-achieved">
       <div class="gs-ach-flag" :class="pops ? popClass(pops) : ''"><Flag :size="18" :stroke-width="2.5" /></div>
       <div class="gs-ach-body">
@@ -113,6 +132,7 @@ watch(() => [props.goal.id, status.value] as const, ([id, s], [pid, ps]) => {
 .gs-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-6); align-items: end; }
 .gs-title { margin-top: 4px; overflow-wrap: anywhere; }
 .gs-side { display: flex; align-items: flex-end; gap: var(--space-2); }
+.gs-copied { font-size: 12px; color: var(--color-neutral-700); }
 .gs-pct { font: 800 64px/.9 var(--font-heading); letter-spacing: -.03em; }
 .gs-readme { border: 2px solid var(--color-divider); }
 .gs-achieved {

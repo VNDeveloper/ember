@@ -11,6 +11,7 @@ import { withFocusRescue } from '../focusRescue'
 import RowMenu from '../RowMenu.vue'
 import TitleEditPanel from '../TitleEditPanel.vue'
 import StepEditPanel from './StepEditPanel.vue'
+import ImportPanel from '../ImportPanel.vue'
 
 const props = defineProps<{ goal: Goal }>()
 const ember = useEmberStore()
@@ -105,12 +106,16 @@ function commit(e: KeyboardEvent) {
 
 <template>
   <section ref="root" class="roadmap">
-    <div class="rm-legend">
-      <span><i class="blk is-earlier"></i>Earlier sessions</span>
-      <span><i class="blk is-today"></i>Today</span>
-      <span><i class="blk is-remaining"></i>Estimate remaining</span>
-      <span>1 block = 25 min</span>
+    <div class="rm-top">
+      <div class="rm-legend">
+        <span><i class="blk is-earlier"></i>Earlier sessions</span>
+        <span><i class="blk is-today"></i>Today</span>
+        <span><i class="blk is-remaining"></i>Estimate remaining</span>
+        <span>1 block = 25 min</span>
+      </div>
+      <button class="btn btn-ghost rm-import" @click="ui.startEdit(`import:next:${goal.id}`)">Add from AI</button>
     </div>
+    <ImportPanel v-if="ui.editing === `import:next:${goal.id}`" kind="next" :goal="goal" @close="ui.editing = null" />
 
     <div class="rm-list">
       <div v-for="r in rows" :key="r.id" class="rm-ms">
@@ -255,6 +260,8 @@ function commit(e: KeyboardEvent) {
 
 <style scoped>
 .roadmap { display: flex; flex-direction: column; gap: var(--space-6); }
+.rm-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.rm-import { margin-left: auto; }
 .rm-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); font-size: 12px; color: var(--color-neutral-700); }
 .rm-legend span { display: flex; align-items: center; gap: 6px; }
 .rm-legend .blk { width: 12px; height: 12px; }

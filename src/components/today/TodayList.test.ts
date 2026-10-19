@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Resource } from '../../core/model'
 import { dataFixture, resourceFixture, taskFixture } from '../../core/test-fixtures'
 import { useEmberStore } from '../../stores/ember'
+import { useUiStore } from '../../stores/ui'
 import TodayList from './TodayList.vue'
 
 const TODAY = '2026-09-23'
@@ -98,5 +99,13 @@ describe('TodayList', () => {
     const w = setup([resourceFixture('Plus', { billing: 'month', price: 49, renewsOn: '2026-09-25' })])
     expect(w.find('.tl-rows > .renewal-card').exists()).toBe(true)
     expect(w.find('.tl-summary').text()).toBe(plain)
+  })
+
+  it('opens Paste tasks', async () => {
+    const w = setup()
+    await w.find('.tl-import').trigger('click')
+    expect(useUiStore().editing).toBe('import:tasks')
+    expect(w.find('.import-panel').exists()).toBe(true)
+    w.unmount()
   })
 })

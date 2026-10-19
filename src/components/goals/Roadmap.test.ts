@@ -295,4 +295,11 @@ describe('Roadmap', () => {
     expect((later().find('.rm-est-input').element as HTMLInputElement).value).toBe('2.08')
     expect(later().find('.rm-est-input').attributes('aria-label')).toBe('Rough hours for Later')
   })
+
+  it('opens Add from AI for this goal', async () => {
+    const { w, ui } = setup()
+    await w.find('.rm-import').trigger('click')
+    expect(ui.editing).toBe('import:next:D3')
+    expect(w.find('.import-panel').exists()).toBe(true)
+  })
 })
