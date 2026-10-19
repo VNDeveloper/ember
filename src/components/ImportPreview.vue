@@ -76,11 +76,15 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
       <li v-for="(t, ti) in tasks" :key="ti" class="ipv-task">
         <label class="ipv-row">
           <input type="checkbox" :checked="picks.has(taskKey(ti))" @change="emit('toggle', taskKey(ti))" />
-          <span class="ipv-task-title">{{ t.title }}</span>
-          <span class="ipv-meta">{{ when(t.date) }}<template v-if="t.deadline"> · deadline</template> · #{{ t.tag }}</span>
-          <span v-if="goalOf(t.goalId)" class="ipv-goal"><span class="swatch swatch-sm" :style="{ background: goalOf(t.goalId)!.color }"></span>{{ goalOf(t.goalId)!.title }}</span>
+          <span class="ipv-task-body">
+            <span class="ipv-task-title">{{ t.title }}</span>
+            <span class="ipv-task-meta">
+              {{ when(t.date) }}<template v-if="t.deadline"> · deadline</template> · #{{ t.tag }}
+              <span v-if="goalOf(t.goalId)" class="ipv-goal">· <span class="swatch swatch-sm" :style="{ background: goalOf(t.goalId)!.color }"></span>{{ goalOf(t.goalId)!.title }}</span>
+            </span>
+            <span v-for="n in t.notes" :key="n" class="muted ipv-task-note">{{ n }}</span>
+          </span>
         </label>
-        <p v-for="n in t.notes" :key="n" class="muted ipv-task-note">{{ n }}</p>
       </li>
     </ul>
     <div v-if="skipped.length" class="ipv-skipped">
@@ -98,15 +102,17 @@ const short = (s: string) => (s.length > 60 ? `${s.slice(0, 59)}…` : s)
 .ipv-title { font-size: 16px; }
 .ipv-list, .ipv-steps, .ipv-skipped ul { list-style: none; margin: 0; padding: 0; }
 .ipv-ms + .ipv-ms, .ipv-task + .ipv-task { border-top: 1px solid var(--color-divider); }
-.ipv-steps { padding-left: var(--space-5); }
+.ipv-steps { padding-left: var(--space-6); }
 .ipv-row { display: flex; align-items: baseline; gap: var(--space-2); padding: 6px 0; cursor: pointer; }
 .ipv-ms-title { font-weight: 700; }
 .ipv-meta { margin-left: auto; font-size: 12px; color: var(--color-neutral-700); white-space: nowrap; }
 .ipv-step.is-there { color: var(--color-neutral-700); }
-.ipv-step.is-there .ipv-row { cursor: default; padding-left: 22px; }
+.ipv-step.is-there .ipv-row { cursor: default; padding-left: 28px; }
 .ipv-step-title.is-done { text-decoration: line-through; }
-.ipv-goal { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
-.ipv-task-note { margin: 0 0 6px 22px; font-size: 12px; }
+.ipv-task-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ipv-task-meta { font-size: 12px; color: var(--color-neutral-700); }
+.ipv-goal { display: inline-flex; align-items: center; gap: 6px; }
+.ipv-task-note { font-size: 12px; }
 .ipv-fields { display: grid; gap: 4px; margin: 0; }
 .ipv-field { display: flex; gap: var(--space-2); }
 .ipv-field dt { font-weight: 700; min-width: 72px; }

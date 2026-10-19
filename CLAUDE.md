@@ -20,6 +20,7 @@ Vite + Vue 3 (`<script setup>`) + TypeScript + Pinia; plain CSS tokens in `src/s
 - Resources: `src/core/companies.ts` (link → company/type/title, duplicates) and `src/core/resources.ts` (repair, costs, renewals, list views). Only http(s) links are stored; repair drops anything else.
 - Habits: `src/core/habits.ts` — a goal's optional practice habit (minutes on N days a week), measured from focus logs; weeks Mon–Sun, streak in weeks (`off` weeks: paused or the first week). No new collection: it syncs as part of the goal.
 - Pace: `src/core/pace.ts` — estimate correction (3+ finished steps, 0.5–2×), unplanned-milestone guesses, 4-week step pace, forecast and finish-by verdicts; `Goal.finishBy` and `Milestone.estMin` are the only stored fields.
+- Import: `src/core/importPlan.ts` — the markdown Ember reads from an AI chat (goal / next steps / tasks), paste-back matching (adds only, by title), copy-out and prompts. Ember never calls an AI: it copies a prompt and parses the paste locally. Undo of an import uses the `'import'` DeleteKey.
 
 ## Visual rules (non-negotiable)
 Zero border radius; 2px rules between major sections, 1px between list rows; button labels flush left; red accent sparingly (paragraph-size accent text = accent-700); no gradients, no emoji, no shadows except the picker dialog. Exception: Focus mode's bottom legibility gradient, blurred translucent panels, text shadow over the video, and the round volume slider thumb.
