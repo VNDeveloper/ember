@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { addDays, isRealDate, todayISO, type ISODate } from '../core/dates'
 import { detect, findDuplicate, normaliseUrl, shortLink } from '../core/companies'
 import { clampHabit, liveHabit, newHabit, withTarget } from '../core/habits'
+import { addedText, matchPlan, msKey, stepKey, type GoalPlan, type PlanMilestone, type PlanStep, type TaskPlan } from '../core/importPlan'
 import { findStep, goalStatus, isLive, isStepLive, liveSteps, nextOpenStep, stepTarget } from '../core/goals'
 import { plural } from '../core/format'
 import { uid } from '../core/ids'
@@ -30,6 +31,7 @@ export type DeleteKey =
   | { kind: 'step'; goalId: string; msId: string; stepId: string }
   | { kind: 'milestone'; goalId: string; msId: string }
   | { kind: 'goal'; goalId: string }
+  | { kind: 'import'; keys: DeleteKey[]; cleared?: { goalId: string; outcome?: boolean; finishBy?: boolean; habit?: boolean } }
 export interface UndoRecord { label: string; key: DeleteKey; selection: Selection }
 export type TaskPatch = Partial<Pick<Task, 'title' | 'date' | 'deadline' | 'goalId' | 'tag'>>
 export type AddResult = { ok: true; id: string } | { ok: false; reason: 'invalid' } | { ok: false; reason: 'duplicate'; id: string }
@@ -320,6 +322,108 @@ export const useEmberStore = defineStore('ember', () => {
     g.habit = h ? withTarget(h, minutes, daysPerWeek, today.value) : newHabit(minutes, daysPerWeek, today.value, goalStatus(g) !== 'active')
   }
 
+  // — import (plan with your AI) —
+  const planStep = (s: PlanStep): Step => ({ id: uid(), title: s.title, doneOn: s.done ? today.value : null, estMin: s.estMin })
+  function planMilestone(pm: PlanMilestone, mi: number, picks: ReadonlySet<string>): Milestone {
+    const m: Milestone = { id: uid(), title: pm.title, steps: pm.steps.filter((_, si) => picks.has(stepKey(mi, si))).map(planStep) }
+    if (pm.estMin != null && m.steps.length === 0) m.estMin = pm.estMin
+    return m
+  }
+
+  /** A new goal from a pasted plan: the picked milestones and steps, plus its outcome, finish-by date and habit. */
+  function importGoal(plan: GoalPlan, picks: ReadonlySet<string>): { goalId: string; undo: UndoRecord } | null {
+    const title = plan.title.trim()
+    if (!title) return null
+    const milestones = plan.milestones.flatMap((pm, mi) => (picks.has(msKey(mi)) ? [planMilestone(pm, mi, picks)] : []))
+    const goal: Goal = {
+      id: uid(), title, outcome: plan.outcome ?? '', createdAt: today.value,
+      milestones: milestones.length ? milestones : [{ id: uid(), title: 'Getting started', steps: [] }],
+    }
+    if (plan.finishBy && isRealDate(plan.finishBy)) goal.finishBy = plan.finishBy
+    if (plan.habit) {
+      const h = clampHabit(plan.habit.minutes, plan.habit.daysPerWeek)
+      goal.habit = newHabit(h.minutes, h.daysPerWeek, today.value, false)
+    }
+    goals.value.push(goal)
+    return {
+      goalId: goal.id,
+      undo: { label: `Imported “${title}”`, key: { kind: 'import', keys: [{ kind: 'goal', goalId: goal.id }] }, selection: selection.value },
+    }
+  }
+
+  /** Paste-back: adds only new milestones and steps (matched by title) and fills only the fields the goal lacks. */
+  function importIntoGoal(goalId: string, plan: GoalPlan, picks: ReadonlySet<string>): UndoRecord | null {
+    const g = goalById(goalId)
+    if (!g || !isLive(g)) return null
+    const match = matchPlan(g, plan)
+    const keys: DeleteKey[] = []
+    let steps = 0
+    let added = 0
+    plan.milestones.forEach((pm, mi) => {
+      const mm = match.milestones[mi]
+      if (mm.msId === null) {
+        if (!picks.has(msKey(mi))) return
+        const m = planMilestone(pm, mi, picks)
+        g.milestones.push(m)
+        keys.push({ kind: 'milestone', goalId, msId: m.id })
+        added++
+        steps += m.steps.length
+        return
+      }
+      const m = g.milestones.find((x) => x.id === mm.msId)
+      if (!m) return
+      pm.steps.forEach((ps, si) => {
+        if (mm.steps[si] !== 'new' || !picks.has(stepKey(mi, si))) return
+        const s = planStep(ps)
+        m.steps.push(s)
+        keys.push({ kind: 'step', goalId, msId: m.id, stepId: s.id })
+        steps++
+      })
+    })
+    if (keys.length) reopenIfAchieved(g)
+    const cleared: { goalId: string; outcome?: boolean; finishBy?: boolean; habit?: boolean } = { goalId }
+    if (match.outcome === 'fill' && plan.outcome) {
+      g.outcome = plan.outcome
+      cleared.outcome = true
+    }
+    if (match.finishBy === 'fill' && plan.finishBy && isRealDate(plan.finishBy)) {
+      g.finishBy = plan.finishBy
+      cleared.finishBy = true
+    }
+    if (match.habit === 'fill' && plan.habit) {
+      const h = clampHabit(plan.habit.minutes, plan.habit.daysPerWeek)
+      g.habit = newHabit(h.minutes, h.daysPerWeek, today.value, goalStatus(g) !== 'active')
+      cleared.habit = true
+    }
+    const filled = !!(cleared.outcome || cleared.finishBy || cleared.habit)
+    if (!keys.length && !filled) return null
+    const what = addedText(steps, added)
+    return {
+      label: what ? `Added ${what} to “${g.title}”` : `Updated “${g.title}”`,
+      key: { kind: 'import', keys, cleared: filled ? cleared : undefined },
+      selection: selection.value,
+    }
+  }
+
+  /** Pasted tasks, each with its own date (a past one becomes today), deadline, tag and goal (only while that goal is live). */
+  function importTasks(plans: TaskPlan[]): UndoRecord | null {
+    const keys: DeleteKey[] = []
+    for (const p of plans) {
+      const title = p.title.trim()
+      if (!title) continue
+      const linked = p.goalId ? goalById(p.goalId) : null
+      const date = p.date && p.date < today.value ? today.value : p.date
+      const task: Task = {
+        id: uid(), title, tag: p.tag || 'Inbox', goalId: linked && isLive(linked) ? linked.id : null,
+        date, deadline: date != null && p.deadline, doneOn: null,
+      }
+      tasks.value.push(task)
+      keys.push({ kind: 'task', id: task.id })
+    }
+    if (!keys.length) return null
+    return { label: `Added ${plural(keys.length, 'task')}`, key: { kind: 'import', keys }, selection: selection.value }
+  }
+
   function setOutcome(goalId: string, text: string) {
     const g = goalById(goalId)
     if (g) g.outcome = text
@@ -442,6 +546,7 @@ export const useEmberStore = defineStore('ember', () => {
 
   // — delete (soft) and undo —
   function itemFor(key: DeleteKey): { deletedOn?: ISODate | null } | null {
+    if (key.kind === 'import') return null
     if (key.kind === 'task') return taskById(key.id)
     if (key.kind === 'resource') return resourceById(key.id)
     if (key.kind === 'habit') return goalById(key.goalId)?.habit ?? null
@@ -484,9 +589,30 @@ export const useEmberStore = defineStore('ember', () => {
 
   /** Clears the flag set by that delete; restores the selection if nothing has been selected since. */
   function undoDelete(record: UndoRecord) {
-    const item = itemFor(record.key)
+    const key = record.key
+    if (key.kind === 'import') {
+      undoImport(key)
+      return
+    }
+    const item = itemFor(key)
     if (item) item.deletedOn = null
     if (!selection.value && record.selection && targetExists(record.selection)) selection.value = record.selection
+  }
+
+  /** Undo of an import: delete what it added, empty the fields it filled. */
+  function undoImport(key: Extract<DeleteKey, { kind: 'import' }>) {
+    for (const k of key.keys) {
+      const item = itemFor(k)
+      if (item) item.deletedOn = today.value
+    }
+    const c = key.cleared
+    const g = c ? goalById(c.goalId) : null
+    if (c && g) {
+      if (c.outcome) g.outcome = ''
+      if (c.finishBy) delete g.finishBy
+      if (c.habit) g.habit = null
+    }
+    if (selection.value && !targetExists(selection.value)) selection.value = null
   }
 
   // — timer —
@@ -553,6 +679,7 @@ export const useEmberStore = defineStore('ember', () => {
     updateTask, updateStep, renameMilestone, renameGoal,
     deleteTask, deleteStep, deleteMilestone, deleteGoal, undoDelete,
     resourceById, addResource, updateResource, deleteResource, keepRenewal, markCancelled, setHabit, removeHabit, setFinishBy, setMilestoneEstimate,
+    importGoal, importIntoGoal, importTasks,
     tick, startPause, resetTimer, skipBreak, setSession, updateSettings,
   }
 })

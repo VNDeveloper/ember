@@ -1,6 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+import { goalStatus, liveSteps } from '../core/goals'
+import { defaultPicks, matchPlan, msKey, parseGoal, parseTasks, stepKey } from '../core/importPlan'
 import type { StepTarget } from '../core/model'
 import { STORAGE_KEY, loadData, saveData } from '../core/persist'
 import { sharedPart } from '../core/sync'
@@ -903,5 +905,102 @@ describe('pace settings', () => {
     store.deleteMilestone('D3', 'D3/Motion')
     store.setMilestoneEstimate('D3', 'D3/Motion', 3)
     expect(store.goals[0].milestones[1].estMin).toBe(120)
+  })
+})
+
+describe('import', () => {
+  const plan = () => parseGoal([
+    '# Goal: Spanish', 'Outcome: Chat', 'Finish by: 2027-01-31', 'Habit: 25m on 5 days a week',
+    '## Sounds', '- [x] Alphabet (45m)', '- Greetings (1h)', '## Later (6h)', '## Skip me', '- Nope',
+  ].join('\n'))!
+
+  it('creates a new goal from the picked parts, and Undo deletes it', async () => {
+    const store = storeWith()
+    await nextTick()
+    const p = plan()
+    const picks = defaultPicks(p, null)
+    picks.delete(msKey(2))
+    picks.delete(stepKey(2, 0))
+    const r = store.importGoal(p, picks)!
+    const g = store.goals.find((x) => x.id === r.goalId)!
+    expect(g).toMatchObject({ title: 'Spanish', outcome: 'Chat', finishBy: '2027-01-31', createdAt: '2026-09-23' })
+    expect(g.habit!.targets).toEqual([{ minutes: 25, daysPerWeek: 5, from: '2026-09-21' }])
+    expect(g.milestones.map((m) => [m.title, m.estMin ?? null, m.steps.map((s) => [s.title, s.estMin, s.doneOn])])).toEqual([
+      ['Sounds', null, [['Alphabet', 45, '2026-09-23'], ['Greetings', 60, null]]],
+      ['Later', 360, []],
+    ])
+    await nextTick()
+    expect(loadData()!.goals.find((x) => x.id === r.goalId)!.updatedAt).toBe(NOW)
+    expect(r.undo.label).toBe('Imported “Spanish”')
+    store.undoDelete(r.undo)
+    expect(g.deletedOn).toBe('2026-09-23')
+  })
+
+  it('needs a title; with nothing picked it still gets a first milestone', () => {
+    const store = storeWith()
+    expect(store.importGoal({ ...plan(), title: ' ' }, new Set())).toBeNull()
+    const r = store.importGoal(plan(), new Set())!
+    expect(store.goals.find((x) => x.id === r.goalId)!.milestones.map((m) => m.title)).toEqual(['Getting started'])
+  })
+
+  it('adds only what is new to a goal, fills only its empty fields, and Undo takes back just that', () => {
+    const store = storeWith()
+    store.setOutcome('D3', 'Ship charts')
+    const p = parseGoal(['# D3', 'Outcome: Other', 'Finish by: 2026-12-01', '## First charts', '- Line', '- Pie (30m)', '## Polish', '- Tooltips (45m)'].join('\n'))!
+    const u = store.importIntoGoal('D3', p, defaultPicks(p, matchPlan(store.goals[0], p)))!
+    const g = store.goals[0]
+    expect(g.milestones.map((x) => x.title)).toEqual(['First charts', 'Motion', 'Polish'])
+    expect(g.milestones[0].steps.map((s) => [s.title, s.estMin])).toEqual([['Bar', 50], ['Line', 50], ['Scatter', 50], ['Pie', 30]])
+    expect(g.outcome).toBe('Ship charts')
+    expect(g.finishBy).toBe('2026-12-01')
+    expect(u.label).toBe('Added 2 steps and 1 milestone to “D3”')
+    store.undoDelete(u)
+    expect(liveSteps(g.milestones[0]).map((s) => s.title)).toEqual(['Bar', 'Line', 'Scatter'])
+    expect(g.milestones[2].deletedOn).toBe('2026-09-23')
+    expect(g).not.toHaveProperty('finishBy')
+    expect(g.outcome).toBe('Ship charts')
+  })
+
+  it('reopens an achieved goal, and ignores a missing goal or a paste with nothing new', () => {
+    const store = storeWith()
+    store.setGoalStatus('D3', 'achieved')
+    const p = parseGoal('## Motion\n- Springs (30m)')!
+    expect(store.importIntoGoal('nope', p, defaultPicks(p, null))).toBeNull()
+    const same = parseGoal('## Motion\n- Easing')!
+    expect(store.importIntoGoal('D3', same, defaultPicks(same, matchPlan(store.goals[0], same)))).toBeNull()
+    expect(store.importIntoGoal('D3', p, defaultPicks(p, matchPlan(store.goals[0], p)))!.label).toBe('Added 1 step to “D3”')
+    expect(goalStatus(store.goals[0])).toBe('active')
+  })
+
+  it('fills a missing habit, and Undo clears it', () => {
+    const store = storeWith()
+    const u = store.importIntoGoal('D3', parseGoal('# D3\nHabit: 20m daily')!, new Set())!
+    expect(u.label).toBe('Updated “D3”')
+    expect(store.goals[0].habit!.targets[0]).toMatchObject({ minutes: 20, daysPerWeek: 7 })
+    store.undoDelete(u)
+    expect(store.goals[0].habit).toBeNull()
+  })
+
+  it('adds tasks with their own date, deadline, tag and goal, and Undo deletes them', () => {
+    const store = storeWith()
+    const { tasks } = parseTasks('- Book lesson | tomorrow | #Admin | goal: D3\n- Renew | 2026-11-02 | deadline', store.goals, store.today)
+    const u = store.importTasks(tasks)!
+    const added = store.tasks.slice(-2)
+    expect(added.map(({ title, date, deadline, tag, goalId }) => ({ title, date, deadline, tag, goalId }))).toEqual([
+      { title: 'Book lesson', date: '2026-09-24', deadline: false, tag: 'Admin', goalId: 'D3' },
+      { title: 'Renew', date: '2026-11-02', deadline: true, tag: 'Inbox', goalId: null },
+    ])
+    expect(u.label).toBe('Added 2 tasks')
+    store.undoDelete(u)
+    expect(added.every((t) => t.deletedOn === '2026-09-23')).toBe(true)
+    expect(store.importTasks([])).toBeNull()
+  })
+
+  it('drops a goal link that is no longer live', () => {
+    const store = storeWith()
+    const { tasks } = parseTasks('- Book lesson | goal: D3', store.goals, store.today)
+    store.deleteGoal('D3')
+    store.importTasks(tasks)
+    expect(store.tasks.at(-1)!.goalId).toBeNull()
   })
 })
