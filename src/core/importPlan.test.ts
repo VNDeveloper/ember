@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { newHabit } from './habits'
 import {
   addedText, defaultPicks, detectKind, goalMarkdown, goalPrompt, matchPlan, msKey, nextStepsPrompt, normTitle, parseEstimate,
-  parseGoal, parseHabit, parseTasks, pickSummary, stepKey, summaryText, taskKey, tasksPrompt, togglePick, type TaskPlan,
+  parseGoal, parseHabit, parseTasks, pickSummary, progressNotes, stepKey, summaryText, taskKey, tasksPrompt, togglePick, type TaskPlan,
 } from './importPlan'
-import { goalFixture } from './test-fixtures'
+import { tallyLogs } from './tally'
+import { d3Fixture, goalFixture, logFixture, stepRef } from './test-fixtures'
 
 export const SAMPLE = [
   'Sure! Here is your plan:',
@@ -249,24 +250,44 @@ describe('copy out and prompts', () => {
     expect(pickSummary(back, defaultPicks(back, match), match)).toMatchObject({ milestones: 0, steps: 0 })
   })
 
-  it('builds prompts with the fill-in line, the rules and today', () => {
+  it('asks about you, lets the AI ask first, and wants the plan in one code block with notes after it', () => {
     const p = goalPrompt(TODAY)
-    expect(p.split('\n')[0]).toBe('My goal: [describe it — what, by when, how much time a week]')
-    expect(p).toContain('# Goal: ')
+    expect(p.split('\n').slice(0, 3)).toEqual([
+      'My goal: [what you want to achieve]',
+      'Where I am now: [e.g. complete beginner, or I know the basics]',
+      'Time I have: [e.g. about 4h a week, ideally done by March]',
+    ])
+    expect(p).toContain('ask me up to 3 short questions first')
+    expect(p).toContain('ONE ```markdown code block')
+    expect(p).toContain('end each with a step that proves it')
     expect(p).toContain('Today is 2026-09-23.')
-    expect(parseGoal(p)!.milestones.length).toBeGreaterThan(0)
+    // The format example sits in its own code block, which reads as a plan.
+    expect(parseGoal(p)!.title).toBe('Speak conversational Spanish')
+  })
+
+  it('gives the AI the goal, how it is going, and the add-only rule for next steps', () => {
     const g = goalFixture('Spanish', [['Basics', [['Alphabet', null]]]])
-    const n = nextStepsPrompt(g, TODAY)
+    const n = nextStepsPrompt(g, TODAY, ['Focused so far: 2h', 'Pace: 50m a week · last 4 weeks.'])
     expect(n.split('\n')[0]).toBe('What I want next: [e.g. plan the next phase, or break down milestones without steps]')
+    expect(n).toContain("How it's going:\n- Focused so far: 2h\n- Pace: 50m a week · last 4 weeks.")
     expect(n).toContain(goalMarkdown(g))
-    expect(n).toContain('Keep my existing milestones and steps exactly as written')
+    expect(n).toContain('The app only adds: keep my existing milestones and steps exactly as written')
+    expect(n).toContain('say so in your notes instead')
+    expect(nextStepsPrompt(g, TODAY)).not.toContain("How it's going")
+  })
+
+  it('asks for tasks to be split and gaps filled, with my goals listed', () => {
+    const g = goalFixture('Spanish', [['Basics', [['Alphabet', null]]]])
     const done = { ...goalFixture('Done', []), status: 'achieved' as const }
     const t = tasksPrompt([g, done, { ...goalFixture('Gone', []), deletedOn: TODAY }], TODAY)
     expect(t.split('\n')[0]).toBe('What I need to do: [list or describe it]')
+    expect(t).toContain('Split anything over about 2 hours')
+    expect(t).toContain('ONE ```markdown code block')
     expect(t).toContain('- Spanish')
     expect(t).not.toContain('Gone')
     expect(t).not.toContain('- Done')
     expect(tasksPrompt([], TODAY)).toContain('leave out "goal:"')
+    expect(parseTasks(t, [], TODAY).tasks.map((x) => x.title)).toEqual(['Book a trial lesson', 'Renew passport', 'Read about learning plateaus'])
   })
 })
 
@@ -292,5 +313,52 @@ describe('review fixes', () => {
     const p = parseGoal('# Goal-setting for 2027\n## Week-long immersion\n- a\n## Part-time study plan\n- b\n## Week 1-2: Basics\n- c\n## Week 3 - Setup\n- d\n## Stage-fright practice\n- e')!
     expect(p.title).toBe('Goal-setting for 2027')
     expect(p.milestones.map((m) => m.title)).toEqual(['Week-long immersion', 'Part-time study plan', 'Week 1-2: Basics', 'Setup', 'Stage-fright practice'])
+  })
+})
+
+describe('a reply with notes around a code block', () => {
+  it('reads only the plan inside the block, keeping line numbers', () => {
+    const p = parseGoal([
+      'Great goal! Two questions answered, so here is the plan.',
+      '### My approach',
+      '- Short daily practice beats long weekends',
+      '```markdown',
+      '# Goal: Learn piano',
+      '## Basics',
+      '- Scales (20m)',
+      '- Scales',
+      '```',
+      '### Resources',
+      '- Pianote (YouTube)',
+    ].join('\n'))!
+    expect(p.title).toBe('Learn piano')
+    expect(p.milestones.map((m) => [m.title, m.steps.map((s) => s.title)])).toEqual([['Basics', ['Scales']]])
+    expect(p.skipped.map((s) => [s.line, s.reason])).toEqual([[8, 'duplicate step']])
+    expect(detectKind('### My approach\n- tip\n```\n# Tasks\n- Call mum\n```')).toBe('tasks')
+  })
+
+  it('ignores tips before and after a fenced task list', () => {
+    const t = parseTasks('A few tips first:\n- Batch errands\n```\n# Tasks\n- Call mum\n- Water plants\n```\n- Review weekly', [], TODAY)
+    expect(t.tasks.map((x) => x.title)).toEqual(['Call mum', 'Water plants'])
+    expect(t.tasks[0].line).toBe(5)
+  })
+})
+
+describe('progressNotes', () => {
+  it('says how the goal is going, in my own words', () => {
+    const { goal, logs } = d3Fixture()
+    const notes = progressNotes(goal, logs, tallyLogs(logs, TODAY).spent, TODAY)
+    expect(notes[0]).toBe('Focused so far: 2h 5m of an estimated 4h 10m.')
+    expect(notes.some((n) => /^Pace: .*last 4 weeks/.test(n))).toBe(true)
+  })
+
+  it('includes how my estimates turn out, the finish-by date and a pause', () => {
+    const g = goalFixture('G', [['M', [['A', '2026-09-10'], ['B', '2026-09-11'], ['C', '2026-09-12'], ['D', null]]]])
+    g.finishBy = '2026-12-01'
+    const logs = ['A', 'B', 'C'].map((s) => logFixture('2026-09-12', stepRef('G', 'M', s), 65))
+    const notes = progressNotes(g, logs, tallyLogs(logs, TODAY).spent, TODAY)
+    expect(notes).toContain('How my estimates turn out: I usually take 30% longer.')
+    expect(notes.find((n) => n.startsWith('Finish by: Dec 1'))).toBeDefined()
+    expect(progressNotes({ ...g, status: 'paused' }, logs, tallyLogs(logs, TODAY).spent, TODAY)).toContain('This goal is paused right now.')
   })
 })

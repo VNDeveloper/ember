@@ -131,4 +131,11 @@ describe('ImportPanel', () => {
     expect(boxes.length).toBe(2)
     expect(boxes.every((b) => b.classes().includes('tick'))).toBe(true)
   })
+
+  it("puts how the goal is going into Add from AI's prompt", async () => {
+    const { w } = setup('next')
+    await w.find('.ip-copy').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("How it's going:\n- Focused so far: 0m of an estimated 50m."))
+  })
 })

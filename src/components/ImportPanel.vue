@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { plural } from '../core/format'
 import {
   addedText, defaultPicks, detectKind, goalPrompt, matchPlan, nextStepsPrompt, parseGoal, parseTasks,
-  pickSummary, taskKey, tasksPrompt, togglePick, type ImportKind,
+  pickSummary, progressNotes, taskKey, tasksPrompt, togglePick, type ImportKind,
 } from '../core/importPlan'
 import type { Goal } from '../core/model'
 import { useEmberStore } from '../stores/ember'
@@ -21,7 +21,7 @@ const TITLE: Record<ImportKind, string> = { goal: 'Import a goal', next: 'Add fr
 
 const prompt = computed(() =>
   props.kind === 'goal' ? goalPrompt(ember.today)
-  : props.kind === 'next' && props.goal ? nextStepsPrompt(props.goal, ember.today)
+  : props.kind === 'next' && props.goal ? nextStepsPrompt(props.goal, ember.today, progressNotes(props.goal, ember.logs, ember.tally.spent, ember.today))
   : tasksPrompt(ember.goals, ember.today))
 const copied = ref(false)
 const showPrompt = ref(false)

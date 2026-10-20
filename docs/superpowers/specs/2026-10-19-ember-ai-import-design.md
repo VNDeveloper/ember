@@ -122,22 +122,35 @@ A paste whose detected kind is not the panel's own kind shows "This looks like a
 
 Parsing what it wrote gives back the same titles, estimates and done flags (a round-trip test).
 
-**Prompts (`goalPrompt()`, `nextStepsPrompt(goal)`, `tasksPrompt(goals)`)** are plain text:
+**Prompts (`goalPrompt()`, `nextStepsPrompt(goal, today, progress)`, `tasksPrompt(goals)`)** are plain text (revised 2026-10-20 so the AI can suggest more):
 
-1. A first line for you to fill in:
-   - `My goal: [describe it — what, by when, how much time a week]`;
-   - `What I want next: [e.g. plan the next phase]`;
-   - `What I need to do: [list or describe it]`.
-2. One sentence of context ("I track this in an app that reads the markdown format below. Reply with only that markdown.").
-3. The format with an example.
-4. The rules:
-   - 3–7 milestones, 3–7 steps each;
-   - every step a concrete action under 3 hours with an estimate in brackets;
-   - no nested bullets;
-   - dates as YYYY-MM-DD;
-   - today's date (so "tomorrow" and finish-by dates make sense).
-5. **For next steps:** the current goal from `goalMarkdown`, with "Keep my existing milestones and steps exactly as written; add new steps under them or new milestones after them."
-6. **For tasks:** the titles of your live goals, active and paused (in the "goal:" form), so the AI can link tasks.
+1. **Fill-in lines** for you:
+   - `My goal:`, `Where I am now:` and `Time I have:` (goal);
+   - `What I want next:` (next steps);
+   - `What I need to do:` (tasks).
+2. **Asking first:** the AI may ask up to 3 short questions before planning (goal and next steps).
+3. **One code block:** the plan comes in a single ```` ```markdown ```` block, followed by a few lines of notes:
+   - for a goal: the approach, pitfalls and resources;
+   - for next steps: what it added and why;
+   - for tasks: what to do first and what to drop.
+
+   **Ember reads only the code block** that holds the plan (one with a heading for a goal, one with a bullet for tasks), so notes before or after it are ignored. Line numbers in the skipped list still refer to the whole paste.
+4. **The format example** sits in its own code block and models the rules: a review step, and a step that proves the milestone.
+5. **Planning rules:**
+   - 3–7 milestones, each building on the last and ending with a step that proves it;
+   - 3–7 steps per milestone, mixing learning, practice and review;
+   - each title says what "done" looks like;
+   - estimates honest for my level;
+   - each step under 3 hours, with its time in brackets;
+   - no nested bullets inside the plan;
+   - dates as YYYY-MM-DD, and today's date.
+6. **Next steps:**
+   - the current goal from `goalMarkdown`, in a code block;
+   - "How it's going", from `progressNotes(goal, logs, spent, today)`: focus so far against the estimate, how my estimates turn out (in the first person), what's left, pace and the at-pace date, the at-habit date, and the finish-by date with its verdict and need, or "paused";
+   - the add-only rule: "keep my existing milestones and steps exactly as written…; if an existing step should change, say so in your notes instead", plus "size new steps for how I actually work".
+7. **Tasks:**
+   - split anything over about 2 hours and add obvious missing tasks;
+   - the titles of your live goals, active and paused (in the "goal:" form).
 
 ## Rules (`src/core/importPlan.ts`, pure)
 
